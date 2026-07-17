@@ -1,0 +1,39 @@
+# Roadmap
+
+## Milestone 0: Product Definition
+
+- Define the product thesis and first workflow.
+- Choose the initial application stack.
+- Define the canonical model package shape.
+- Define proposal/review mechanics for AI-suggested model changes.
+- Define privacy and provider-selection defaults.
+
+## Milestone 1: Thin Prototype
+
+- Create a model package with requirements, actors, use cases, and trace links.
+- Validate model package structure from a CLI.
+- Render a use-case diagram from accepted model data.
+- Show traceability between a requirement and model elements.
+- Save deterministic text-backed files.
+
+## Milestone 2: Proposal Review Workflow
+
+- Store proposed model operations separately from canonical state.
+- Render proposal summaries, operation diffs, validation results, and provenance.
+- Apply accepted operations through the core validation path.
+- Reject or defer individual operations.
+- Commit accepted model changes when configured.
+
+## Milestone 3: Workbench UX
+
+- Build source-note, model, proposal, diagram, and traceability views.
+- Support basic editing for requirements and model elements.
+- Improve diagram ergonomics enough that the model does not feel like homework with a viewport.
+- Add export of diagram images and readable summaries.
+
+## Milestone 4: Compatibility And Packaging
+
+- Evaluate XMI, PlantUML, Mermaid, Structurizr DSL, SVG, and PDF export priorities.
+- Package for common Linux desktop environments.
+- Add project templates and examples.
+- Document provider integration boundaries.
