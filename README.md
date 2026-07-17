@@ -20,7 +20,7 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 
 - full Enterprise Architect feature parity
 - Windows-first product design
-- hosted enterprise collaboration before the local model is credible
+- networked collaboration before the local model is credible
 - opaque AI mutation of canonical model files
 - proprietary-format lock-in as the primary storage model
 
@@ -29,7 +29,6 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 - `docs/PRODUCT_BRIEF.md` - product framing and audience
 - `docs/REQUIREMENTS.md` - first prototype requirements
 - `docs/ROADMAP.md` - public milestone outline
-- `docs/EDITIONS.md` - MIT open-core and paid/enterprise boundary
 - `docs/architecture/OVERVIEW.md` - architecture direction
 - `docs/security/THREAT_MODEL.md` - public safety and privacy model
 - `docs/research/COMPARABLE_TOOLS.md` - high-level market and tooling context
@@ -40,4 +39,4 @@ This repository is a public product concept and planning repository. Implementat
 
 ## License
 
-The open/core product is licensed under the MIT License. See `LICENSE`.
+RedShield Architect is licensed under the MIT License. See `LICENSE`.

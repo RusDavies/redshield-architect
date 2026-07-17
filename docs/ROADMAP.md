@@ -7,7 +7,6 @@
 - Define the canonical model package shape.
 - Define proposal/review mechanics for AI-suggested model changes.
 - Define privacy and provider-selection defaults.
-- Record MIT open-core licensing and the paid/enterprise boundary.
 
 ## Milestone 1: Thin Prototype
 
