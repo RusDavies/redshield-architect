@@ -1,20 +1,36 @@
-# Comparable Tools
+# Comparable Tooling Categories
 
-This note records high-level positioning context. It is not a feature-cloning plan.
+This note records high-level positioning context without naming specific competitors.
 
-## Modeling And Architecture Tools
+## Modeling And Architecture Suites
 
-- Sparx Enterprise Architect: broad modeling capability and mature UML support; less aligned with lightweight Linux-first, Git-native, AI-proposal workflows.
-- Visual Paradigm: strong visual modeling and documentation workflows; heavier than the first RedShield target.
-- MagicDraw/Cameo: powerful systems modeling ecosystem; aimed at larger and more formal environments.
-- StarUML: approachable UML tooling; useful reference for diagram ergonomics.
-- Papyrus and Modelio: open modeling ecosystems with different tradeoffs around usability, standards, and extension.
+Established modeling suites can provide broad requirements, UML, systems modeling, documentation, collaboration, and lifecycle-management capabilities. They are useful proof that deep modeling workflows matter, but they can also become broad, heavy, proprietary, and awkward for lightweight Linux-first workflows.
 
-## Diagram And Text-First Tools
+RedShield Architect should not compete by trying to clone a mature suite feature-by-feature. The more useful wedge is focused local modeling, deterministic text-backed storage, traceability, and reviewable AI-assisted model proposals.
 
-- diagrams.net: excellent general-purpose diagramming, but diagrams are not a semantic architecture model.
-- Mermaid and PlantUML: strong text-to-diagram options and useful export targets, but not enough by themselves for requirements/model/proposal lifecycle management.
-- Structurizr DSL: strong fit for C4-style architecture documentation; a useful integration target rather than the whole product shape.
+## Diagram-First Tools
+
+General-purpose diagramming tools often provide fast drawing ergonomics and broad shape libraries. They are useful for sketching and communication, but the diagram is usually the artifact rather than a view over a semantic model.
+
+RedShield Architect should learn from their speed and visual clarity while keeping model objects, relationships, provenance, and validation as first-class data.
+
+## Text-To-Diagram Tools
+
+Text-to-diagram tools are strong export and documentation targets. They fit developer workflows well and make diagrams easier to diff than binary or canvas-only formats.
+
+RedShield Architect should treat these formats as import/export surfaces, not as the only internal model representation.
+
+## Architecture-As-Code Tools
+
+Architecture-as-code approaches prove that model-once, view-many workflows are valuable. They are especially useful for system context, containers, components, and documentation automation.
+
+RedShield Architect should build on the same spirit while adding requirements management, practical UML, proposal review, traceability, and richer model lifecycle support.
+
+## Open Modeling Platforms
+
+Open modeling ecosystems show that standards-aligned tooling is possible, but they can also inherit complexity from formal metamodels and plugin-heavy environments.
+
+RedShield Architect should keep the first prototype practical and focused before attempting broad standards coverage.
 
 ## Product Implications
 
@@ -28,4 +44,4 @@ RedShield Architect should compete by combining:
 - traceability
 - AI proposal review with provenance
 
-The project should avoid copying proprietary UX, terminology, data models, or trade dress from commercial tools. The useful exercise is understanding jobs to be done, then designing a distinct product.
+The project should avoid copying proprietary UX, terminology, data models, workflows, or trade dress from existing tools. The useful exercise is understanding jobs to be done, then designing a distinct product.

@@ -18,7 +18,7 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 
 ## Early Non-Goals
 
-- full Enterprise Architect feature parity
+- full feature parity with established enterprise modeling suites
 - Windows-first product design
 - networked collaboration before the local model is credible
 - opaque AI mutation of canonical model files
