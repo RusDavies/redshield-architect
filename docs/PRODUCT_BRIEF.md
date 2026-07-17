@@ -55,6 +55,12 @@ The first prototype should support one end-to-end path:
 - provenance and validation attached to model changes
 - export-oriented design rather than storage lock-in
 
+## Edition Strategy
+
+RedShield Architect is planned as an MIT-licensed open-core product. The open core should provide real local architecture value: requirements, practical UML, traceability, deterministic model storage, validation, imports/exports, and local AI proposal review.
+
+Paid/commercial scope is reserved for hosted collaboration, enterprise governance, organization-wide integrations, managed policy, compliance evidence, reporting at scale, and commercial support.
+
 ## Risks
 
 - scope creep toward a full ALM suite
