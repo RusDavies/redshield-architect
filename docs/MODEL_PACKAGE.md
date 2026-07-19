@@ -13,7 +13,7 @@ redshield/
   proposals/open/*.json
 ```
 
-The JSON Schemas in `schemas/` describe the prototype file shapes. The Rust core currently validates the same first slice: schema version, duplicate IDs, supported element and relationship kinds, broken references, use-case diagram references, trace links, and proposal operation envelopes.
+The JSON Schemas in `schemas/` describe the prototype file shapes. `cargo test` validates the example package against those published schemas and meta-validates the schema documents themselves. The Rust core validates the cross-file semantic slice that JSON Schema cannot see alone: schema version, duplicate IDs, supported element and relationship kinds, broken references, use-case diagram references, trace links, and proposal operation envelopes.
 
 ## Thin CLI
 
