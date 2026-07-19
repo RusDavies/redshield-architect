@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use redshield_architect::{
-    load_package, render_use_case_svg, validate_package, validate_proposals,
+    apply_accepted_proposal_file, load_package, render_use_case_svg, validate_package,
+    validate_proposals,
 };
 use std::env;
 use std::fs;
@@ -48,6 +49,25 @@ fn main() -> Result<()> {
             fs::write(&output, svg).with_context(|| format!("writing {}", output.display()))?;
             println!("rendered {}", output.display());
         }
+        "apply-proposal" => {
+            let root = args
+                .next()
+                .unwrap_or_else(|| "examples/minimal/redshield".to_string());
+            let Some(proposal_path) = args.next() else {
+                bail!("apply-proposal requires a proposal JSON path");
+            };
+            let summary = apply_accepted_proposal_file(&root, proposal_path)?;
+            println!("applied proposal:");
+            println!("- requirements created: {}", summary.requirements_created);
+            println!("- elements created: {}", summary.elements_created);
+            println!("- relationships created: {}", summary.relationships_created);
+            println!("- diagrams created: {}", summary.diagrams_created);
+            println!("- trace links created: {}", summary.trace_links_created);
+            println!(
+                "- applied proposal copy: {}",
+                summary.applied_proposal_path.display()
+            );
+        }
         "help" | "--help" | "-h" => print_usage(),
         other => bail!("unknown command {other}"),
     }
@@ -59,4 +79,5 @@ fn print_usage() {
     println!("Usage:");
     println!("  redshield-architect validate [redshield-dir]");
     println!("  redshield-architect render-use-case [redshield-dir] [output.svg]");
+    println!("  redshield-architect apply-proposal [redshield-dir] <proposal.json>");
 }
