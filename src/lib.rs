@@ -2,9 +2,11 @@ use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt::Write as _;
+use std::fmt::Write as FmtWrite;
 use std::fs;
+use std::io::Write as IoWrite;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -505,20 +507,11 @@ pub fn validate_proposal(proposal: &Proposal) -> Result<()> {
 }
 
 pub fn render_use_case_svg(package: &ModelPackage, diagram_id: Option<&str>) -> Result<String> {
-    let diagram = match diagram_id {
-        Some(id) => package
-            .diagrams
-            .diagrams
-            .iter()
-            .find(|diagram| diagram.id == id),
-        None => package
-            .diagrams
-            .diagrams
-            .iter()
-            .find(|diagram| diagram.view_kind == "use_case"),
-    }
-    .ok_or_else(|| anyhow!("no matching use-case diagram found"))?;
+    render_dot_to_svg(&render_use_case_dot(package, diagram_id)?)
+}
 
+pub fn render_use_case_dot(package: &ModelPackage, diagram_id: Option<&str>) -> Result<String> {
+    let diagram = find_use_case_diagram(package, diagram_id)?;
     let elements: BTreeMap<&str, &ModelElement> = package
         .elements
         .elements
@@ -538,84 +531,68 @@ pub fn render_use_case_svg(package: &ModelPackage, diagram_id: Option<&str>) -> 
         .filter(|element| element.kind == "use_case")
         .collect();
 
-    let width = 900;
-    let height = 160 + (actors.len().max(use_cases.len()) as i32 * 110).max(260);
-    let mut svg = String::new();
+    let mut dot = String::new();
     writeln!(
-        svg,
-        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-labelledby="title desc">"#
-    )?;
-    writeln!(svg, "<title>{}</title>", escape_xml(&diagram.title))?;
-    writeln!(
-        svg,
-        "<desc>Use-case diagram rendered from RedShield semantic model data.</desc>"
+        dot,
+        "digraph {} {{",
+        dot_id(diagram.id.strip_prefix("diagram.").unwrap_or(&diagram.id))
     )?;
     writeln!(
-        svg,
-        r##"<rect width="100%" height="100%" fill="#f8fafc"/>"##
+        dot,
+        "  graph [rankdir=LR, bgcolor=\"{}\", pad=\"0.35\", nodesep=\"0.8\", ranksep=\"1.2\", label=\"{}\", labelloc=t, fontsize=20, fontname=\"Inter, Arial, sans-serif\", fontcolor=\"{}\"]",
+        "#f8fafc",
+        escape_dot_label(&diagram.title),
+        "#0f172a"
     )?;
     writeln!(
-        svg,
-        r##"<rect x="250" y="72" width="570" height="{}" rx="8" fill="#ffffff" stroke="#334155" stroke-width="2"/>"##,
-        height - 120
+        dot,
+        "  node [fontname=\"Inter, Arial, sans-serif\", fontsize=12, style=\"filled\", color=\"{}\", fontcolor=\"{}\"]",
+        "#334155", "#0f172a"
     )?;
     writeln!(
-        svg,
-        r##"<text x="270" y="106" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">{}</text>"##,
-        escape_xml(&package.manifest.name)
+        dot,
+        "  edge [fontname=\"Inter, Arial, sans-serif\", fontsize=10, color=\"{}\", fontcolor=\"{}\"]",
+        "#475569", "#475569"
     )?;
 
-    for (index, actor) in actors.iter().enumerate() {
-        let y = 170 + index as i32 * 110;
+    for actor in &actors {
         writeln!(
-            svg,
-            r##"<circle cx="95" cy="{y}" r="18" fill="none" stroke="#0f766e" stroke-width="3"/>"##
-        )?;
-        writeln!(
-            svg,
-            r##"<line x1="95" y1="{}" x2="95" y2="{}" stroke="#0f766e" stroke-width="3"/>"##,
-            y + 18,
-            y + 58
-        )?;
-        writeln!(
-            svg,
-            r##"<line x1="62" y1="{}" x2="128" y2="{}" stroke="#0f766e" stroke-width="3"/>"##,
-            y + 34,
-            y + 34
-        )?;
-        writeln!(
-            svg,
-            r##"<line x1="95" y1="{}" x2="66" y2="{}" stroke="#0f766e" stroke-width="3"/>"##,
-            y + 58,
-            y + 92
-        )?;
-        writeln!(
-            svg,
-            r##"<line x1="95" y1="{}" x2="124" y2="{}" stroke="#0f766e" stroke-width="3"/>"##,
-            y + 58,
-            y + 92
-        )?;
-        writeln!(
-            svg,
-            r##"<text x="95" y="{}" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#134e4a">{}</text>"##,
-            y + 118,
-            escape_xml(&actor.name)
+            dot,
+            "  {} [id=\"{}\", label=\"{}\", shape=box, fillcolor=\"{}\", color=\"{}\", fontcolor=\"{}\", tooltip=\"{}\"]",
+            dot_id(&actor.id),
+            escape_dot_label(&actor.id),
+            escape_dot_label(&actor.name),
+            "#ccfbf1",
+            "#0f766e",
+            "#134e4a",
+            escape_dot_label(&actor.id)
         )?;
     }
 
-    for (index, use_case) in use_cases.iter().enumerate() {
-        let y = 160 + index as i32 * 110;
+    writeln!(
+        dot,
+        "  subgraph cluster_system {{\n    id=\"{}\"\n    label=\"{}\"\n    color=\"{}\"\n    fillcolor=\"{}\"\n    style=\"rounded,filled\"\n    fontname=\"Inter, Arial, sans-serif\"\n    fontsize=16\n    fontcolor=\"{}\"",
+        escape_dot_label(&format!("cluster.{}", package.manifest.project_id)),
+        escape_dot_label(&package.manifest.name),
+        "#334155",
+        "#ffffff",
+        "#0f172a"
+    )?;
+
+    for use_case in &use_cases {
         writeln!(
-            svg,
-            r##"<ellipse cx="535" cy="{y}" rx="185" ry="42" fill="#ecfeff" stroke="#0369a1" stroke-width="2"/>"##
-        )?;
-        writeln!(
-            svg,
-            r##"<text x="535" y="{}" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" fill="#0c4a6e">{}</text>"##,
-            y + 5,
-            escape_xml(&use_case.name)
+            dot,
+            "    {} [id=\"{}\", label=\"{}\", shape=ellipse, fillcolor=\"{}\", color=\"{}\", fontcolor=\"{}\", tooltip=\"{}\"]",
+            dot_id(&use_case.id),
+            escape_dot_label(&use_case.id),
+            escape_dot_label(&use_case.name),
+            "#ecfeff",
+            "#0369a1",
+            "#0c4a6e",
+            escape_dot_label(&use_case.id)
         )?;
     }
+    writeln!(dot, "  }}")?;
 
     for relationship in &package.relationships.relationships {
         let Some(source) = elements.get(relationship.source_id.as_str()) else {
@@ -627,22 +604,74 @@ pub fn render_use_case_svg(package: &ModelPackage, diagram_id: Option<&str>) -> 
         if source.kind != "actor" || target.kind != "use_case" {
             continue;
         }
-        let actor_index = actors.iter().position(|actor| actor.id == source.id);
-        let use_case_index = use_cases
-            .iter()
-            .position(|use_case| use_case.id == target.id);
-        if let (Some(actor_index), Some(use_case_index)) = (actor_index, use_case_index) {
-            let y1 = 204 + actor_index as i32 * 110;
-            let y2 = 160 + use_case_index as i32 * 110;
+        if actors.iter().any(|actor| actor.id == source.id)
+            && use_cases.iter().any(|use_case| use_case.id == target.id)
+        {
             writeln!(
-                svg,
-                r##"<line x1="132" y1="{y1}" x2="350" y2="{y2}" stroke="#475569" stroke-width="2"/>"##
+                dot,
+                "  {} -> {} [id=\"{}\", label=\"{}\", dir=none, tooltip=\"{}\"]",
+                dot_id(&source.id),
+                dot_id(&target.id),
+                escape_dot_label(&relationship.id),
+                escape_dot_label(&relationship.label),
+                escape_dot_label(&relationship.id)
             )?;
         }
     }
 
-    writeln!(svg, "</svg>")?;
+    writeln!(dot, "}}")?;
+    Ok(dot)
+}
+
+pub fn render_dot_to_svg(dot: &str) -> Result<String> {
+    let mut child = Command::new("dot")
+        .arg("-Tsvg")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("starting Graphviz dot")?;
+
+    child
+        .stdin
+        .as_mut()
+        .ok_or_else(|| anyhow!("opening dot stdin"))?
+        .write_all(dot.as_bytes())
+        .context("writing DOT to Graphviz")?;
+
+    let output = child
+        .wait_with_output()
+        .context("waiting for Graphviz dot")?;
+    if !output.status.success() {
+        bail!(
+            "Graphviz dot failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+    let svg = String::from_utf8(output.stdout).context("Graphviz produced non-UTF8 SVG")?;
+    if !svg.contains("<svg") {
+        bail!("Graphviz output did not contain an SVG document");
+    }
     Ok(svg)
+}
+
+fn find_use_case_diagram<'a>(
+    package: &'a ModelPackage,
+    diagram_id: Option<&str>,
+) -> Result<&'a DiagramView> {
+    match diagram_id {
+        Some(id) => package
+            .diagrams
+            .diagrams
+            .iter()
+            .find(|diagram| diagram.id == id),
+        None => package
+            .diagrams
+            .diagrams
+            .iter()
+            .find(|diagram| diagram.view_kind == "use_case"),
+    }
+    .ok_or_else(|| anyhow!("no matching use-case diagram found"))
 }
 
 fn read_json<T: for<'de> Deserialize<'de>>(path: impl AsRef<Path>) -> Result<T> {
@@ -772,13 +801,20 @@ fn default_priority() -> String {
     "must".to_string()
 }
 
-fn escape_xml(input: &str) -> String {
-    input
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&apos;")
+fn dot_id(input: &str) -> String {
+    let mut id = String::from("n_");
+    for character in input.chars() {
+        if character.is_ascii_alphanumeric() || character == '_' {
+            id.push(character);
+        } else {
+            id.push('_');
+        }
+    }
+    id
+}
+
+fn escape_dot_label(input: &str) -> String {
+    input.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 #[cfg(test)]
@@ -804,6 +840,9 @@ mod tests {
         assert!(warnings.is_empty(), "{warnings:?}");
         let proposal_warnings = validate_proposals("examples/minimal/redshield").unwrap();
         assert!(proposal_warnings.is_empty(), "{proposal_warnings:?}");
+        let dot = render_use_case_dot(&package, Some("diagram.first-use-case")).unwrap();
+        assert!(dot.contains("digraph"));
+        assert!(dot.contains("actor.architect"));
         let svg = render_use_case_svg(&package, Some("diagram.first-use-case")).unwrap();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Review proposal"));
