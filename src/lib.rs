@@ -141,6 +141,75 @@ pub struct ProposalOperation {
     pub source_refs: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApplySummary {
+    pub requirements_created: usize,
+    pub elements_created: usize,
+    pub relationships_created: usize,
+    pub diagrams_created: usize,
+    pub trace_links_created: usize,
+    pub applied_proposal_path: PathBuf,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateRequirementArgs {
+    id: String,
+    title: String,
+    statement: String,
+    #[serde(default = "default_status")]
+    status: String,
+    #[serde(default = "default_priority")]
+    priority: String,
+    #[serde(default)]
+    acceptance_criteria: Vec<String>,
+    #[serde(default)]
+    tags: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateModelElementArgs {
+    id: String,
+    kind: String,
+    name: String,
+    #[serde(default)]
+    description: String,
+    #[serde(default)]
+    tags: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateRelationshipArgs {
+    id: String,
+    relationship_kind: String,
+    source_id: String,
+    target_id: String,
+    #[serde(default)]
+    label: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateDiagramViewArgs {
+    id: String,
+    title: String,
+    view_kind: String,
+    model_refs: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateTraceLinkArgs {
+    id: String,
+    source_id: String,
+    target_id: String,
+    trace_kind: String,
+    #[serde(default)]
+    confidence: Option<f32>,
+}
+
 pub fn load_package(root: impl AsRef<Path>) -> Result<ModelPackage> {
     let root = root.as_ref().to_path_buf();
     Ok(ModelPackage {
@@ -152,6 +221,126 @@ pub fn load_package(root: impl AsRef<Path>) -> Result<ModelPackage> {
         trace: read_json(root.join("trace/links.json"))?,
         root,
     })
+}
+
+pub fn apply_accepted_proposal_file(
+    root: impl AsRef<Path>,
+    proposal_path: impl AsRef<Path>,
+) -> Result<ApplySummary> {
+    let root = root.as_ref();
+    let proposal_path = proposal_path.as_ref();
+    let mut package = load_package(root)?;
+    let mut proposal: Proposal = read_json(proposal_path)?;
+    validate_proposal(&proposal)
+        .with_context(|| format!("validating {}", proposal_path.display()))?;
+
+    if proposal.state != "accepted" {
+        bail!(
+            "{} must be in accepted state before application",
+            proposal.proposal_id
+        );
+    }
+
+    let mut summary = apply_proposal_operations(&mut package, &proposal)?;
+    validate_package(&package)?;
+    write_package(&package)?;
+
+    proposal.state = "applied".to_string();
+    let applied_dir = root.join("proposals/applied");
+    fs::create_dir_all(&applied_dir)
+        .with_context(|| format!("creating {}", applied_dir.display()))?;
+    let applied_path = applied_dir.join(
+        proposal_path
+            .file_name()
+            .ok_or_else(|| anyhow!("proposal path has no file name"))?,
+    );
+    write_json(&applied_path, &proposal)?;
+    summary.applied_proposal_path = applied_path;
+    Ok(summary)
+}
+
+pub fn apply_proposal_operations(
+    package: &mut ModelPackage,
+    proposal: &Proposal,
+) -> Result<ApplySummary> {
+    let mut summary = ApplySummary {
+        requirements_created: 0,
+        elements_created: 0,
+        relationships_created: 0,
+        diagrams_created: 0,
+        trace_links_created: 0,
+        applied_proposal_path: PathBuf::new(),
+    };
+
+    for operation in &proposal.operations {
+        match operation.op.as_str() {
+            "create_requirement" => {
+                let args: CreateRequirementArgs = parse_args(operation)?;
+                ensure_available_id(package, &args.id)?;
+                package.requirements.requirements.push(Requirement {
+                    id: args.id,
+                    title: args.title,
+                    statement: args.statement,
+                    status: args.status,
+                    priority: args.priority,
+                    acceptance_criteria: args.acceptance_criteria,
+                    tags: args.tags,
+                });
+                summary.requirements_created += 1;
+            }
+            "create_model_element" => {
+                let args: CreateModelElementArgs = parse_args(operation)?;
+                ensure_available_id(package, &args.id)?;
+                package.elements.elements.push(ModelElement {
+                    id: args.id,
+                    kind: args.kind,
+                    name: args.name,
+                    description: args.description,
+                    tags: args.tags,
+                });
+                summary.elements_created += 1;
+            }
+            "create_relationship" => {
+                let args: CreateRelationshipArgs = parse_args(operation)?;
+                ensure_available_id(package, &args.id)?;
+                package.relationships.relationships.push(Relationship {
+                    id: args.id,
+                    relationship_kind: args.relationship_kind,
+                    source_id: args.source_id,
+                    target_id: args.target_id,
+                    label: args.label,
+                });
+                summary.relationships_created += 1;
+            }
+            "create_diagram_view" => {
+                let args: CreateDiagramViewArgs = parse_args(operation)?;
+                ensure_available_id(package, &args.id)?;
+                package.diagrams.diagrams.push(DiagramView {
+                    id: args.id,
+                    title: args.title,
+                    view_kind: args.view_kind,
+                    model_refs: args.model_refs,
+                });
+                summary.diagrams_created += 1;
+            }
+            "create_trace_link" => {
+                let args: CreateTraceLinkArgs = parse_args(operation)?;
+                ensure_available_id(package, &args.id)?;
+                package.trace.links.push(TraceLink {
+                    id: args.id,
+                    source_id: args.source_id,
+                    target_id: args.target_id,
+                    trace_kind: args.trace_kind,
+                    confidence: args.confidence,
+                });
+                summary.trace_links_created += 1;
+            }
+            other => bail!("{} uses unsupported operation {}", operation.op_id, other),
+        }
+    }
+
+    sort_package(package);
+    Ok(summary)
 }
 
 pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
@@ -463,6 +652,84 @@ fn read_json<T: for<'de> Deserialize<'de>>(path: impl AsRef<Path>) -> Result<T> 
     serde_json::from_str(&contents).with_context(|| format!("parsing {}", path.display()))
 }
 
+fn write_package(package: &ModelPackage) -> Result<()> {
+    write_json(package.root.join("manifest.json"), &package.manifest)?;
+    write_json(
+        package.root.join("requirements/requirements.json"),
+        &package.requirements,
+    )?;
+    write_json(package.root.join("model/elements.json"), &package.elements)?;
+    write_json(
+        package.root.join("model/relationships.json"),
+        &package.relationships,
+    )?;
+    write_json(package.root.join("views/diagrams.json"), &package.diagrams)?;
+    write_json(package.root.join("trace/links.json"), &package.trace)?;
+    Ok(())
+}
+
+fn write_json(path: impl AsRef<Path>, value: &impl Serialize) -> Result<()> {
+    let path = path.as_ref();
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
+    }
+    let mut contents = serde_json::to_string_pretty(value)
+        .with_context(|| format!("serializing {}", path.display()))?;
+    contents.push('\n');
+    fs::write(path, contents).with_context(|| format!("writing {}", path.display()))
+}
+
+fn parse_args<T: for<'de> Deserialize<'de>>(operation: &ProposalOperation) -> Result<T> {
+    serde_json::from_value(operation.args.clone())
+        .with_context(|| format!("parsing args for {}", operation.op_id))
+}
+
+fn ensure_available_id(package: &ModelPackage, id: &str) -> Result<()> {
+    let mut ids = BTreeSet::new();
+    for existing in &package.requirements.requirements {
+        ids.insert(existing.id.as_str());
+    }
+    for existing in &package.elements.elements {
+        ids.insert(existing.id.as_str());
+    }
+    for existing in &package.relationships.relationships {
+        ids.insert(existing.id.as_str());
+    }
+    for existing in &package.diagrams.diagrams {
+        ids.insert(existing.id.as_str());
+    }
+    for existing in &package.trace.links {
+        ids.insert(existing.id.as_str());
+    }
+    if ids.contains(id) {
+        bail!("cannot create duplicate id {id}");
+    }
+    Ok(())
+}
+
+fn sort_package(package: &mut ModelPackage) {
+    package
+        .requirements
+        .requirements
+        .sort_by(|left, right| left.id.cmp(&right.id));
+    package
+        .elements
+        .elements
+        .sort_by(|left, right| left.id.cmp(&right.id));
+    package
+        .relationships
+        .relationships
+        .sort_by(|left, right| left.id.cmp(&right.id));
+    package
+        .diagrams
+        .diagrams
+        .sort_by(|left, right| left.id.cmp(&right.id));
+    package
+        .trace
+        .links
+        .sort_by(|left, right| left.id.cmp(&right.id));
+}
+
 fn ensure_unique<'a>(ids: &mut BTreeSet<&'a str>, id: &'a str) -> Result<()> {
     ensure_non_empty(id, "id")?;
     if !ids.insert(id) {
@@ -495,6 +762,14 @@ fn require_args(args: &Value, required: &[&str]) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn default_status() -> String {
+    "proposed".to_string()
+}
+
+fn default_priority() -> String {
+    "must".to_string()
 }
 
 fn escape_xml(input: &str) -> String {
@@ -532,5 +807,107 @@ mod tests {
         let svg = render_use_case_svg(&package, Some("diagram.first-use-case")).unwrap();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Review proposal"));
+    }
+
+    #[test]
+    fn accepted_proposal_applies_to_canonical_files() {
+        let root = copy_example_to_temp();
+        let proposal_path = root.join("proposals/open/accepted-add-export-use-case.json");
+        fs::write(
+            &proposal_path,
+            r#"{
+  "proposalId": "proposal.add-export-use-case",
+  "schemaVersion": "0.1.0",
+  "state": "accepted",
+  "createdAt": "2026-07-19T20:00:00Z",
+  "intent": "Add an export use case to the accepted model.",
+  "operations": [
+    {
+      "opId": "op.create-export-use-case",
+      "op": "create_model_element",
+      "args": {
+        "id": "usecase.export-svg",
+        "kind": "use_case",
+        "name": "Export SVG"
+      },
+      "rationale": "SVG export is part of the thin prototype acceptance path.",
+      "sourceRefs": ["source.roadmap"]
+    },
+    {
+      "opId": "op.link-architect-export",
+      "op": "create_relationship",
+      "args": {
+        "id": "rel.architect-export",
+        "relationshipKind": "association",
+        "sourceId": "actor.architect",
+        "targetId": "usecase.export-svg",
+        "label": "exports"
+      },
+      "rationale": "The existing architect actor initiates SVG export.",
+      "sourceRefs": ["source.roadmap"]
+    },
+    {
+      "opId": "op.trace-export",
+      "op": "create_trace_link",
+      "args": {
+        "id": "trace.render-export",
+        "sourceId": "req.review-ai-proposals",
+        "targetId": "usecase.export-svg",
+        "traceKind": "satisfies",
+        "confidence": 0.8
+      },
+      "rationale": "The export use case supports the rendered diagram acceptance criteria.",
+      "sourceRefs": ["source.requirements"]
+    }
+  ]
+}
+"#,
+        )
+        .unwrap();
+
+        let summary = apply_accepted_proposal_file(&root, &proposal_path).unwrap();
+        assert_eq!(summary.elements_created, 1);
+        assert_eq!(summary.relationships_created, 1);
+        assert_eq!(summary.trace_links_created, 1);
+
+        let package = load_package(&root).unwrap();
+        validate_package(&package).unwrap();
+        assert!(
+            package
+                .elements
+                .elements
+                .iter()
+                .any(|element| element.id == "usecase.export-svg")
+        );
+        let applied = fs::read_to_string(summary.applied_proposal_path).unwrap();
+        assert!(applied.contains(r#""state": "applied""#));
+    }
+
+    fn copy_example_to_temp() -> PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "redshield-apply-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        copy_dir(Path::new("examples/minimal/redshield"), &root).unwrap();
+        root
+    }
+
+    fn copy_dir(source: &Path, target: &Path) -> Result<()> {
+        fs::create_dir_all(target)?;
+        for entry in fs::read_dir(source)? {
+            let entry = entry?;
+            let source_path = entry.path();
+            let target_path = target.join(entry.file_name());
+            if source_path.is_dir() {
+                copy_dir(&source_path, &target_path)?;
+            } else {
+                fs::copy(&source_path, &target_path)?;
+            }
+        }
+        Ok(())
     }
 }

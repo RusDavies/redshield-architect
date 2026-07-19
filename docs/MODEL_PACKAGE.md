@@ -30,3 +30,11 @@ cargo run -- render-use-case examples/minimal/redshield target/redshield/first-u
 ```
 
 The rendered SVG is generated from semantic model element and relationship IDs. It is not canonical project state.
+
+Apply an accepted proposal transaction:
+
+```sh
+cargo run -- apply-proposal path/to/redshield path/to/proposal.json
+```
+
+Application requires proposal state `accepted`. The core applies typed create operations to canonical files, revalidates the package, writes deterministic JSON, and stores an applied proposal copy under `redshield/proposals/applied/`.
