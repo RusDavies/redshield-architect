@@ -29,7 +29,7 @@ Render the first use-case diagram:
 cargo run -- render-use-case examples/minimal/redshield target/redshield/first-use-case.svg
 ```
 
-The rendered SVG is generated from semantic model element and relationship IDs. It is not canonical project state.
+The renderer converts semantic model element and relationship IDs into Graphviz DOT, then renders SVG through `dot -Tsvg`. DOT and SVG are generated artifacts; the canonical source remains the JSON model package.
 
 Apply an accepted proposal transaction:
 
