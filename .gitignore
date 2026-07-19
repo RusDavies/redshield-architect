@@ -9,3 +9,4 @@ build/
 coverage/
 __pycache__/
 /target
+*.tsbuildinfo

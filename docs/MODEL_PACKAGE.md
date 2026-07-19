@@ -31,6 +31,8 @@ cargo run -- render-use-case examples/minimal/redshield target/redshield/first-u
 
 The renderer converts semantic model element and relationship IDs into Graphviz DOT, then renders SVG through `dot -Tsvg`. DOT and SVG are generated artifacts; the canonical source remains the JSON model package.
 
+The `web/` spike loads the same example model into an interactive React Flow canvas and uses ELK for auto-layout. It is the first GUI interaction candidate for direct manipulation: move, align, distribute, connect, inspect, and persist view metadata.
+
 Apply an accepted proposal transaction:
 
 ```sh
