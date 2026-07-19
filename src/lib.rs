@@ -113,6 +113,8 @@ pub struct DiagramNodeLayout {
     pub layout_state: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label_position: Option<DiagramPoint>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub style: Option<DiagramStyle>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -124,6 +126,8 @@ pub struct DiagramConnectorLayout {
     pub route_hint: Option<DiagramRouteHint>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label_position: Option<DiagramPoint>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub style: Option<DiagramStyle>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -148,6 +152,19 @@ pub struct DiagramBounds {
 pub struct DiagramPoint {
     pub x: f64,
     pub y: f64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagramStyle {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fill_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stroke_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_style: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -210,6 +227,7 @@ pub struct ApplySummary {
     pub relationships_created: usize,
     pub diagrams_created: usize,
     pub trace_links_created: usize,
+    pub diagram_layout_operations_applied: usize,
     pub applied_proposal_path: PathBuf,
 }
 
@@ -274,6 +292,78 @@ struct CreateTraceLinkArgs {
     confidence: Option<f32>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MoveDiagramNodeArgs {
+    diagram_id: String,
+    model_ref: String,
+    x: f64,
+    y: f64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ResizeDiagramNodeArgs {
+    diagram_id: String,
+    model_ref: String,
+    width: f64,
+    height: f64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AlignDiagramNodesArgs {
+    diagram_id: String,
+    model_refs: Vec<String>,
+    alignment: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DistributeDiagramNodesArgs {
+    diagram_id: String,
+    model_refs: Vec<String>,
+    axis: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ConnectDiagramRelationshipArgs {
+    diagram_id: String,
+    relationship_ref: String,
+    #[serde(default)]
+    route_hint: Option<DiagramRouteHint>,
+    #[serde(default)]
+    label_position: Option<DiagramPoint>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RouteDiagramConnectorArgs {
+    diagram_id: String,
+    relationship_ref: String,
+    route_hint: DiagramRouteHint,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StyleDiagramObjectArgs {
+    diagram_id: String,
+    object_kind: String,
+    object_ref: String,
+    style: DiagramStyle,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ApplyDiagramAutoLayoutArgs {
+    diagram_id: String,
+    layout_engine: String,
+    nodes: Vec<DiagramNodeLayout>,
+    #[serde(default)]
+    connectors: Vec<DiagramConnectorLayout>,
+}
+
 pub fn load_package(root: impl AsRef<Path>) -> Result<ModelPackage> {
     let root = root.as_ref().to_path_buf();
     Ok(ModelPackage {
@@ -333,6 +423,7 @@ pub fn apply_proposal_operations(
         relationships_created: 0,
         diagrams_created: 0,
         trace_links_created: 0,
+        diagram_layout_operations_applied: 0,
         applied_proposal_path: PathBuf::new(),
     };
 
@@ -399,6 +490,46 @@ pub fn apply_proposal_operations(
                     confidence: args.confidence,
                 });
                 summary.trace_links_created += 1;
+            }
+            "move_diagram_node" => {
+                let args: MoveDiagramNodeArgs = parse_args(operation)?;
+                move_diagram_node(package, args)?;
+                summary.diagram_layout_operations_applied += 1;
+            }
+            "resize_diagram_node" => {
+                let args: ResizeDiagramNodeArgs = parse_args(operation)?;
+                resize_diagram_node(package, args)?;
+                summary.diagram_layout_operations_applied += 1;
+            }
+            "align_diagram_nodes" => {
+                let args: AlignDiagramNodesArgs = parse_args(operation)?;
+                align_diagram_nodes(package, args)?;
+                summary.diagram_layout_operations_applied += 1;
+            }
+            "distribute_diagram_nodes" => {
+                let args: DistributeDiagramNodesArgs = parse_args(operation)?;
+                distribute_diagram_nodes(package, args)?;
+                summary.diagram_layout_operations_applied += 1;
+            }
+            "connect_diagram_relationship" => {
+                let args: ConnectDiagramRelationshipArgs = parse_args(operation)?;
+                connect_diagram_relationship(package, args)?;
+                summary.diagram_layout_operations_applied += 1;
+            }
+            "route_diagram_connector" => {
+                let args: RouteDiagramConnectorArgs = parse_args(operation)?;
+                route_diagram_connector(package, args)?;
+                summary.diagram_layout_operations_applied += 1;
+            }
+            "style_diagram_object" => {
+                let args: StyleDiagramObjectArgs = parse_args(operation)?;
+                style_diagram_object(package, args)?;
+                summary.diagram_layout_operations_applied += 1;
+            }
+            "apply_diagram_auto_layout" => {
+                let args: ApplyDiagramAutoLayoutArgs = parse_args(operation)?;
+                apply_diagram_auto_layout(package, args)?;
+                summary.diagram_layout_operations_applied += 1;
             }
             other => bail!("{} uses unsupported operation {}", operation.op_id, other),
         }
@@ -471,11 +602,11 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
             );
         }
     }
-    let relationship_ids: BTreeSet<&str> = package
+    let relationships_by_id: BTreeMap<&str, &Relationship> = package
         .relationships
         .relationships
         .iter()
-        .map(|relationship| relationship.id.as_str())
+        .map(|relationship| (relationship.id.as_str(), relationship))
         .collect();
 
     for diagram in &package.diagrams.diagrams {
@@ -497,7 +628,7 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
             }
         }
         if let Some(layout) = &diagram.layout {
-            validate_diagram_layout(diagram, layout, &element_kinds, &relationship_ids)?;
+            validate_diagram_layout(diagram, layout, &element_kinds, &relationships_by_id)?;
         }
     }
 
@@ -518,7 +649,7 @@ fn validate_diagram_layout(
     diagram: &DiagramView,
     layout: &DiagramLayout,
     element_kinds: &BTreeMap<&str, &str>,
-    relationship_ids: &BTreeSet<&str>,
+    relationships_by_id: &BTreeMap<&str, &Relationship>,
 ) -> Result<()> {
     if layout.coordinate_system != "canvas" {
         bail!(
@@ -558,14 +689,27 @@ fn validate_diagram_layout(
         }
         validate_bounds(&diagram.id, &node.model_ref, &node.bounds)?;
         validate_layout_state(&diagram.id, &node.model_ref, &node.layout_state)?;
+        if let Some(style) = &node.style {
+            validate_diagram_style(&diagram.id, &node.model_ref, style)?;
+        }
     }
 
     let mut connector_refs = BTreeSet::new();
     for connector in &layout.connectors {
         ensure_unique(&mut connector_refs, &connector.relationship_ref)?;
-        if !relationship_ids.contains(connector.relationship_ref.as_str()) {
+        let Some(relationship) = relationships_by_id.get(connector.relationship_ref.as_str())
+        else {
             bail!(
                 "{} layout references missing relationship {}",
+                diagram.id,
+                connector.relationship_ref
+            );
+        };
+        if !diagram_refs.contains(relationship.source_id.as_str())
+            || !diagram_refs.contains(relationship.target_id.as_str())
+        {
+            bail!(
+                "{} connector {} references relationship endpoints outside the diagram view",
                 diagram.id,
                 connector.relationship_ref
             );
@@ -588,9 +732,44 @@ fn validate_diagram_layout(
                 );
             }
         }
+        if let Some(style) = &connector.style {
+            validate_diagram_style(&diagram.id, &connector.relationship_ref, style)?;
+        }
     }
 
     Ok(())
+}
+
+fn validate_diagram_style(diagram_id: &str, object_ref: &str, style: &DiagramStyle) -> Result<()> {
+    for color in [
+        style.fill_color.as_deref(),
+        style.stroke_color.as_deref(),
+        style.text_color.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        if !is_hex_color(color) {
+            bail!("{diagram_id} layout object {object_ref} has invalid color {color}");
+        }
+    }
+    if let Some(line_style) = &style.line_style {
+        if !matches!(line_style.as_str(), "solid" | "dashed" | "dotted") {
+            bail!(
+                "{diagram_id} layout object {object_ref} has unsupported line style {line_style}"
+            );
+        }
+    }
+    Ok(())
+}
+
+fn is_hex_color(value: &str) -> bool {
+    value.len() == 7
+        && value.starts_with('#')
+        && value
+            .chars()
+            .skip(1)
+            .all(|character| character.is_ascii_hexdigit())
 }
 
 fn validate_bounds(diagram_id: &str, model_ref: &str, bounds: &DiagramBounds) -> Result<()> {
@@ -607,6 +786,366 @@ fn validate_layout_state(diagram_id: &str, object_ref: &str, layout_state: &str)
         );
     }
     Ok(())
+}
+
+fn move_diagram_node(package: &mut ModelPackage, args: MoveDiagramNodeArgs) -> Result<()> {
+    let diagram = find_diagram_mut(package, &args.diagram_id)?;
+    let node = upsert_node_layout(diagram, &args.model_ref)?;
+    node.bounds.x = args.x;
+    node.bounds.y = args.y;
+    node.layout_state = "manual".to_string();
+    mark_layout_manual(diagram)?;
+    Ok(())
+}
+
+fn resize_diagram_node(package: &mut ModelPackage, args: ResizeDiagramNodeArgs) -> Result<()> {
+    if args.width <= 0.0 || args.height <= 0.0 {
+        bail!(
+            "{} layout node {} must have positive bounds",
+            args.diagram_id,
+            args.model_ref
+        );
+    }
+    let diagram = find_diagram_mut(package, &args.diagram_id)?;
+    let node = upsert_node_layout(diagram, &args.model_ref)?;
+    node.bounds.width = args.width;
+    node.bounds.height = args.height;
+    node.layout_state = "manual".to_string();
+    mark_layout_manual(diagram)?;
+    Ok(())
+}
+
+fn align_diagram_nodes(package: &mut ModelPackage, args: AlignDiagramNodesArgs) -> Result<()> {
+    if args.model_refs.len() < 2 {
+        bail!("align_diagram_nodes requires at least two modelRefs");
+    }
+    let diagram = find_diagram_mut(package, &args.diagram_id)?;
+    ensure_node_layouts(diagram, &args.model_refs)?;
+    let bounds = node_bounds(diagram, &args.model_refs)?;
+    let target = match args.alignment.as_str() {
+        "left" => bounds
+            .iter()
+            .map(|bounds| bounds.x)
+            .fold(f64::INFINITY, f64::min),
+        "right" => bounds
+            .iter()
+            .map(|bounds| bounds.x + bounds.width)
+            .fold(f64::NEG_INFINITY, f64::max),
+        "top" => bounds
+            .iter()
+            .map(|bounds| bounds.y)
+            .fold(f64::INFINITY, f64::min),
+        "bottom" => bounds
+            .iter()
+            .map(|bounds| bounds.y + bounds.height)
+            .fold(f64::NEG_INFINITY, f64::max),
+        "hcenter" => {
+            let min = bounds
+                .iter()
+                .map(|bounds| bounds.x)
+                .fold(f64::INFINITY, f64::min);
+            let max = bounds
+                .iter()
+                .map(|bounds| bounds.x + bounds.width)
+                .fold(f64::NEG_INFINITY, f64::max);
+            (min + max) / 2.0
+        }
+        "vcenter" => {
+            let min = bounds
+                .iter()
+                .map(|bounds| bounds.y)
+                .fold(f64::INFINITY, f64::min);
+            let max = bounds
+                .iter()
+                .map(|bounds| bounds.y + bounds.height)
+                .fold(f64::NEG_INFINITY, f64::max);
+            (min + max) / 2.0
+        }
+        other => bail!("unsupported diagram node alignment {other}"),
+    };
+
+    for model_ref in &args.model_refs {
+        let node = find_node_layout_mut(diagram, model_ref)?;
+        match args.alignment.as_str() {
+            "left" => node.bounds.x = target,
+            "right" => node.bounds.x = target - node.bounds.width,
+            "top" => node.bounds.y = target,
+            "bottom" => node.bounds.y = target - node.bounds.height,
+            "hcenter" => node.bounds.x = target - node.bounds.width / 2.0,
+            "vcenter" => node.bounds.y = target - node.bounds.height / 2.0,
+            _ => unreachable!(),
+        }
+        node.layout_state = "manual".to_string();
+    }
+    mark_layout_manual(diagram)?;
+    Ok(())
+}
+
+fn distribute_diagram_nodes(
+    package: &mut ModelPackage,
+    args: DistributeDiagramNodesArgs,
+) -> Result<()> {
+    if args.model_refs.len() < 3 {
+        bail!("distribute_diagram_nodes requires at least three modelRefs");
+    }
+    if !matches!(args.axis.as_str(), "x" | "y") {
+        bail!("unsupported diagram distribution axis {}", args.axis);
+    }
+    let diagram = find_diagram_mut(package, &args.diagram_id)?;
+    ensure_node_layouts(diagram, &args.model_refs)?;
+    let mut ordered: Vec<(String, f64)> = args
+        .model_refs
+        .iter()
+        .map(|model_ref| {
+            let node = find_node_layout(diagram, model_ref)?;
+            let value = if args.axis == "x" {
+                node.bounds.x
+            } else {
+                node.bounds.y
+            };
+            Ok((model_ref.clone(), value))
+        })
+        .collect::<Result<_>>()?;
+    ordered.sort_by(|left, right| left.1.total_cmp(&right.1));
+    let first = ordered.first().map(|(_, value)| *value).unwrap_or(0.0);
+    let last = ordered.last().map(|(_, value)| *value).unwrap_or(first);
+    let step = (last - first) / (ordered.len() - 1) as f64;
+
+    for (index, (model_ref, _)) in ordered.iter().enumerate() {
+        let node = find_node_layout_mut(diagram, model_ref)?;
+        if args.axis == "x" {
+            node.bounds.x = first + index as f64 * step;
+        } else {
+            node.bounds.y = first + index as f64 * step;
+        }
+        node.layout_state = "manual".to_string();
+    }
+    mark_layout_manual(diagram)?;
+    Ok(())
+}
+
+fn connect_diagram_relationship(
+    package: &mut ModelPackage,
+    args: ConnectDiagramRelationshipArgs,
+) -> Result<()> {
+    ensure_relationship_exists(package, &args.relationship_ref)?;
+    let diagram = find_diagram_mut(package, &args.diagram_id)?;
+    let connector = upsert_connector_layout(diagram, &args.relationship_ref)?;
+    connector.route_hint = args.route_hint;
+    connector.label_position = args.label_position;
+    connector.layout_state = "manual".to_string();
+    mark_layout_manual(diagram)?;
+    Ok(())
+}
+
+fn route_diagram_connector(
+    package: &mut ModelPackage,
+    args: RouteDiagramConnectorArgs,
+) -> Result<()> {
+    ensure_relationship_exists(package, &args.relationship_ref)?;
+    let diagram = find_diagram_mut(package, &args.diagram_id)?;
+    let connector = upsert_connector_layout(diagram, &args.relationship_ref)?;
+    connector.route_hint = Some(args.route_hint);
+    connector.layout_state = "manual".to_string();
+    mark_layout_manual(diagram)?;
+    Ok(())
+}
+
+fn style_diagram_object(package: &mut ModelPackage, args: StyleDiagramObjectArgs) -> Result<()> {
+    match args.object_kind.as_str() {
+        "node" => {
+            let diagram = find_diagram_mut(package, &args.diagram_id)?;
+            let node = upsert_node_layout(diagram, &args.object_ref)?;
+            node.style = Some(args.style);
+            node.layout_state = "manual".to_string();
+        }
+        "connector" => {
+            ensure_relationship_exists(package, &args.object_ref)?;
+            let diagram = find_diagram_mut(package, &args.diagram_id)?;
+            let connector = upsert_connector_layout(diagram, &args.object_ref)?;
+            connector.style = Some(args.style);
+            connector.layout_state = "manual".to_string();
+        }
+        other => bail!("unsupported diagram style object kind {other}"),
+    }
+    let diagram = find_diagram_mut(package, &args.diagram_id)?;
+    mark_layout_manual(diagram)?;
+    Ok(())
+}
+
+fn apply_diagram_auto_layout(
+    package: &mut ModelPackage,
+    args: ApplyDiagramAutoLayoutArgs,
+) -> Result<()> {
+    let diagram = find_diagram_mut(package, &args.diagram_id)?;
+    let layout = ensure_layout_mut(diagram);
+    layout.coordinate_system = "canvas".to_string();
+    layout.layout_engine = args.layout_engine;
+    layout.layout_state = "generated".to_string();
+    layout.nodes = args.nodes;
+    if !args.connectors.is_empty() {
+        layout.connectors = args.connectors;
+    }
+    for node in &mut layout.nodes {
+        node.layout_state = "generated".to_string();
+    }
+    for connector in &mut layout.connectors {
+        connector.layout_state = "generated".to_string();
+    }
+    Ok(())
+}
+
+fn find_diagram_mut<'a>(
+    package: &'a mut ModelPackage,
+    diagram_id: &str,
+) -> Result<&'a mut DiagramView> {
+    package
+        .diagrams
+        .diagrams
+        .iter_mut()
+        .find(|diagram| diagram.id == diagram_id)
+        .ok_or_else(|| anyhow!("missing diagram {diagram_id}"))
+}
+
+fn ensure_layout_mut(diagram: &mut DiagramView) -> &mut DiagramLayout {
+    diagram.layout.get_or_insert_with(|| DiagramLayout {
+        coordinate_system: "canvas".to_string(),
+        layout_engine: String::new(),
+        layout_state: "manual".to_string(),
+        nodes: Vec::new(),
+        connectors: Vec::new(),
+    })
+}
+
+fn upsert_node_layout<'a>(
+    diagram: &'a mut DiagramView,
+    model_ref: &str,
+) -> Result<&'a mut DiagramNodeLayout> {
+    if !diagram
+        .model_refs
+        .iter()
+        .any(|reference| reference == model_ref)
+    {
+        bail!("{} does not include modelRef {model_ref}", diagram.id);
+    }
+    let layout = ensure_layout_mut(diagram);
+    if let Some(index) = layout
+        .nodes
+        .iter()
+        .position(|node| node.model_ref == model_ref)
+    {
+        return Ok(&mut layout.nodes[index]);
+    }
+    layout.nodes.push(DiagramNodeLayout {
+        model_ref: model_ref.to_string(),
+        bounds: default_node_bounds(),
+        layout_state: "manual".to_string(),
+        label_position: None,
+        style: None,
+    });
+    Ok(layout
+        .nodes
+        .last_mut()
+        .expect("node layout was just inserted"))
+}
+
+fn upsert_connector_layout<'a>(
+    diagram: &'a mut DiagramView,
+    relationship_ref: &str,
+) -> Result<&'a mut DiagramConnectorLayout> {
+    let layout = ensure_layout_mut(diagram);
+    if let Some(index) = layout
+        .connectors
+        .iter()
+        .position(|connector| connector.relationship_ref == relationship_ref)
+    {
+        return Ok(&mut layout.connectors[index]);
+    }
+    layout.connectors.push(DiagramConnectorLayout {
+        relationship_ref: relationship_ref.to_string(),
+        layout_state: "manual".to_string(),
+        route_hint: None,
+        label_position: None,
+        style: None,
+    });
+    Ok(layout
+        .connectors
+        .last_mut()
+        .expect("connector layout was just inserted"))
+}
+
+fn ensure_node_layouts(diagram: &mut DiagramView, model_refs: &[String]) -> Result<()> {
+    for model_ref in model_refs {
+        upsert_node_layout(diagram, model_ref)?;
+    }
+    Ok(())
+}
+
+fn find_node_layout<'a>(
+    diagram: &'a DiagramView,
+    model_ref: &str,
+) -> Result<&'a DiagramNodeLayout> {
+    diagram
+        .layout
+        .as_ref()
+        .and_then(|layout| layout.nodes.iter().find(|node| node.model_ref == model_ref))
+        .ok_or_else(|| anyhow!("{} is missing layout node {model_ref}", diagram.id))
+}
+
+fn find_node_layout_mut<'a>(
+    diagram: &'a mut DiagramView,
+    model_ref: &str,
+) -> Result<&'a mut DiagramNodeLayout> {
+    let diagram_id = diagram.id.clone();
+    diagram
+        .layout
+        .as_mut()
+        .and_then(|layout| {
+            layout
+                .nodes
+                .iter_mut()
+                .find(|node| node.model_ref == model_ref)
+        })
+        .ok_or_else(|| anyhow!("{diagram_id} is missing layout node {model_ref}"))
+}
+
+fn node_bounds(diagram: &DiagramView, model_refs: &[String]) -> Result<Vec<DiagramBounds>> {
+    model_refs
+        .iter()
+        .map(|model_ref| Ok(find_node_layout(diagram, model_ref)?.bounds.clone()))
+        .collect()
+}
+
+fn mark_layout_manual(diagram: &mut DiagramView) -> Result<()> {
+    let layout = diagram
+        .layout
+        .as_mut()
+        .ok_or_else(|| anyhow!("{} is missing layout", diagram.id))?;
+    layout.coordinate_system = "canvas".to_string();
+    layout.layout_state = "mixed".to_string();
+    Ok(())
+}
+
+fn ensure_relationship_exists(package: &ModelPackage, relationship_ref: &str) -> Result<()> {
+    if package
+        .relationships
+        .relationships
+        .iter()
+        .any(|relationship| relationship.id == relationship_ref)
+    {
+        Ok(())
+    } else {
+        bail!("missing relationship {relationship_ref}")
+    }
+}
+
+fn default_node_bounds() -> DiagramBounds {
+    DiagramBounds {
+        x: 0.0,
+        y: 0.0,
+        width: 210.0,
+        height: 86.0,
+    }
 }
 
 pub fn validate_proposals(root: impl AsRef<Path>) -> Result<Vec<String>> {
@@ -667,6 +1206,33 @@ pub fn validate_proposal(proposal: &Proposal) -> Result<()> {
                 &operation.args,
                 &["id", "sourceId", "targetId", "traceKind"],
             )?,
+            "move_diagram_node" => {
+                require_args(&operation.args, &["diagramId", "modelRef", "x", "y"])?
+            }
+            "resize_diagram_node" => require_args(
+                &operation.args,
+                &["diagramId", "modelRef", "width", "height"],
+            )?,
+            "align_diagram_nodes" => {
+                require_args(&operation.args, &["diagramId", "modelRefs", "alignment"])?
+            }
+            "distribute_diagram_nodes" => {
+                require_args(&operation.args, &["diagramId", "modelRefs", "axis"])?
+            }
+            "connect_diagram_relationship" => {
+                require_args(&operation.args, &["diagramId", "relationshipRef"])?
+            }
+            "route_diagram_connector" => require_args(
+                &operation.args,
+                &["diagramId", "relationshipRef", "routeHint"],
+            )?,
+            "style_diagram_object" => require_args(
+                &operation.args,
+                &["diagramId", "objectKind", "objectRef", "style"],
+            )?,
+            "apply_diagram_auto_layout" => {
+                require_args(&operation.args, &["diagramId", "layoutEngine", "nodes"])?
+            }
             other => bail!("{} uses unsupported operation {}", operation.op_id, other),
         }
     }
@@ -1092,6 +1658,211 @@ mod tests {
         );
         let applied = fs::read_to_string(summary.applied_proposal_path).unwrap();
         assert!(applied.contains(r#""state": "applied""#));
+    }
+
+    #[test]
+    fn accepted_proposal_applies_diagram_layout_operations() {
+        let root = copy_example_to_temp();
+        let proposal_path = root.join("proposals/open/accepted-layout-ops.json");
+        fs::write(
+            &proposal_path,
+            r##"{
+  "proposalId": "proposal.layout-ops",
+  "schemaVersion": "0.1.0",
+  "state": "accepted",
+  "createdAt": "2026-07-19T23:40:00Z",
+  "intent": "Apply direct manipulation layout changes.",
+  "operations": [
+    {
+      "opId": "op.move-actor",
+      "op": "move_diagram_node",
+      "args": {
+        "diagramId": "diagram.first-use-case",
+        "modelRef": "actor.architect",
+        "x": 120,
+        "y": 144
+      },
+      "rationale": "The actor was manually positioned on the canvas."
+    },
+    {
+      "opId": "op.resize-actor",
+      "op": "resize_diagram_node",
+      "args": {
+        "diagramId": "diagram.first-use-case",
+        "modelRef": "actor.architect",
+        "width": 240,
+        "height": 100
+      },
+      "rationale": "The actor node was resized to fit the label."
+    },
+    {
+      "opId": "op.align-top",
+      "op": "align_diagram_nodes",
+      "args": {
+        "diagramId": "diagram.first-use-case",
+        "modelRefs": ["actor.architect", "usecase.review-proposal"],
+        "alignment": "top"
+      },
+      "rationale": "The actor and proposal use case were aligned."
+    },
+    {
+      "opId": "op.distribute-y",
+      "op": "distribute_diagram_nodes",
+      "args": {
+        "diagramId": "diagram.first-use-case",
+        "modelRefs": ["actor.architect", "usecase.review-proposal", "usecase.render-diagram"],
+        "axis": "y"
+      },
+      "rationale": "The visible use-case objects were distributed vertically."
+    },
+    {
+      "opId": "op.connect-review",
+      "op": "connect_diagram_relationship",
+      "args": {
+        "diagramId": "diagram.first-use-case",
+        "relationshipRef": "rel.architect-review",
+        "labelPosition": { "x": 360, "y": 128 }
+      },
+      "rationale": "The existing semantic relationship was made visible in the diagram view."
+    },
+    {
+      "opId": "op.route-render",
+      "op": "route_diagram_connector",
+      "args": {
+        "diagramId": "diagram.first-use-case",
+        "relationshipRef": "rel.architect-render",
+        "routeHint": {
+          "kind": "orthogonal",
+          "points": [
+            { "x": 300, "y": 194 },
+            { "x": 420, "y": 244 }
+          ]
+        }
+      },
+      "rationale": "The render connector was manually routed."
+    },
+    {
+      "opId": "op.style-actor",
+      "op": "style_diagram_object",
+      "args": {
+        "diagramId": "diagram.first-use-case",
+        "objectKind": "node",
+        "objectRef": "actor.architect",
+        "style": {
+          "fillColor": "#ffffff",
+          "strokeColor": "#0f766e",
+          "textColor": "#134e4a"
+        }
+      },
+      "rationale": "The actor node was styled as a manual view concern."
+    },
+    {
+      "opId": "op.style-render-connector",
+      "op": "style_diagram_object",
+      "args": {
+        "diagramId": "diagram.first-use-case",
+        "objectKind": "connector",
+        "objectRef": "rel.architect-render",
+        "style": {
+          "strokeColor": "#475569",
+          "lineStyle": "dashed"
+        }
+      },
+      "rationale": "The render connector was styled as a manual view concern."
+    }
+  ]
+}
+"##,
+        )
+        .unwrap();
+
+        let summary = apply_accepted_proposal_file(&root, &proposal_path).unwrap();
+        assert_eq!(summary.diagram_layout_operations_applied, 8);
+
+        let package = load_package(&root).unwrap();
+        validate_package(&package).unwrap();
+        let layout = package.diagrams.diagrams[0].layout.as_ref().unwrap();
+        assert_eq!(layout.layout_state, "mixed");
+        let actor = layout
+            .nodes
+            .iter()
+            .find(|node| node.model_ref == "actor.architect")
+            .unwrap();
+        assert_eq!(actor.bounds.width, 240.0);
+        assert_eq!(actor.layout_state, "manual");
+        assert_eq!(
+            actor.style.as_ref().unwrap().fill_color.as_deref(),
+            Some("#ffffff")
+        );
+        let connector = layout
+            .connectors
+            .iter()
+            .find(|connector| connector.relationship_ref == "rel.architect-render")
+            .unwrap();
+        assert_eq!(connector.route_hint.as_ref().unwrap().kind, "orthogonal");
+        assert_eq!(
+            connector.style.as_ref().unwrap().line_style.as_deref(),
+            Some("dashed")
+        );
+    }
+
+    #[test]
+    fn accepted_proposal_applies_generated_auto_layout() {
+        let root = copy_example_to_temp();
+        let proposal_path = root.join("proposals/open/accepted-auto-layout.json");
+        fs::write(
+            &proposal_path,
+            r#"{
+  "proposalId": "proposal.auto-layout",
+  "schemaVersion": "0.1.0",
+  "state": "accepted",
+  "createdAt": "2026-07-19T23:42:00Z",
+  "intent": "Replace view metadata with a generated layout.",
+  "operations": [
+    {
+      "opId": "op.apply-elk",
+      "op": "apply_diagram_auto_layout",
+      "args": {
+        "diagramId": "diagram.first-use-case",
+        "layoutEngine": "elk.layered",
+        "nodes": [
+          {
+            "modelRef": "actor.architect",
+            "bounds": { "x": 10, "y": 20, "width": 210, "height": 86 },
+            "layoutState": "manual"
+          },
+          {
+            "modelRef": "usecase.review-proposal",
+            "bounds": { "x": 320, "y": 20, "width": 210, "height": 86 },
+            "layoutState": "manual"
+          },
+          {
+            "modelRef": "usecase.render-diagram",
+            "bounds": { "x": 320, "y": 150, "width": 210, "height": 86 },
+            "layoutState": "manual"
+          }
+        ]
+      },
+      "rationale": "The layout engine generated fresh canvas bounds."
+    }
+  ]
+}
+"#,
+        )
+        .unwrap();
+
+        let summary = apply_accepted_proposal_file(&root, &proposal_path).unwrap();
+        assert_eq!(summary.diagram_layout_operations_applied, 1);
+        let package = load_package(&root).unwrap();
+        let layout = package.diagrams.diagrams[0].layout.as_ref().unwrap();
+        assert_eq!(layout.layout_engine, "elk.layered");
+        assert_eq!(layout.layout_state, "generated");
+        assert!(
+            layout
+                .nodes
+                .iter()
+                .all(|node| node.layout_state == "generated")
+        );
     }
 
     #[test]

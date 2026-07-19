@@ -21,7 +21,21 @@
           "opId": { "type": "string", "minLength": 1 },
           "op": {
             "type": "string",
-            "enum": ["create_requirement", "create_model_element", "create_relationship", "create_diagram_view", "create_trace_link"]
+            "enum": [
+              "create_requirement",
+              "create_model_element",
+              "create_relationship",
+              "create_diagram_view",
+              "create_trace_link",
+              "move_diagram_node",
+              "resize_diagram_node",
+              "align_diagram_nodes",
+              "distribute_diagram_nodes",
+              "connect_diagram_relationship",
+              "route_diagram_connector",
+              "style_diagram_object",
+              "apply_diagram_auto_layout"
+            ]
           },
           "args": { "type": "object" },
           "rationale": { "type": "string", "minLength": 1 },

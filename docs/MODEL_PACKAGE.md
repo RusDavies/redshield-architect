@@ -40,8 +40,24 @@ Diagram views may now include canonical view metadata under `layout`. This metad
 - `layoutState`: `generated`, `manual`, or `mixed`
 - `nodes`: model element references with persisted bounds, per-node layout state, and optional label positions
 - `connectors`: relationship references with per-connector layout state, optional route hints, and optional label positions
+- `style`: optional node or connector presentation metadata such as fill, stroke, text color, and line style
 
 The Rust validator checks that layout nodes reference elements in the diagram, connector layout references point to real relationships, bounds are positive, and route/layout states are supported. Canvas edits should still become typed operations before they mutate these files durably.
+
+## View/Layout Operations
+
+Accepted proposal transactions can now apply typed view/layout operations to canonical diagram metadata:
+
+- `move_diagram_node`
+- `resize_diagram_node`
+- `align_diagram_nodes`
+- `distribute_diagram_nodes`
+- `connect_diagram_relationship`
+- `route_diagram_connector`
+- `style_diagram_object`
+- `apply_diagram_auto_layout`
+
+These operations update only `views/diagrams.json`. They do not create requirements, model elements, trace links, or semantic relationships. Semantic relationship creation still uses `create_relationship`; `connect_diagram_relationship` only makes an existing relationship visible/configured in a diagram view.
 
 Apply an accepted proposal transaction:
 
