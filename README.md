@@ -27,6 +27,7 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 ## Repository Map
 
 - `src/` - first Rust model/validation/rendering core and CLI
+- `web/` - React Flow + ELK workbench interaction spike
 - `schemas/` - prototype JSON Schemas for the `redshield/` model package and proposal transactions
 - `examples/minimal/redshield/` - smallest model package used by tests and the CLI
 - `docs/PRODUCT_BRIEF.md` - product framing and audience

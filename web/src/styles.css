@@ -1,0 +1,260 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #f8fafc;
+  color: #0f172a;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
+  font: inherit;
+}
+
+button:hover:not(:disabled),
+button.is-active {
+  border-color: #0f766e;
+  color: #134e4a;
+}
+
+button:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.workbench-shell {
+  display: grid;
+  grid-template-columns: minmax(220px, 18vw) minmax(520px, 1fr) minmax(280px, 23vw);
+  height: 100%;
+  min-height: 620px;
+}
+
+.sidebar,
+.inspector {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  overflow: auto;
+  padding: 14px;
+}
+
+.sidebar {
+  border-right: 1px solid #cbd5e1;
+}
+
+.inspector {
+  border-left: 1px solid #cbd5e1;
+}
+
+.brand {
+  border-bottom: 1px solid #e2e8f0;
+  display: grid;
+  gap: 4px;
+  padding-bottom: 14px;
+}
+
+.brand span,
+section h2 {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.brand strong {
+  font-size: 18px;
+}
+
+section {
+  margin-top: 18px;
+}
+
+.object-list {
+  display: grid;
+  gap: 8px;
+}
+
+.object-list button {
+  border-radius: 6px;
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  text-align: left;
+}
+
+.object-list small,
+.trace-list span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.trace-list {
+  display: grid;
+  gap: 10px;
+}
+
+.trace-list div {
+  border-left: 3px solid #0f766e;
+  display: grid;
+  gap: 3px;
+  padding-left: 8px;
+}
+
+.canvas-region {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-width: 0;
+}
+
+.toolbar {
+  align-items: center;
+  background: #f1f5f9;
+  border-bottom: 1px solid #cbd5e1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 48px;
+  padding: 8px 10px;
+}
+
+.toolbar button {
+  border-radius: 6px;
+  min-height: 32px;
+  padding: 6px 9px;
+}
+
+.divider {
+  background: #cbd5e1;
+  height: 26px;
+  margin: 0 3px;
+  width: 1px;
+}
+
+.canvas-frame {
+  min-height: 0;
+}
+
+.operation-log {
+  align-items: center;
+  background: #0f172a;
+  display: flex;
+  gap: 10px;
+  min-height: 38px;
+  overflow: auto;
+  padding: 8px 10px;
+}
+
+.operation-log code {
+  color: #d9f99d;
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.diagram-node {
+  border: 2px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+  display: grid;
+  gap: 4px;
+  min-height: 78px;
+  padding: 10px 12px;
+  width: 210px;
+}
+
+.diagram-node--actor {
+  background: #ccfbf1;
+  border-color: #0f766e;
+}
+
+.diagram-node--use_case {
+  background: #ecfeff;
+  border-color: #0369a1;
+  border-radius: 999px;
+  text-align: center;
+}
+
+.diagram-node.is-selected {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.diagram-node__kind {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.diagram-node__label {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.diagram-node__id {
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.inspector-list {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 8px 10px;
+}
+
+.inspector-list dt {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.inspector-list dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.inspector pre {
+  background: #0f172a;
+  border-radius: 6px;
+  color: #d9f99d;
+  font-size: 11px;
+  max-height: 360px;
+  overflow: auto;
+  padding: 10px;
+}
+
+.react-flow__edge-path {
+  stroke: #475569;
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #f59e0b;
+  stroke-width: 3;
+}
+
+@media (max-width: 980px) {
+  .workbench-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 70vh auto;
+  }
+
+  .sidebar,
+  .inspector {
+    border: 0;
+    max-height: 36vh;
+  }
+}
