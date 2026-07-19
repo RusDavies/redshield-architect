@@ -40,7 +40,7 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 
 ## Status
 
-This repository now contains the first thin prototype core: a Rust CLI that loads a text-backed `redshield/` model package, validates canonical objects and open proposal transactions, and renders one semantic use-case diagram to SVG.
+This repository now contains the first thin prototype core: a Rust CLI that loads a text-backed `redshield/` model package, validates canonical objects, validates diagram view metadata, validates open proposal transactions, and renders one semantic use-case diagram to SVG. The `web/` spike reads the same example package and uses persisted view metadata as the starting point for direct manipulation.
 
 ## License
 

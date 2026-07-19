@@ -74,20 +74,80 @@ pub struct Relationship {
     pub label: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DiagramFile {
     pub schema_version: String,
     pub diagrams: Vec<DiagramView>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DiagramView {
     pub id: String,
     pub title: String,
     pub view_kind: String,
     pub model_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<DiagramLayout>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagramLayout {
+    pub coordinate_system: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub layout_engine: String,
+    pub layout_state: String,
+    #[serde(default)]
+    pub nodes: Vec<DiagramNodeLayout>,
+    #[serde(default)]
+    pub connectors: Vec<DiagramConnectorLayout>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagramNodeLayout {
+    pub model_ref: String,
+    pub bounds: DiagramBounds,
+    pub layout_state: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label_position: Option<DiagramPoint>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagramConnectorLayout {
+    pub relationship_ref: String,
+    pub layout_state: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route_hint: Option<DiagramRouteHint>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label_position: Option<DiagramPoint>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagramRouteHint {
+    pub kind: String,
+    #[serde(default)]
+    pub points: Vec<DiagramPoint>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagramBounds {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagramPoint {
+    pub x: f64,
+    pub y: f64,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -199,6 +259,8 @@ struct CreateDiagramViewArgs {
     title: String,
     view_kind: String,
     model_refs: Vec<String>,
+    #[serde(default)]
+    layout: Option<DiagramLayout>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -322,6 +384,7 @@ pub fn apply_proposal_operations(
                     title: args.title,
                     view_kind: args.view_kind,
                     model_refs: args.model_refs,
+                    layout: args.layout,
                 });
                 summary.diagrams_created += 1;
             }
@@ -408,6 +471,12 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
             );
         }
     }
+    let relationship_ids: BTreeSet<&str> = package
+        .relationships
+        .relationships
+        .iter()
+        .map(|relationship| relationship.id.as_str())
+        .collect();
 
     for diagram in &package.diagrams.diagrams {
         ensure_unique(&mut ids, &diagram.id)?;
@@ -427,6 +496,9 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
                 );
             }
         }
+        if let Some(layout) = &diagram.layout {
+            validate_diagram_layout(diagram, layout, &element_kinds, &relationship_ids)?;
+        }
     }
 
     for link in &package.trace.links {
@@ -440,6 +512,101 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
     }
 
     Ok(warnings)
+}
+
+fn validate_diagram_layout(
+    diagram: &DiagramView,
+    layout: &DiagramLayout,
+    element_kinds: &BTreeMap<&str, &str>,
+    relationship_ids: &BTreeSet<&str>,
+) -> Result<()> {
+    if layout.coordinate_system != "canvas" {
+        bail!(
+            "{} has unsupported layout coordinate system {}",
+            diagram.id,
+            layout.coordinate_system
+        );
+    }
+    if !matches!(
+        layout.layout_state.as_str(),
+        "generated" | "manual" | "mixed"
+    ) {
+        bail!(
+            "{} has unsupported layout state {}",
+            diagram.id,
+            layout.layout_state
+        );
+    }
+
+    let diagram_refs: BTreeSet<&str> = diagram.model_refs.iter().map(String::as_str).collect();
+    let mut node_refs = BTreeSet::new();
+    for node in &layout.nodes {
+        ensure_unique(&mut node_refs, &node.model_ref)?;
+        if !element_kinds.contains_key(node.model_ref.as_str()) {
+            bail!(
+                "{} layout references missing model element {}",
+                diagram.id,
+                node.model_ref
+            );
+        }
+        if !diagram_refs.contains(node.model_ref.as_str()) {
+            bail!(
+                "{} layout node {} is not in modelRefs",
+                diagram.id,
+                node.model_ref
+            );
+        }
+        validate_bounds(&diagram.id, &node.model_ref, &node.bounds)?;
+        validate_layout_state(&diagram.id, &node.model_ref, &node.layout_state)?;
+    }
+
+    let mut connector_refs = BTreeSet::new();
+    for connector in &layout.connectors {
+        ensure_unique(&mut connector_refs, &connector.relationship_ref)?;
+        if !relationship_ids.contains(connector.relationship_ref.as_str()) {
+            bail!(
+                "{} layout references missing relationship {}",
+                diagram.id,
+                connector.relationship_ref
+            );
+        }
+        validate_layout_state(
+            &diagram.id,
+            &connector.relationship_ref,
+            &connector.layout_state,
+        )?;
+        if let Some(route_hint) = &connector.route_hint {
+            if !matches!(
+                route_hint.kind.as_str(),
+                "straight" | "step" | "smoothstep" | "bezier" | "orthogonal"
+            ) {
+                bail!(
+                    "{} connector {} has unsupported route hint {}",
+                    diagram.id,
+                    connector.relationship_ref,
+                    route_hint.kind
+                );
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_bounds(diagram_id: &str, model_ref: &str, bounds: &DiagramBounds) -> Result<()> {
+    if bounds.width <= 0.0 || bounds.height <= 0.0 {
+        bail!("{diagram_id} layout node {model_ref} must have positive bounds");
+    }
+    Ok(())
+}
+
+fn validate_layout_state(diagram_id: &str, object_ref: &str, layout_state: &str) -> Result<()> {
+    if !matches!(layout_state, "generated" | "manual") {
+        bail!(
+            "{diagram_id} layout object {object_ref} has unsupported layout state {layout_state}"
+        );
+    }
+    Ok(())
 }
 
 pub fn validate_proposals(root: impl AsRef<Path>) -> Result<Vec<String>> {
@@ -838,6 +1005,11 @@ mod tests {
         let package = load_package("examples/minimal/redshield").unwrap();
         let warnings = validate_package(&package).unwrap();
         assert!(warnings.is_empty(), "{warnings:?}");
+        let layout = package.diagrams.diagrams[0].layout.as_ref().unwrap();
+        assert_eq!(layout.coordinate_system, "canvas");
+        assert_eq!(layout.layout_state, "mixed");
+        assert_eq!(layout.nodes.len(), 3);
+        assert_eq!(layout.connectors.len(), 2);
         let proposal_warnings = validate_proposals("examples/minimal/redshield").unwrap();
         assert!(proposal_warnings.is_empty(), "{proposal_warnings:?}");
         let dot = render_use_case_dot(&package, Some("diagram.first-use-case")).unwrap();
@@ -920,6 +1092,19 @@ mod tests {
         );
         let applied = fs::read_to_string(summary.applied_proposal_path).unwrap();
         assert!(applied.contains(r#""state": "applied""#));
+    }
+
+    #[test]
+    fn validation_rejects_broken_diagram_layout_references() {
+        let mut package = load_package("examples/minimal/redshield").unwrap();
+        let layout = package.diagrams.diagrams[0].layout.as_mut().unwrap();
+        layout.connectors[0].relationship_ref = "rel.missing".to_string();
+
+        let error = validate_package(&package).unwrap_err().to_string();
+        assert!(
+            error.contains("rel.missing"),
+            "expected missing relationship error, got {error}"
+        );
     }
 
     fn copy_example_to_temp() -> PathBuf {

@@ -33,6 +33,16 @@ The renderer converts semantic model element and relationship IDs into Graphviz 
 
 The `web/` spike loads the same example model into an interactive React Flow canvas and uses ELK for auto-layout. It is the first GUI interaction candidate for direct manipulation: move, align, distribute, connect, inspect, and persist view metadata.
 
+Diagram views may now include canonical view metadata under `layout`. This metadata records canvas coordinates separately from semantic model truth:
+
+- `coordinateSystem`: currently `canvas`
+- `layoutEngine`: optional generator such as `elk.layered`
+- `layoutState`: `generated`, `manual`, or `mixed`
+- `nodes`: model element references with persisted bounds, per-node layout state, and optional label positions
+- `connectors`: relationship references with per-connector layout state, optional route hints, and optional label positions
+
+The Rust validator checks that layout nodes reference elements in the diagram, connector layout references point to real relationships, bounds are positive, and route/layout states are supported. Canvas edits should still become typed operations before they mutate these files durably.
+
 Apply an accepted proposal transaction:
 
 ```sh
