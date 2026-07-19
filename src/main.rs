@@ -64,6 +64,10 @@ fn main() -> Result<()> {
             println!("- diagrams created: {}", summary.diagrams_created);
             println!("- trace links created: {}", summary.trace_links_created);
             println!(
+                "- diagram layout operations applied: {}",
+                summary.diagram_layout_operations_applied
+            );
+            println!(
                 "- applied proposal copy: {}",
                 summary.applied_proposal_path.display()
             );

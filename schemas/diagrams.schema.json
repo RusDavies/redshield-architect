@@ -36,7 +36,8 @@
                     "modelRef": { "type": "string", "minLength": 1 },
                     "bounds": { "$ref": "#/$defs/bounds" },
                     "layoutState": { "type": "string", "enum": ["generated", "manual"] },
-                    "labelPosition": { "$ref": "#/$defs/point" }
+                    "labelPosition": { "$ref": "#/$defs/point" },
+                    "style": { "$ref": "#/$defs/style" }
                   }
                 }
               },
@@ -64,7 +65,8 @@
                         }
                       }
                     },
-                    "labelPosition": { "$ref": "#/$defs/point" }
+                    "labelPosition": { "$ref": "#/$defs/point" },
+                    "style": { "$ref": "#/$defs/style" }
                   }
                 }
               }
@@ -94,6 +96,20 @@
         "x": { "type": "number" },
         "y": { "type": "number" }
       }
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fillColor": { "$ref": "#/$defs/color" },
+        "strokeColor": { "$ref": "#/$defs/color" },
+        "textColor": { "$ref": "#/$defs/color" },
+        "lineStyle": { "type": "string", "enum": ["solid", "dashed", "dotted"] }
+      }
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
     }
   }
 }
