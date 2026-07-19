@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "0.1.0",
+  "requirements": [
+    {
+      "id": "req.review-ai-proposals",
+      "title": "Review AI proposals before model application",
+      "statement": "An architect must be able to review AI-suggested model operations before they change canonical project files.",
+      "status": "accepted",
+      "priority": "must",
+      "acceptanceCriteria": [
+        "A proposal can be stored separately from canonical model files.",
+        "Validation can reject malformed proposal operations.",
+        "Accepted semantic model data can render a use-case diagram."
+      ],
+      "tags": ["ai", "proposal-review", "mvp"]
+    }
+  ]
+}

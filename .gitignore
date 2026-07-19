@@ -8,3 +8,4 @@ build/
 *.db
 coverage/
 __pycache__/
+/target

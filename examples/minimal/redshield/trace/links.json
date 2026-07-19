@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "0.1.0",
+  "links": [
+    {
+      "id": "trace.review-ai-proposals",
+      "sourceId": "req.review-ai-proposals",
+      "targetId": "usecase.review-proposal",
+      "traceKind": "satisfies",
+      "confidence": 0.92
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://redshield.dev/schemas/elements.schema.json",
+  "title": "RedShield Model Elements",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "elements"],
+  "properties": {
+    "schemaVersion": { "const": "0.1.0" },
+    "elements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "name"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "enum": ["actor", "use_case", "class", "component", "activity", "sequence_participant"] },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "0.1.0",
+  "elements": [
+    {
+      "id": "actor.architect",
+      "kind": "actor",
+      "name": "Architect",
+      "description": "Human owner of model review and approval.",
+      "tags": ["human", "reviewer"]
+    },
+    {
+      "id": "usecase.review-proposal",
+      "kind": "use_case",
+      "name": "Review proposal",
+      "description": "Inspect, validate, and accept or reject proposed model operations.",
+      "tags": ["proposal-review"]
+    },
+    {
+      "id": "usecase.render-diagram",
+      "kind": "use_case",
+      "name": "Render diagram",
+      "description": "Render an accepted semantic model view as SVG.",
+      "tags": ["diagram"]
+    }
+  ]
+}
