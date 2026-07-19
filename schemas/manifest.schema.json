@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://redshield.dev/schemas/manifest.schema.json",
+  "title": "RedShield Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "projectId", "name"],
+  "properties": {
+    "schemaVersion": { "const": "0.1.0" },
+    "projectId": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 }
+  }
+}

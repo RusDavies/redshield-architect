@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://redshield.dev/schemas/diagrams.schema.json",
+  "title": "RedShield Diagrams",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "diagrams"],
+  "properties": {
+    "schemaVersion": { "const": "0.1.0" },
+    "diagrams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "viewKind", "modelRefs"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "viewKind": { "type": "string", "enum": ["use_case"] },
+          "modelRefs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

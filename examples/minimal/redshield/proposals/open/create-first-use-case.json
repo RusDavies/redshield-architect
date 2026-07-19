@@ -1,0 +1,43 @@
+{
+  "proposalId": "proposal.first-use-case",
+  "schemaVersion": "0.1.0",
+  "state": "review_ready",
+  "createdAt": "2026-07-19T19:00:00Z",
+  "intent": "Create the first semantic use-case slice for proposal review and diagram rendering.",
+  "operations": [
+    {
+      "opId": "op.create-actor-architect",
+      "op": "create_model_element",
+      "args": {
+        "id": "actor.architect",
+        "kind": "actor",
+        "name": "Architect"
+      },
+      "rationale": "The architect is the primary reviewer and approval actor for the prototype workflow.",
+      "sourceRefs": ["source.product-brief"]
+    },
+    {
+      "opId": "op.create-usecase-review",
+      "op": "create_model_element",
+      "args": {
+        "id": "usecase.review-proposal",
+        "kind": "use_case",
+        "name": "Review proposal"
+      },
+      "rationale": "Proposal review is the trust boundary that prevents silent AI mutation.",
+      "sourceRefs": ["source.requirements"]
+    },
+    {
+      "opId": "op.create-diagram",
+      "op": "create_diagram_view",
+      "args": {
+        "id": "diagram.first-use-case",
+        "title": "First Use-Case View",
+        "viewKind": "use_case",
+        "modelRefs": ["actor.architect", "usecase.review-proposal"]
+      },
+      "rationale": "The thin prototype needs one diagram view rendered from accepted semantic model data.",
+      "sourceRefs": ["source.roadmap"]
+    }
+  ]
+}

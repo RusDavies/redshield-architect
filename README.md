@@ -26,16 +26,20 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 
 ## Repository Map
 
+- `src/` - first Rust model/validation/rendering core and CLI
+- `schemas/` - prototype JSON Schemas for the `redshield/` model package and proposal transactions
+- `examples/minimal/redshield/` - smallest model package used by tests and the CLI
 - `docs/PRODUCT_BRIEF.md` - product framing and audience
 - `docs/REQUIREMENTS.md` - first prototype requirements
 - `docs/ROADMAP.md` - public milestone outline
 - `docs/architecture/OVERVIEW.md` - architecture direction
 - `docs/security/THREAT_MODEL.md` - public safety and privacy model
 - `docs/research/COMPARABLE_TOOLS.md` - high-level market and tooling context
+- `docs/MODEL_PACKAGE.md` - current text-backed model package shape and CLI usage
 
 ## Status
 
-This repository is a public product concept and planning repository. Implementation work has not yet reached a usable prototype.
+This repository now contains the first thin prototype core: a Rust CLI that loads a text-backed `redshield/` model package, validates canonical objects and open proposal transactions, and renders one semantic use-case diagram to SVG.
 
 ## License
 

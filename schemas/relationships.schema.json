@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://redshield.dev/schemas/relationships.schema.json",
+  "title": "RedShield Relationships",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "relationships"],
+  "properties": {
+    "schemaVersion": { "const": "0.1.0" },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "relationshipKind", "sourceId", "targetId"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "relationshipKind": { "type": "string", "enum": ["association", "include", "extend", "trace", "dependency"] },
+          "sourceId": { "type": "string", "minLength": 1 },
+          "targetId": { "type": "string", "minLength": 1 },
+          "label": { "type": "string" }
+        }
+      }
+    }
+  }
+}

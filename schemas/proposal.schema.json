@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://redshield.dev/schemas/proposal.schema.json",
+  "title": "RedShield Proposal Transaction",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["proposalId", "schemaVersion", "state", "createdAt", "intent", "operations"],
+  "properties": {
+    "proposalId": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": "0.1.0" },
+    "state": { "type": "string", "enum": ["draft", "validation_pending", "review_ready", "accepted", "rejected", "applied"] },
+    "createdAt": { "type": "string", "minLength": 1 },
+    "intent": { "type": "string", "minLength": 1 },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["opId", "op", "args", "rationale"],
+        "properties": {
+          "opId": { "type": "string", "minLength": 1 },
+          "op": {
+            "type": "string",
+            "enum": ["create_requirement", "create_model_element", "create_relationship", "create_diagram_view", "create_trace_link"]
+          },
+          "args": { "type": "object" },
+          "rationale": { "type": "string", "minLength": 1 },
+          "sourceRefs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

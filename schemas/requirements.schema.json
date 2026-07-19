@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://redshield.dev/schemas/requirements.schema.json",
+  "title": "RedShield Requirements",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "requirements"],
+  "properties": {
+    "schemaVersion": { "const": "0.1.0" },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "statement", "status", "priority"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "statement": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["draft", "proposed", "accepted", "deprecated"] },
+          "priority": { "type": "string", "enum": ["must", "should", "could", "wont"] },
+          "acceptanceCriteria": { "type": "array", "items": { "type": "string" } },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "0.1.0",
+  "diagrams": [
+    {
+      "id": "diagram.first-use-case",
+      "title": "First Use-Case View",
+      "viewKind": "use_case",
+      "modelRefs": [
+        "actor.architect",
+        "usecase.review-proposal",
+        "usecase.render-diagram"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "0.1.0",
+  "relationships": [
+    {
+      "id": "rel.architect-review",
+      "relationshipKind": "association",
+      "sourceId": "actor.architect",
+      "targetId": "usecase.review-proposal",
+      "label": "reviews"
+    },
+    {
+      "id": "rel.architect-render",
+      "relationshipKind": "association",
+      "sourceId": "actor.architect",
+      "targetId": "usecase.render-diagram",
+      "label": "inspects"
+    }
+  ]
+}
