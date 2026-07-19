@@ -27,6 +27,9 @@ import traceFile from '../../examples/minimal/redshield/trace/links.json';
 
 type ElementRecord = (typeof elementsFile.elements)[number];
 type RelationshipRecord = (typeof relationshipsFile.relationships)[number];
+type DiagramLayout = NonNullable<(typeof diagramsFile.diagrams)[number]['layout']>;
+type DiagramNodeLayout = DiagramLayout['nodes'][number];
+type DiagramConnectorLayout = DiagramLayout['connectors'][number];
 type RedshieldNodeData = {
   label: string;
   modelId: string;
@@ -34,6 +37,8 @@ type RedshieldNodeData = {
   description: string;
   tags: string[];
   layoutState: 'generated' | 'manual';
+  bounds: { width: number; height: number };
+  labelPosition?: { x: number; y: number };
 };
 type RedshieldEdgeData = {
   relationshipId: string;
@@ -41,22 +46,36 @@ type RedshieldEdgeData = {
   label: string;
   traceCount: number;
   layoutState: 'generated' | 'manual' | 'draft';
+  routeHint: 'straight' | 'step' | 'smoothstep' | 'bezier' | 'orthogonal';
+  labelPosition?: { x: number; y: number };
 };
 
 const elk = new ELK();
 const diagram = diagramsFile.diagrams[0];
 const elementById = new Map(elementsFile.elements.map((element) => [element.id, element]));
+const nodeLayoutByRef = new Map(
+  (diagram.layout?.nodes ?? []).map((nodeLayout) => [nodeLayout.modelRef, nodeLayout]),
+);
+const connectorLayoutByRef = new Map(
+  (diagram.layout?.connectors ?? []).map((connectorLayout) => [
+    connectorLayout.relationshipRef,
+    connectorLayout,
+  ]),
+);
 
 function initialNodes(): Node<RedshieldNodeData>[] {
   return diagram.modelRefs
     .map((modelId, index): Node<RedshieldNodeData> | undefined => {
       const element = elementById.get(modelId);
       if (!element) return undefined;
+      const persisted = nodeLayoutByRef.get(modelId);
       return {
         id: element.id,
         type: 'redshield',
-        position: { x: element.kind === 'actor' ? 80 : 360, y: 92 + index * 116 },
-        data: toNodeData(element, 'generated'),
+        position: persisted
+          ? { x: persisted.bounds.x, y: persisted.bounds.y }
+          : { x: element.kind === 'actor' ? 80 : 360, y: 92 + index * 116 },
+        data: toNodeData(element, persisted),
       };
     })
     .filter((node): node is Node<RedshieldNodeData> => node !== undefined);
@@ -74,36 +93,70 @@ function initialEdges(): Edge<RedshieldEdgeData>[] {
       source: relationship.sourceId,
       target: relationship.targetId,
       label: relationship.label,
-      type: 'smoothstep',
-      data: toEdgeData(relationship, 'generated'),
+      type: toReactFlowEdgeType(
+        toRouteHint(connectorLayoutByRef.get(relationship.id)?.routeHint?.kind),
+      ),
+      data: toEdgeData(relationship, connectorLayoutByRef.get(relationship.id)),
     }));
 }
 
-function toNodeData(
-  element: ElementRecord,
-  layoutState: RedshieldNodeData['layoutState'],
-): RedshieldNodeData {
+function toNodeData(element: ElementRecord, layout?: DiagramNodeLayout): RedshieldNodeData {
   return {
     label: element.name,
     modelId: element.id,
     kind: element.kind,
     description: element.description,
     tags: element.tags,
-    layoutState,
+    layoutState: toLayoutState(layout?.layoutState),
+    bounds: {
+      width: layout?.bounds.width ?? 210,
+      height: layout?.bounds.height ?? 86,
+    },
+    labelPosition: layout?.labelPosition,
   };
 }
 
 function toEdgeData(
   relationship: RelationshipRecord,
-  layoutState: RedshieldEdgeData['layoutState'],
+  layout?: DiagramConnectorLayout,
 ): RedshieldEdgeData {
   return {
     relationshipId: relationship.id,
     relationshipKind: relationship.relationshipKind,
     label: relationship.label,
     traceCount: traceFile.links.filter((link) => link.targetId === relationship.targetId).length,
-    layoutState,
+    layoutState: toEdgeLayoutState(layout?.layoutState),
+    routeHint: toRouteHint(layout?.routeHint?.kind),
+    labelPosition: layout?.labelPosition,
   };
+}
+
+function toReactFlowEdgeType(routeKind?: RedshieldEdgeData['routeHint']) {
+  if (routeKind === 'straight') return 'straight';
+  if (routeKind === 'step' || routeKind === 'orthogonal') return 'step';
+  if (routeKind === 'bezier') return 'default';
+  return 'smoothstep';
+}
+
+function toLayoutState(value?: string): RedshieldNodeData['layoutState'] {
+  return value === 'manual' ? 'manual' : 'generated';
+}
+
+function toEdgeLayoutState(value?: string): RedshieldEdgeData['layoutState'] {
+  return value === 'manual' ? 'manual' : 'generated';
+}
+
+function toRouteHint(value?: string): RedshieldEdgeData['routeHint'] {
+  if (
+    value === 'straight' ||
+    value === 'step' ||
+    value === 'smoothstep' ||
+    value === 'bezier' ||
+    value === 'orthogonal'
+  ) {
+    return value;
+  }
+  return 'smoothstep';
 }
 
 function RedshieldNode({ data, selected }: NodeProps<Node<RedshieldNodeData>>) {
@@ -171,6 +224,7 @@ export default function App() {
             label: 'draft',
             traceCount: 0,
             layoutState: 'draft',
+            routeHint: 'smoothstep',
           },
         },
         currentEdges,
@@ -194,8 +248,8 @@ export default function App() {
       },
       children: nodes.map((node) => ({
         id: node.id,
-        width: 210,
-        height: 86,
+        width: node.data.bounds.width,
+        height: node.data.bounds.height,
       })),
       edges: edges.map((edge) => ({
         id: edge.id,
@@ -284,23 +338,27 @@ export default function App() {
   const viewMetadata = useMemo(
     () => ({
       diagramId: diagram.id,
-      layoutEngine: 'manual-or-elk',
+      coordinateSystem: 'canvas',
+      layoutEngine: diagram.layout?.layoutEngine ?? 'manual-or-elk',
+      layoutState: nodes.some((node) => node.data.layoutState === 'manual') ? 'mixed' : 'generated',
       nodes: nodes.map((node) => ({
-        modelId: node.id,
+        modelRef: node.id,
         bounds: {
           x: Math.round(node.position.x),
           y: Math.round(node.position.y),
-          width: 210,
-          height: 86,
+          width: node.data.bounds.width,
+          height: node.data.bounds.height,
         },
         layoutState: node.data.layoutState,
+        labelPosition: node.data.labelPosition,
       })),
-      edges: edges.map((edge) => ({
-        relationshipId: edge.id,
-        sourceId: edge.source,
-        targetId: edge.target,
-        routeHint: edge.type,
+      connectors: edges.map((edge) => ({
+        relationshipRef: edge.data?.relationshipId ?? edge.id,
         layoutState: edge.data?.layoutState ?? 'manual',
+        routeHint: {
+          kind: edge.data?.routeHint ?? 'smoothstep',
+        },
+        labelPosition: edge.data?.labelPosition,
       })),
     }),
     [edges, nodes],
@@ -389,6 +447,7 @@ export default function App() {
             fitView
             multiSelectionKeyCode={['Shift', 'Meta']}
             selectionOnDrag
+            nodeOrigin={[0, 0]}
           >
             <Background color="#cbd5e1" gap={24} />
             <MiniMap pannable zoomable />
@@ -433,6 +492,10 @@ function InspectorNode({ node }: { node: Node<RedshieldNodeData> }) {
       <dd>{node.data.label}</dd>
       <dt>Layout</dt>
       <dd>{node.data.layoutState}</dd>
+      <dt>Bounds</dt>
+      <dd>
+        {node.data.bounds.width} x {node.data.bounds.height}
+      </dd>
       <dt>Position</dt>
       <dd>
         {Math.round(node.position.x)}, {Math.round(node.position.y)}
@@ -451,7 +514,7 @@ function InspectorEdge({ edge }: { edge: Edge<RedshieldEdgeData> }) {
       <dt>Kind</dt>
       <dd>{edge.data?.relationshipKind ?? 'association'}</dd>
       <dt>Route</dt>
-      <dd>{edge.type}</dd>
+      <dd>{edge.data?.routeHint ?? edge.type}</dd>
       <dt>Source</dt>
       <dd>{edge.source}</dd>
       <dt>Target</dt>

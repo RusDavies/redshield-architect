@@ -17,8 +17,82 @@
           "id": { "type": "string", "minLength": 1 },
           "title": { "type": "string", "minLength": 1 },
           "viewKind": { "type": "string", "enum": ["use_case"] },
-          "modelRefs": { "type": "array", "items": { "type": "string" } }
+          "modelRefs": { "type": "array", "items": { "type": "string" } },
+          "layout": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["coordinateSystem", "layoutState", "nodes", "connectors"],
+            "properties": {
+              "coordinateSystem": { "type": "string", "enum": ["canvas"] },
+              "layoutEngine": { "type": "string", "minLength": 1 },
+              "layoutState": { "type": "string", "enum": ["generated", "manual", "mixed"] },
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["modelRef", "bounds", "layoutState"],
+                  "properties": {
+                    "modelRef": { "type": "string", "minLength": 1 },
+                    "bounds": { "$ref": "#/$defs/bounds" },
+                    "layoutState": { "type": "string", "enum": ["generated", "manual"] },
+                    "labelPosition": { "$ref": "#/$defs/point" }
+                  }
+                }
+              },
+              "connectors": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["relationshipRef", "layoutState"],
+                  "properties": {
+                    "relationshipRef": { "type": "string", "minLength": 1 },
+                    "layoutState": { "type": "string", "enum": ["generated", "manual"] },
+                    "routeHint": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["kind"],
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": ["straight", "step", "smoothstep", "bezier", "orthogonal"]
+                        },
+                        "points": {
+                          "type": "array",
+                          "items": { "$ref": "#/$defs/point" }
+                        }
+                      }
+                    },
+                    "labelPosition": { "$ref": "#/$defs/point" }
+                  }
+                }
+              }
+            }
+          }
         }
+      }
+    }
+  },
+  "$defs": {
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
       }
     }
   }

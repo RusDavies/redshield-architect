@@ -9,7 +9,78 @@
         "actor.architect",
         "usecase.review-proposal",
         "usecase.render-diagram"
-      ]
+      ],
+      "layout": {
+        "coordinateSystem": "canvas",
+        "layoutEngine": "elk.layered",
+        "layoutState": "mixed",
+        "nodes": [
+          {
+            "modelRef": "actor.architect",
+            "bounds": {
+              "x": 80,
+              "y": 132,
+              "width": 210,
+              "height": 86
+            },
+            "layoutState": "manual",
+            "labelPosition": {
+              "x": 185,
+              "y": 175
+            }
+          },
+          {
+            "modelRef": "usecase.review-proposal",
+            "bounds": {
+              "x": 420,
+              "y": 78,
+              "width": 210,
+              "height": 86
+            },
+            "layoutState": "generated"
+          },
+          {
+            "modelRef": "usecase.render-diagram",
+            "bounds": {
+              "x": 420,
+              "y": 202,
+              "width": 210,
+              "height": 86
+            },
+            "layoutState": "generated"
+          }
+        ],
+        "connectors": [
+          {
+            "relationshipRef": "rel.architect-review",
+            "layoutState": "manual",
+            "routeHint": {
+              "kind": "smoothstep",
+              "points": [
+                {
+                  "x": 290,
+                  "y": 175
+                },
+                {
+                  "x": 420,
+                  "y": 121
+                }
+              ]
+            },
+            "labelPosition": {
+              "x": 350,
+              "y": 138
+            }
+          },
+          {
+            "relationshipRef": "rel.architect-render",
+            "layoutState": "generated",
+            "routeHint": {
+              "kind": "smoothstep"
+            }
+          }
+        ]
+      }
     }
   ]
 }

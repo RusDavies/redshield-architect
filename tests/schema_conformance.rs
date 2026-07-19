@@ -97,6 +97,45 @@ fn schema_validation_rejects_unknown_proposal_operation() {
     );
 }
 
+#[test]
+fn schema_validation_rejects_invalid_diagram_layout_shape() {
+    let schema = read_json("schemas/diagrams.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("diagrams schema should compile");
+    let invalid = json!({
+        "schemaVersion": "0.1.0",
+        "diagrams": [
+            {
+                "id": "diagram.invalid-layout",
+                "title": "Invalid layout",
+                "viewKind": "use_case",
+                "modelRefs": ["actor.architect"],
+                "layout": {
+                    "coordinateSystem": "canvas",
+                    "layoutState": "mixed",
+                    "nodes": [
+                        {
+                            "modelRef": "actor.architect",
+                            "bounds": {
+                                "x": 0,
+                                "y": 0,
+                                "width": 0,
+                                "height": 86
+                            },
+                            "layoutState": "manual"
+                        }
+                    ],
+                    "connectors": []
+                }
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "diagrams schema should reject non-positive node bounds"
+    );
+}
+
 fn assert_conforms(schema_path: &str, instance_path: &str) {
     let schema = read_json(schema_path);
     let instance = read_json(instance_path);
