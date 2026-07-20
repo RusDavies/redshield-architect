@@ -34,7 +34,9 @@
         { "$ref": "#/$defs/connectDiagramRelationshipOperation" },
         { "$ref": "#/$defs/routeDiagramConnectorOperation" },
         { "$ref": "#/$defs/styleDiagramObjectOperation" },
-        { "$ref": "#/$defs/applyDiagramAutoLayoutOperation" }
+        { "$ref": "#/$defs/applyDiagramAutoLayoutOperation" },
+        { "$ref": "#/$defs/upsertRenderRuleOperation" },
+        { "$ref": "#/$defs/removeRenderRuleOperation" }
       ]
     },
     "operationCommon": {
@@ -205,6 +207,30 @@
         }
       ]
     },
+    "upsertRenderRuleOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "upsert_render_rule" },
+            "args": { "$ref": "#/$defs/upsertRenderRuleArgs" }
+          }
+        }
+      ]
+    },
+    "removeRenderRuleOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "remove_render_rule" },
+            "args": { "$ref": "#/$defs/removeRenderRuleArgs" }
+          }
+        }
+      ]
+    },
     "createRequirementArgs": {
       "type": "object",
       "additionalProperties": false,
@@ -370,6 +396,24 @@
         }
       }
     },
+    "upsertRenderRuleArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profileId", "rule"],
+      "properties": {
+        "profileId": { "type": "string", "minLength": 1 },
+        "rule": { "$ref": "#/$defs/renderRule" }
+      }
+    },
+    "removeRenderRuleArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profileId", "ruleId"],
+      "properties": {
+        "profileId": { "type": "string", "minLength": 1 },
+        "ruleId": { "type": "string", "minLength": 1 }
+      }
+    },
     "diagramLayout": {
       "type": "object",
       "additionalProperties": false,
@@ -449,6 +493,86 @@
         "strokeColor": { "$ref": "#/$defs/color" },
         "textColor": { "$ref": "#/$defs/color" },
         "lineStyle": { "type": "string", "enum": ["solid", "dashed", "dotted"] }
+      }
+    },
+    "renderRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "selector", "renderAs", "precedence"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "selector": { "$ref": "#/$defs/renderSelector" },
+        "renderAs": { "$ref": "#/$defs/renderTarget" },
+        "precedence": { "type": "integer", "minimum": 0 },
+        "enabled": { "type": "boolean", "default": true }
+      }
+    },
+    "renderSelector": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "elementId": { "type": "string", "minLength": 1 },
+        "elementKind": {
+          "type": "string",
+          "enum": ["actor", "use_case", "class", "component", "activity", "sequence_participant"]
+        },
+        "stereotype": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string", "minLength": 1 }
+      }
+    },
+    "renderTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rendererId"],
+      "properties": {
+        "rendererId": {
+          "type": "string",
+          "enum": [
+            "uml.actor",
+            "uml.use_case",
+            "uml.class",
+            "uml.component",
+            "uml.activity",
+            "uml.sequence_participant",
+            "image.element",
+            "html.custom"
+          ]
+        },
+        "assetRef": { "type": "string", "minLength": 1 },
+        "style": { "$ref": "#/$defs/style" },
+        "ports": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/renderPort" }
+        },
+        "label": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "visible": { "type": "boolean" },
+            "position": { "type": "string", "enum": ["inside", "top", "right", "bottom", "left"] }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "rendererId": { "const": "image.element" } },
+            "required": ["rendererId"]
+          },
+          "then": { "required": ["assetRef"] }
+        }
+      ]
+    },
+    "renderPort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "side"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "side": { "type": "string", "enum": ["top", "right", "bottom", "left"] },
+        "offset": { "type": "number", "minimum": 0, "maximum": 1 }
       }
     },
     "color": {

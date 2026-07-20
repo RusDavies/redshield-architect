@@ -48,7 +48,14 @@ Image-backed renderers use explicit assets with source and license provenance. T
 
 The current workbench spike resolves the first profile, applies rule precedence, and renders built-in actor, class, component, and image-backed element nodes. Referenced or missing image assets render as a visible asset-status placeholder until a real package asset is available.
 
-The workbench sidebar also includes a draft render-rule editor. It can assign renderer/style rules by element ID, element kind, stereotype, or tag; toggle existing rules; reset to the packaged default profile; and download the current in-memory render profile JSON. These edits are local to the browser session until a later Tauri/backend adapter writes render-profile changes through a typed operation path.
+The workbench sidebar also includes a draft render-rule editor. It can assign renderer/style rules by element ID, element kind, stereotype, or tag; toggle existing rules; reset to the packaged default profile; and download the current in-memory render profile JSON.
+
+Render-rule edits now emit typed proposal operations:
+
+- `upsert_render_rule`
+- `remove_render_rule`
+
+Accepted render-profile operations are applied by the same `apply-proposal` command as model/view operations. They update `views/render-profile.json`, revalidate the model package, and store the applied proposal copy under `redshield/proposals/applied/`. This gives the future Tauri/backend adapter a durable operation path instead of letting the browser mutate package files directly.
 
 Export behavior for built-in, image-backed, SVG, and custom HTML renderers is defined in [Render Export Behavior](RENDER_EXPORT_BEHAVIOR.md).
 
@@ -75,10 +82,12 @@ Accepted proposal transactions can now apply typed view/layout operations to can
 - `route_diagram_connector`
 - `style_diagram_object`
 - `apply_diagram_auto_layout`
+- `upsert_render_rule`
+- `remove_render_rule`
 
-These operations update only `views/diagrams.json`. They do not create requirements, model elements, trace links, or semantic relationships. Semantic relationship creation still uses `create_relationship`; `connect_diagram_relationship` only makes an existing relationship visible/configured in a diagram view.
+View/layout operations update only `views/diagrams.json`. Render-profile operations update only `views/render-profile.json`. They do not create requirements, model elements, trace links, or semantic relationships. Semantic relationship creation still uses `create_relationship`; `connect_diagram_relationship` only makes an existing relationship visible/configured in a diagram view.
 
-The proposal JSON Schema validates operation arguments per operation type. For example, `move_diagram_node` requires `diagramId`, `modelRef`, `x`, and `y`; `align_diagram_nodes` requires at least two model refs and a supported alignment; and unknown or stray args are rejected before the Rust application layer runs.
+The proposal JSON Schema validates operation arguments per operation type. For example, `move_diagram_node` requires `diagramId`, `modelRef`, `x`, and `y`; `align_diagram_nodes` requires at least two model refs and a supported alignment; `upsert_render_rule` requires `profileId` plus a render rule matching the render profile schema; and unknown or stray args are rejected before the Rust application layer runs.
 
 Apply an accepted proposal transaction:
 

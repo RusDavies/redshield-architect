@@ -68,6 +68,10 @@ fn main() -> Result<()> {
                 summary.diagram_layout_operations_applied
             );
             println!(
+                "- render profile operations applied: {}",
+                summary.render_profile_operations_applied
+            );
+            println!(
                 "- applied proposal copy: {}",
                 summary.applied_proposal_path.display()
             );

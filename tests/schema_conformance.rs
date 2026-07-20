@@ -209,6 +209,58 @@ fn schema_validation_accepts_typed_layout_operation_args() {
 }
 
 #[test]
+fn schema_validation_accepts_typed_render_profile_operation_args() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let valid = json!({
+        "proposalId": "proposal.valid-render-profile-ops",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T14:25:00Z",
+        "intent": "Apply render profile operations.",
+        "operations": [
+            {
+                "opId": "op.upsert-render-rule",
+                "op": "upsert_render_rule",
+                "args": {
+                    "profileId": "render-profile.default",
+                    "rule": {
+                        "id": "render.ui.kind.class",
+                        "selector": {
+                            "elementKind": "class"
+                        },
+                        "renderAs": {
+                            "rendererId": "uml.class",
+                            "style": {
+                                "fillColor": "#ffffff",
+                                "strokeColor": "#334155",
+                                "textColor": "#0f172a"
+                            }
+                        },
+                        "precedence": 150,
+                        "enabled": true
+                    }
+                },
+                "rationale": "Persist a render rule."
+            },
+            {
+                "opId": "op.remove-render-rule",
+                "op": "remove_render_rule",
+                "args": {
+                    "profileId": "render-profile.default",
+                    "ruleId": "render.ui.kind.class"
+                },
+                "rationale": "Remove a render rule."
+            }
+        ]
+    });
+
+    if let Err(error) = validator.validate(&valid) {
+        panic!("proposal schema should accept typed render profile args: {error}");
+    }
+}
+
+#[test]
 fn schema_validation_rejects_invalid_diagram_layout_shape() {
     let schema = read_json("schemas/diagrams.schema.json");
     let validator = jsonschema::validator_for(&schema).expect("diagrams schema should compile");
