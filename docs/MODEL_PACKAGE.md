@@ -33,6 +33,8 @@ The renderer converts semantic model element and relationship IDs into Graphviz 
 
 The `web/` spike loads the same example model into an interactive React Flow canvas and uses ELK for auto-layout. It is the first GUI interaction candidate for direct manipulation: move, align, distribute, connect, inspect, and persist view metadata.
 
+The workbench emits proposal-shaped operation drafts for direct manipulation actions. Dragging nodes emits `move_diagram_node`, align/distribute controls emit their matching layout operations, ELK emits `apply_diagram_auto_layout`, and creating a connector emits both a draft `create_relationship` and `connect_diagram_relationship`. The current spike displays those operations in the inspector; durable save/apply wiring remains a follow-up.
+
 Diagram views may now include canonical view metadata under `layout`. This metadata records canvas coordinates separately from semantic model truth:
 
 - `coordinateSystem`: currently `canvas`
