@@ -50,8 +50,17 @@ Model elements are semantic objects under `model/elements.json`. The common elem
 - `stereotypes` and `tags` for classification and render/profile selectors
 - `provenance` with source references, creator, creation timestamp, and notes
 - `externalReferences` for links to documents, standards, tickets, repositories, or imported/source artifacts
+- `classifier` details for UML class/component elements
 
-This common metadata is intentionally separate from UML classifier details such as attributes, operations, visibility, multiplicity, and type references. Those fields belong to later element-detail schemas rather than the shared metadata envelope.
+Classifier details are optional and currently valid only on `class` and `component` model elements. They support:
+
+- element-level `isAbstract` and `isStatic` flags
+- `attributes` with name, visibility, `typeRef`, multiplicity, default value, static/read-only flags, and documentation
+- `operations` with name, visibility, `returnTypeRef`, parameters, abstract/static flags, and documentation
+- operation parameters with name, `typeRef`, direction, multiplicity, and default value
+- multiplicity bounds using integer `lower`, integer `upper`, or unbounded `upper: "*"`
+
+This keeps semantic UML classifier detail in `model/elements.json`, while view layout, renderer selection, label placement, and custom visual treatment remain view/render metadata.
 
 ## Render Profiles
 

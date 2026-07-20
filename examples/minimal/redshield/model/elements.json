@@ -43,6 +43,22 @@
       "kind": "component",
       "name": "Workbench",
       "description": "Interactive diagram surface for reviewing and editing model views.",
+      "classifier": {
+        "operations": [
+          {
+            "name": "emitProposalOperation",
+            "visibility": "public",
+            "returnTypeRef": "ProposalOperation",
+            "parameters": [
+              {
+                "name": "operation",
+                "typeRef": "WorkbenchOperation",
+                "direction": "in"
+              }
+            ]
+          }
+        ]
+      },
       "tags": ["ui", "diagram"]
     },
     {
@@ -51,6 +67,47 @@
       "name": "Render Policy",
       "description": "Example class carrying a stereotype that maps to an image-backed renderer.",
       "stereotypes": ["XYZ"],
+      "classifier": {
+        "isAbstract": false,
+        "attributes": [
+          {
+            "name": "rendererId",
+            "visibility": "private",
+            "typeRef": "RendererId",
+            "multiplicity": {
+              "lower": 1,
+              "upper": 1
+            },
+            "isReadOnly": true
+          },
+          {
+            "name": "selectorTags",
+            "visibility": "private",
+            "typeRef": "String",
+            "multiplicity": {
+              "lower": 0,
+              "upper": "*",
+              "isOrdered": true,
+              "isUnique": true
+            },
+            "defaultValue": "[]"
+          }
+        ],
+        "operations": [
+          {
+            "name": "matches",
+            "visibility": "public",
+            "returnTypeRef": "Boolean",
+            "parameters": [
+              {
+                "name": "element",
+                "typeRef": "ModelElement",
+                "direction": "in"
+              }
+            ]
+          }
+        ]
+      },
       "tags": ["renderer-demo"]
     }
   ]

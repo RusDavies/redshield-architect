@@ -69,6 +69,8 @@ pub struct ModelElement {
     pub provenance: ElementProvenance,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub external_references: Vec<ExternalReference>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub classifier: Option<ClassifierDetails>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
@@ -101,6 +103,91 @@ pub struct ExternalReference {
     pub uri: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub kind: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ClassifierDetails {
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_abstract: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_static: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attributes: Vec<ClassifierAttribute>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub operations: Vec<ClassifierOperation>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ClassifierAttribute {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub visibility: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub type_ref: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub multiplicity: Option<Multiplicity>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub default_value: String,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_static: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_read_only: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub documentation: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ClassifierOperation {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub visibility: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub return_type_ref: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameters: Vec<OperationParameter>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_abstract: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_static: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub documentation: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct OperationParameter {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub type_ref: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub direction: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub multiplicity: Option<Multiplicity>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub default_value: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct Multiplicity {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lower: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upper: Option<MultiplicityUpper>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_ordered: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_unique: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum MultiplicityUpper {
+    Count(u64),
+    Unbounded(String),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -436,6 +523,8 @@ struct CreateModelElementArgs {
     provenance: ElementProvenance,
     #[serde(default)]
     external_references: Vec<ExternalReference>,
+    #[serde(default)]
+    classifier: Option<ClassifierDetails>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -653,6 +742,7 @@ pub fn apply_proposal_operations(
                     tags: args.tags,
                     provenance: args.provenance,
                     external_references: args.external_references,
+                    classifier: args.classifier,
                 });
                 summary.elements_created += 1;
             }
@@ -805,6 +895,7 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
         }
         validate_element_provenance(element)?;
         validate_external_references(element)?;
+        validate_classifier_details(element)?;
         element_kinds.insert(element.id.as_str(), element.kind.as_str());
     }
 
@@ -905,6 +996,118 @@ fn validate_external_references(element: &ModelElement) -> Result<()> {
             &reference.uri,
             &format!("{} external reference {} uri", element.id, reference.id),
         )?;
+    }
+    Ok(())
+}
+
+fn validate_classifier_details(element: &ModelElement) -> Result<()> {
+    let Some(classifier) = &element.classifier else {
+        return Ok(());
+    };
+    if !matches!(element.kind.as_str(), "class" | "component") {
+        bail!(
+            "{} has classifier details but kind {}",
+            element.id,
+            element.kind
+        );
+    }
+
+    let mut attribute_names = BTreeSet::new();
+    for attribute in &classifier.attributes {
+        ensure_unique(&mut attribute_names, attribute.name.as_str())?;
+        validate_visibility(
+            &attribute.visibility,
+            &format!("{} attribute {} visibility", element.id, attribute.name),
+        )?;
+        validate_optional_type_ref(
+            &attribute.type_ref,
+            &format!("{} attribute {} typeRef", element.id, attribute.name),
+        )?;
+        validate_multiplicity(
+            attribute.multiplicity.as_ref(),
+            &format!("{} attribute {} multiplicity", element.id, attribute.name),
+        )?;
+    }
+
+    for operation in &classifier.operations {
+        ensure_non_empty(&operation.name, &format!("{} operation name", element.id))?;
+        validate_visibility(
+            &operation.visibility,
+            &format!("{} operation {} visibility", element.id, operation.name),
+        )?;
+        validate_optional_type_ref(
+            &operation.return_type_ref,
+            &format!("{} operation {} returnTypeRef", element.id, operation.name),
+        )?;
+        let mut parameter_names = BTreeSet::new();
+        for parameter in &operation.parameters {
+            ensure_unique(&mut parameter_names, parameter.name.as_str())?;
+            validate_optional_type_ref(
+                &parameter.type_ref,
+                &format!(
+                    "{} operation {} parameter {} typeRef",
+                    element.id, operation.name, parameter.name
+                ),
+            )?;
+            if !parameter.direction.is_empty()
+                && !matches!(
+                    parameter.direction.as_str(),
+                    "in" | "out" | "inout" | "return"
+                )
+            {
+                bail!(
+                    "{} operation {} parameter {} has unsupported direction {}",
+                    element.id,
+                    operation.name,
+                    parameter.name,
+                    parameter.direction
+                );
+            }
+            validate_multiplicity(
+                parameter.multiplicity.as_ref(),
+                &format!(
+                    "{} operation {} parameter {} multiplicity",
+                    element.id, operation.name, parameter.name
+                ),
+            )?;
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_visibility(visibility: &str, field: &str) -> Result<()> {
+    if visibility.is_empty() {
+        return Ok(());
+    }
+    if !matches!(visibility, "public" | "private" | "protected" | "package") {
+        bail!("{field} has unsupported value {visibility}");
+    }
+    Ok(())
+}
+
+fn validate_optional_type_ref(type_ref: &str, field: &str) -> Result<()> {
+    if !type_ref.is_empty() {
+        ensure_non_empty(type_ref, field)?;
+    }
+    Ok(())
+}
+
+fn validate_multiplicity(multiplicity: Option<&Multiplicity>, field: &str) -> Result<()> {
+    let Some(multiplicity) = multiplicity else {
+        return Ok(());
+    };
+    if let Some(MultiplicityUpper::Unbounded(upper)) = &multiplicity.upper {
+        if upper != "*" {
+            bail!("{field} upper must be a non-negative integer or *");
+        }
+    }
+    if let (Some(lower), Some(MultiplicityUpper::Count(upper))) =
+        (multiplicity.lower, &multiplicity.upper)
+    {
+        if lower > *upper {
+            bail!("{field} lower bound {lower} exceeds upper bound {upper}");
+        }
     }
     Ok(())
 }
@@ -2053,6 +2256,10 @@ fn is_default_element_status(status: &str) -> bool {
     status == "accepted"
 }
 
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
 fn default_enabled() -> bool {
     true
 }
@@ -2151,6 +2358,34 @@ mod tests {
       "sourceRefs": ["source.roadmap"]
     },
     {
+      "opId": "op.create-export-component",
+      "op": "create_model_element",
+      "args": {
+        "id": "component.svg-exporter",
+        "kind": "component",
+        "name": "SVG Exporter",
+        "description": "Component responsible for producing SVG documents from accepted diagrams.",
+        "classifier": {
+          "operations": [
+            {
+              "name": "export",
+              "visibility": "public",
+              "returnTypeRef": "SvgDocument",
+              "parameters": [
+                {
+                  "name": "diagram",
+                  "typeRef": "DiagramView",
+                  "direction": "in"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "rationale": "Component classifier details should survive accepted proposal application.",
+      "sourceRefs": ["source.roadmap"]
+    },
+    {
       "opId": "op.link-architect-export",
       "op": "create_relationship",
       "args": {
@@ -2183,7 +2418,7 @@ mod tests {
         .unwrap();
 
         let summary = apply_accepted_proposal_file(&root, &proposal_path).unwrap();
-        assert_eq!(summary.elements_created, 1);
+        assert_eq!(summary.elements_created, 2);
         assert_eq!(summary.relationships_created, 1);
         assert_eq!(summary.trace_links_created, 1);
 
@@ -2206,6 +2441,18 @@ mod tests {
         assert_eq!(exported.aliases, vec!["SVG export"]);
         assert_eq!(exported.provenance.source_refs, vec!["source.roadmap"]);
         assert_eq!(exported.external_references[0].id, "ref.svg");
+        let exporter = package
+            .elements
+            .elements
+            .iter()
+            .find(|element| element.id == "component.svg-exporter")
+            .unwrap();
+        let classifier = exporter.classifier.as_ref().unwrap();
+        assert_eq!(classifier.operations[0].name, "export");
+        assert_eq!(
+            classifier.operations[0].parameters[0].type_ref,
+            "DiagramView"
+        );
         let applied = fs::read_to_string(summary.applied_proposal_path).unwrap();
         assert!(applied.contains(r#""state": "applied""#));
     }
