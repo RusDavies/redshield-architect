@@ -51,6 +51,7 @@ Model elements are semantic objects under `model/elements.json`. The common elem
 - `provenance` with source references, creator, creation timestamp, and notes
 - `externalReferences` for links to documents, standards, tickets, repositories, or imported/source artifacts
 - `classifier` details for UML class/component elements
+- `actorDetails`, `useCaseDetails`, `activityDetails`, and `sequenceParticipantDetails` for supported UML behavior/interaction elements
 
 Classifier details are optional and currently valid only on `class` and `component` model elements. They support:
 
@@ -61,6 +62,13 @@ Classifier details are optional and currently valid only on `class` and `compone
 - multiplicity bounds using integer `lower`, integer `upper`, or unbounded `upper: "*"`
 
 This keeps semantic UML classifier detail in `model/elements.json`, while view layout, renderer selection, label placement, and custom visual treatment remain view/render metadata.
+
+The other supported UML element detail envelopes are also kind-scoped:
+
+- `actorDetails` belongs to `actor` elements and records actor type, responsibilities, goals, and constraints.
+- `useCaseDetails` belongs to `use_case` elements and records actor references, preconditions, postconditions, main flow steps, alternate flows, and extension points.
+- `activityDetails` belongs to `activity` elements and records parameters, activity nodes, and flows between activity nodes.
+- `sequenceParticipantDetails` belongs to `sequence_participant` elements and records participant kind, represented model reference, lifeline name, and whether the lifeline is external.
 
 ## Render Profiles
 

@@ -277,6 +277,148 @@ fn schema_validation_rejects_classifier_details_on_non_classifier_element() {
 }
 
 #[test]
+fn schema_validation_accepts_specialized_element_details() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let valid = json!({
+        "proposalId": "proposal.valid-specialized-details",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T20:40:00Z",
+        "intent": "Create behavioral UML element details.",
+        "operations": [
+            {
+                "opId": "op.actor",
+                "op": "create_model_element",
+                "args": {
+                    "id": "actor.reviewer",
+                    "kind": "actor",
+                    "name": "Reviewer",
+                    "actorDetails": {
+                        "actorType": "role",
+                        "responsibilities": ["Inspect proposals"],
+                        "goals": ["Keep model changes reviewed"],
+                        "constraints": ["Must not bypass approval"]
+                    }
+                },
+                "rationale": "Actor details should be accepted on actors."
+            },
+            {
+                "opId": "op.use-case",
+                "op": "create_model_element",
+                "args": {
+                    "id": "usecase.review",
+                    "kind": "use_case",
+                    "name": "Review proposal",
+                    "useCaseDetails": {
+                        "primaryActorRef": "actor.reviewer",
+                        "preconditions": ["Proposal exists"],
+                        "postconditions": ["Decision recorded"],
+                        "mainFlow": [
+                            {
+                                "step": 1,
+                                "actorRef": "actor.reviewer",
+                                "action": "Inspect proposal"
+                            }
+                        ],
+                        "alternateFlows": [
+                            {
+                                "name": "Reject proposal",
+                                "trigger": "Proposal is invalid",
+                                "steps": [
+                                    { "step": 1, "action": "Reject without applying changes" }
+                                ]
+                            }
+                        ],
+                        "extensionPoints": ["Ask agent for rationale"]
+                    }
+                },
+                "rationale": "Use-case details should be accepted on use cases."
+            },
+            {
+                "opId": "op.activity",
+                "op": "create_model_element",
+                "args": {
+                    "id": "activity.review",
+                    "kind": "activity",
+                    "name": "Review activity",
+                    "activityDetails": {
+                        "parameters": [
+                            { "name": "proposal", "typeRef": "ProposalTransaction", "direction": "in" }
+                        ],
+                        "nodes": [
+                            { "id": "start", "name": "Start", "kind": "initial" },
+                            { "id": "inspect", "name": "Inspect", "kind": "action" },
+                            { "id": "done", "name": "Done", "kind": "final" }
+                        ],
+                        "flows": [
+                            { "id": "flow.start-inspect", "sourceNodeId": "start", "targetNodeId": "inspect" },
+                            { "id": "flow.inspect-done", "sourceNodeId": "inspect", "targetNodeId": "done" }
+                        ]
+                    }
+                },
+                "rationale": "Activity details should be accepted on activities."
+            },
+            {
+                "opId": "op.participant",
+                "op": "create_model_element",
+                "args": {
+                    "id": "participant.reviewer",
+                    "kind": "sequence_participant",
+                    "name": "Reviewer lifeline",
+                    "sequenceParticipantDetails": {
+                        "participantKind": "actor",
+                        "representsRef": "actor.reviewer",
+                        "lifelineName": "Reviewer",
+                        "isExternal": false
+                    }
+                },
+                "rationale": "Sequence participant details should be accepted on sequence participants."
+            }
+        ]
+    });
+
+    if let Err(error) = validator.validate(&valid) {
+        panic!("proposal schema should accept specialized element details: {error}");
+    }
+}
+
+#[test]
+fn schema_validation_rejects_specialized_details_on_wrong_kind() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let invalid = json!({
+        "proposalId": "proposal.invalid-specialized-details",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T20:45:00Z",
+        "intent": "Create a component with use case details.",
+        "operations": [
+            {
+                "opId": "op.component",
+                "op": "create_model_element",
+                "args": {
+                    "id": "component.invalid",
+                    "kind": "component",
+                    "name": "Invalid Component",
+                    "useCaseDetails": {
+                        "mainFlow": [
+                            { "step": 1, "action": "Should fail" }
+                        ]
+                    }
+                },
+                "rationale": "Use-case details should be kind-scoped."
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "proposal schema should reject specialized details on the wrong kind"
+    );
+}
+
+#[test]
 fn schema_validation_accepts_typed_layout_operation_args() {
     let schema = read_json("schemas/proposal.schema.json");
     let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
