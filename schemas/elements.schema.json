@@ -27,8 +27,19 @@
           "externalReferences": {
             "type": "array",
             "items": { "$ref": "#/$defs/externalReference" }
+          },
+          "classifier": { "$ref": "#/$defs/classifierDetails" }
+        },
+        "allOf": [
+          {
+            "if": { "required": ["classifier"] },
+            "then": {
+              "properties": {
+                "kind": { "enum": ["class", "component"] }
+              }
+            }
           }
-        }
+        ]
       }
     }
   },
@@ -56,6 +67,85 @@
         "uri": { "type": "string", "minLength": 1 },
         "kind": { "type": "string", "minLength": 1 }
       }
+    },
+    "classifierDetails": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "isAbstract": { "type": "boolean" },
+        "isStatic": { "type": "boolean" },
+        "attributes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/classifierAttribute" }
+        },
+        "operations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/classifierOperation" }
+        }
+      }
+    },
+    "classifierAttribute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "visibility": { "$ref": "#/$defs/visibility" },
+        "typeRef": { "type": "string", "minLength": 1 },
+        "multiplicity": { "$ref": "#/$defs/multiplicity" },
+        "defaultValue": { "type": "string" },
+        "isStatic": { "type": "boolean" },
+        "isReadOnly": { "type": "boolean" },
+        "documentation": { "type": "string" }
+      }
+    },
+    "classifierOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "visibility": { "$ref": "#/$defs/visibility" },
+        "returnTypeRef": { "type": "string", "minLength": 1 },
+        "parameters": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operationParameter" }
+        },
+        "isAbstract": { "type": "boolean" },
+        "isStatic": { "type": "boolean" },
+        "documentation": { "type": "string" }
+      }
+    },
+    "operationParameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "typeRef": { "type": "string", "minLength": 1 },
+        "direction": { "type": "string", "enum": ["in", "out", "inout", "return"] },
+        "multiplicity": { "$ref": "#/$defs/multiplicity" },
+        "defaultValue": { "type": "string" }
+      }
+    },
+    "multiplicity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lower": { "type": "integer", "minimum": 0 },
+        "upper": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0 },
+            { "const": "*" }
+          ]
+        },
+        "isOrdered": { "type": "boolean" },
+        "isUnique": { "type": "boolean" }
+      }
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "private", "protected", "package"]
     }
   }
 }

@@ -96,6 +96,44 @@ type ExternalReference = {
   uri: string;
   kind?: string;
 };
+type Multiplicity = {
+  lower?: number;
+  upper?: number | string;
+  isOrdered?: boolean;
+  isUnique?: boolean;
+};
+type ClassifierAttribute = {
+  name: string;
+  visibility?: string;
+  typeRef?: string;
+  multiplicity?: Multiplicity;
+  defaultValue?: string;
+  isStatic?: boolean;
+  isReadOnly?: boolean;
+  documentation?: string;
+};
+type OperationParameter = {
+  name: string;
+  typeRef?: string;
+  direction?: string;
+  multiplicity?: Multiplicity;
+  defaultValue?: string;
+};
+type ClassifierOperation = {
+  name: string;
+  visibility?: string;
+  returnTypeRef?: string;
+  parameters?: OperationParameter[];
+  isAbstract?: boolean;
+  isStatic?: boolean;
+  documentation?: string;
+};
+type ClassifierDetails = {
+  isAbstract?: boolean;
+  isStatic?: boolean;
+  attributes?: ClassifierAttribute[];
+  operations?: ClassifierOperation[];
+};
 type RedshieldNodeData = {
   label: string;
   modelId: string;
@@ -107,6 +145,7 @@ type RedshieldNodeData = {
   stereotypes: string[];
   tags: string[];
   externalReferences: ExternalReference[];
+  classifier?: ClassifierDetails;
   layoutState: 'generated' | 'manual';
   bounds: { width: number; height: number };
   labelPosition?: { x: number; y: number };
@@ -203,6 +242,7 @@ function toNodeData(
     stereotypes: element.stereotypes ?? [],
     tags: element.tags,
     externalReferences: element.externalReferences ?? [],
+    classifier: element.classifier,
     layoutState: toLayoutState(layout?.layoutState),
     bounds: {
       width: layout?.bounds.width ?? 210,
@@ -1304,6 +1344,9 @@ function RenderRuleEditor({
 }
 
 function InspectorNode({ node }: { node: Node<RedshieldNodeData> }) {
+  const attributes = node.data.classifier?.attributes ?? [];
+  const operations = node.data.classifier?.operations ?? [];
+
   return (
     <dl className="inspector-list">
       <dt>ID</dt>
@@ -1330,6 +1373,31 @@ function InspectorNode({ node }: { node: Node<RedshieldNodeData> }) {
           ? node.data.externalReferences.map((reference) => reference.label).join(', ')
           : 'none'}
       </dd>
+      <dt>Classifier</dt>
+      <dd>
+        {node.data.classifier
+          ? [
+              node.data.classifier.isAbstract ? 'abstract' : undefined,
+              node.data.classifier.isStatic ? 'static' : undefined,
+              `${attributes.length} attr`,
+              `${operations.length} ops`,
+            ]
+              .filter(Boolean)
+              .join(', ')
+          : 'none'}
+      </dd>
+      {attributes.length > 0 ? (
+        <>
+          <dt>Attributes</dt>
+          <dd>{attributes.map(formatAttribute).join('; ')}</dd>
+        </>
+      ) : null}
+      {operations.length > 0 ? (
+        <>
+          <dt>Operations</dt>
+          <dd>{operations.map(formatOperation).join('; ')}</dd>
+        </>
+      ) : null}
       <dt>Layout</dt>
       <dd>{node.data.layoutState}</dd>
       <dt>Bounds</dt>
@@ -1346,6 +1414,58 @@ function InspectorNode({ node }: { node: Node<RedshieldNodeData> }) {
       <dd>{node.data.documentation || 'none'}</dd>
     </dl>
   );
+}
+
+function formatAttribute(attribute: ClassifierAttribute): string {
+  const flags = [attribute.isStatic ? 'static' : undefined, attribute.isReadOnly ? 'read-only' : undefined]
+    .filter(Boolean)
+    .join(' ');
+  const suffix = [
+    attribute.typeRef ? `: ${attribute.typeRef}` : '',
+    formatMultiplicity(attribute.multiplicity),
+    attribute.defaultValue ? ` = ${attribute.defaultValue}` : '',
+    flags ? ` (${flags})` : '',
+  ].join('');
+  return `${visibilitySymbol(attribute.visibility)}${attribute.name}${suffix}`;
+}
+
+function formatOperation(operation: ClassifierOperation): string {
+  const parameters = (operation.parameters ?? [])
+    .map((parameter) => {
+      const direction = parameter.direction && parameter.direction !== 'in' ? `${parameter.direction} ` : '';
+      const typeRef = parameter.typeRef ? `: ${parameter.typeRef}` : '';
+      const defaultValue = parameter.defaultValue ? ` = ${parameter.defaultValue}` : '';
+      return `${direction}${parameter.name}${typeRef}${formatMultiplicity(parameter.multiplicity)}${defaultValue}`;
+    })
+    .join(', ');
+  const flags = [operation.isAbstract ? 'abstract' : undefined, operation.isStatic ? 'static' : undefined]
+    .filter(Boolean)
+    .join(' ');
+  const returnType = operation.returnTypeRef ? `: ${operation.returnTypeRef}` : '';
+  return `${visibilitySymbol(operation.visibility)}${operation.name}(${parameters})${returnType}${
+    flags ? ` (${flags})` : ''
+  }`;
+}
+
+function formatMultiplicity(multiplicity?: Multiplicity): string {
+  if (!multiplicity) return '';
+  const lower = multiplicity.lower ?? '';
+  const upper = multiplicity.upper ?? '';
+  const bounds = lower === '' && upper === '' ? '' : `[${lower}..${upper}]`;
+  const qualifiers = [
+    multiplicity.isOrdered ? 'ordered' : undefined,
+    multiplicity.isUnique ? 'unique' : undefined,
+  ]
+    .filter(Boolean)
+    .join(',');
+  return `${bounds}${qualifiers ? `{${qualifiers}}` : ''}`;
+}
+
+function visibilitySymbol(visibility?: string): string {
+  if (visibility === 'private') return '-';
+  if (visibility === 'protected') return '#';
+  if (visibility === 'package') return '~';
+  return '+';
 }
 
 function InspectorEdge({ edge }: { edge: Edge<RedshieldEdgeData> }) {

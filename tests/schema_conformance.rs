@@ -199,7 +199,37 @@ fn schema_validation_accepts_model_element_common_metadata() {
                             "uri": "docs/MODEL_PACKAGE.md",
                             "kind": "document"
                         }
-                    ]
+                    ],
+                    "classifier": {
+                        "isAbstract": false,
+                        "attributes": [
+                            {
+                                "name": "policyName",
+                                "visibility": "private",
+                                "typeRef": "String",
+                                "multiplicity": {
+                                    "lower": 1,
+                                    "upper": 1
+                                },
+                                "defaultValue": "default",
+                                "isReadOnly": true
+                            }
+                        ],
+                        "operations": [
+                            {
+                                "name": "apply",
+                                "visibility": "public",
+                                "returnTypeRef": "Boolean",
+                                "parameters": [
+                                    {
+                                        "name": "element",
+                                        "typeRef": "ModelElement",
+                                        "direction": "in"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
                 },
                 "rationale": "Common metadata should be accepted by create_model_element."
             }
@@ -209,6 +239,41 @@ fn schema_validation_accepts_model_element_common_metadata() {
     if let Err(error) = validator.validate(&valid) {
         panic!("proposal schema should accept model element metadata: {error}");
     }
+}
+
+#[test]
+fn schema_validation_rejects_classifier_details_on_non_classifier_element() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let invalid = json!({
+        "proposalId": "proposal.invalid-classifier-target",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T19:40:00Z",
+        "intent": "Create an actor with classifier details.",
+        "operations": [
+            {
+                "opId": "op.create-actor",
+                "op": "create_model_element",
+                "args": {
+                    "id": "actor.invalid",
+                    "kind": "actor",
+                    "name": "Invalid Actor",
+                    "classifier": {
+                        "operations": [
+                            { "name": "act" }
+                        ]
+                    }
+                },
+                "rationale": "Actors should not carry classifier details."
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "proposal schema should reject classifier details on non-classifier elements"
+    );
 }
 
 #[test]
