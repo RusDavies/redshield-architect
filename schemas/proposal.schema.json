@@ -24,6 +24,7 @@
       "oneOf": [
         { "$ref": "#/$defs/createRequirementOperation" },
         { "$ref": "#/$defs/createModelElementOperation" },
+        { "$ref": "#/$defs/updateModelElementDetailsOperation" },
         { "$ref": "#/$defs/createRelationshipOperation" },
         { "$ref": "#/$defs/createDiagramViewOperation" },
         { "$ref": "#/$defs/createTraceLinkOperation" },
@@ -71,6 +72,18 @@
           "properties": {
             "op": { "const": "create_model_element" },
             "args": { "$ref": "#/$defs/createModelElementArgs" }
+          }
+        }
+      ]
+    },
+    "updateModelElementDetailsOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "update_model_element_details" },
+            "args": { "$ref": "#/$defs/updateModelElementDetailsArgs" }
           }
         }
       ]
@@ -297,6 +310,47 @@
           "then": { "properties": { "kind": { "const": "sequence_participant" } } }
         }
       ]
+    },
+    "updateModelElementDetailsArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["elementId"],
+      "minProperties": 2,
+      "properties": {
+        "elementId": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "description": { "type": "string" },
+        "documentation": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "proposed", "accepted", "deprecated", "retired"] },
+        "stereotypes": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "tags": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "provenance": { "$ref": "#/$defs/modelElementProvenance" },
+        "externalReferences": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/externalReference" }
+        },
+        "architecture": { "$ref": "#/$defs/architectureDetails" },
+        "classifier": { "$ref": "#/$defs/classifierDetails" },
+        "actorDetails": { "$ref": "#/$defs/actorDetails" },
+        "useCaseDetails": { "$ref": "#/$defs/useCaseDetails" },
+        "activityDetails": { "$ref": "#/$defs/activityDetails" },
+        "sequenceParticipantDetails": { "$ref": "#/$defs/sequenceParticipantDetails" },
+        "clearDetails": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "architecture",
+              "classifier",
+              "actorDetails",
+              "useCaseDetails",
+              "activityDetails",
+              "sequenceParticipantDetails"
+            ]
+          }
+        }
+      }
     },
     "createRelationshipArgs": {
       "type": "object",

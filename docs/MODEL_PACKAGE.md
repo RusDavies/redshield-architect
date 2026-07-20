@@ -117,8 +117,9 @@ The Rust validator checks that layout nodes reference elements in the diagram, c
 
 ## View/Layout Operations
 
-Accepted proposal transactions can now apply typed view/layout operations to canonical diagram metadata:
+Accepted proposal transactions can now apply typed semantic element, view/layout, and render-profile operations:
 
+- `update_model_element_details`
 - `move_diagram_node`
 - `resize_diagram_node`
 - `align_diagram_nodes`
@@ -129,6 +130,8 @@ Accepted proposal transactions can now apply typed view/layout operations to can
 - `apply_diagram_auto_layout`
 - `upsert_render_rule`
 - `remove_render_rule`
+
+`update_model_element_details` updates existing semantic model elements in `model/elements.json`. It keeps `id` and `kind` stable, can update common semantic fields such as name, documentation, status, tags, provenance, and external references, and can replace or clear supported detail envelopes such as `architecture`, `classifier`, `actorDetails`, `useCaseDetails`, `activityDetails`, and `sequenceParticipantDetails`. Package validation still enforces kind boundaries, supported states, bounded architecture metadata, and malformed UML details before the accepted proposal is written.
 
 View/layout operations update only `views/diagrams.json`. Render-profile operations update only `views/render-profile.json`. They do not create requirements, model elements, trace links, or semantic relationships. Semantic relationship creation still uses `create_relationship`; `connect_diagram_relationship` only makes an existing relationship visible/configured in a diagram view.
 

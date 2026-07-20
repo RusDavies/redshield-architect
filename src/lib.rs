@@ -700,6 +700,7 @@ pub struct ApplySummary {
     pub relationships_created: usize,
     pub diagrams_created: usize,
     pub trace_links_created: usize,
+    pub model_element_detail_operations_applied: usize,
     pub diagram_layout_operations_applied: usize,
     pub render_profile_operations_applied: usize,
     pub applied_proposal_path: PathBuf,
@@ -755,6 +756,44 @@ struct CreateModelElementArgs {
     activity_details: Option<ActivityDetails>,
     #[serde(default)]
     sequence_participant_details: Option<SequenceParticipantDetails>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateModelElementDetailsArgs {
+    element_id: String,
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    aliases: Option<Vec<String>>,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    documentation: Option<String>,
+    #[serde(default)]
+    status: Option<String>,
+    #[serde(default)]
+    stereotypes: Option<Vec<String>>,
+    #[serde(default)]
+    tags: Option<Vec<String>>,
+    #[serde(default)]
+    provenance: Option<ElementProvenance>,
+    #[serde(default)]
+    external_references: Option<Vec<ExternalReference>>,
+    #[serde(default)]
+    architecture: Option<ArchitectureDetails>,
+    #[serde(default)]
+    classifier: Option<ClassifierDetails>,
+    #[serde(default)]
+    actor_details: Option<ActorDetails>,
+    #[serde(default)]
+    use_case_details: Option<UseCaseDetails>,
+    #[serde(default)]
+    activity_details: Option<ActivityDetails>,
+    #[serde(default)]
+    sequence_participant_details: Option<SequenceParticipantDetails>,
+    #[serde(default)]
+    clear_details: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -936,6 +975,7 @@ pub fn apply_proposal_operations(
         relationships_created: 0,
         diagrams_created: 0,
         trace_links_created: 0,
+        model_element_detail_operations_applied: 0,
         diagram_layout_operations_applied: 0,
         render_profile_operations_applied: 0,
         applied_proposal_path: PathBuf::new(),
@@ -980,6 +1020,11 @@ pub fn apply_proposal_operations(
                     sequence_participant_details: args.sequence_participant_details,
                 });
                 summary.elements_created += 1;
+            }
+            "update_model_element_details" => {
+                let args: UpdateModelElementDetailsArgs = parse_args(operation)?;
+                update_model_element_details(package, args)?;
+                summary.model_element_detail_operations_applied += 1;
             }
             "create_relationship" => {
                 let args: CreateRelationshipArgs = parse_args(operation)?;
@@ -1073,6 +1118,107 @@ pub fn apply_proposal_operations(
 
     sort_package(package);
     Ok(summary)
+}
+
+fn update_model_element_details(
+    package: &mut ModelPackage,
+    args: UpdateModelElementDetailsArgs,
+) -> Result<()> {
+    if args.element_id.trim().is_empty() {
+        bail!("update_model_element_details elementId must not be empty");
+    }
+    if !has_model_element_detail_update(&args) {
+        bail!(
+            "update_model_element_details for {} must change at least one field",
+            args.element_id
+        );
+    }
+
+    let element = package
+        .elements
+        .elements
+        .iter_mut()
+        .find(|element| element.id == args.element_id)
+        .ok_or_else(|| anyhow!("missing model element {}", args.element_id))?;
+
+    for detail in &args.clear_details {
+        match detail.as_str() {
+            "architecture" => element.architecture = ArchitectureDetails::default(),
+            "classifier" => element.classifier = None,
+            "actorDetails" => element.actor_details = None,
+            "useCaseDetails" => element.use_case_details = None,
+            "activityDetails" => element.activity_details = None,
+            "sequenceParticipantDetails" => element.sequence_participant_details = None,
+            other => bail!("unsupported clearDetails entry {other}"),
+        }
+    }
+
+    if let Some(name) = args.name {
+        element.name = name;
+    }
+    if let Some(aliases) = args.aliases {
+        element.aliases = aliases;
+    }
+    if let Some(description) = args.description {
+        element.description = description;
+    }
+    if let Some(documentation) = args.documentation {
+        element.documentation = documentation;
+    }
+    if let Some(status) = args.status {
+        element.status = status;
+    }
+    if let Some(stereotypes) = args.stereotypes {
+        element.stereotypes = stereotypes;
+    }
+    if let Some(tags) = args.tags {
+        element.tags = tags;
+    }
+    if let Some(provenance) = args.provenance {
+        element.provenance = provenance;
+    }
+    if let Some(external_references) = args.external_references {
+        element.external_references = external_references;
+    }
+    if let Some(architecture) = args.architecture {
+        element.architecture = architecture;
+    }
+    if let Some(classifier) = args.classifier {
+        element.classifier = Some(classifier);
+    }
+    if let Some(actor_details) = args.actor_details {
+        element.actor_details = Some(actor_details);
+    }
+    if let Some(use_case_details) = args.use_case_details {
+        element.use_case_details = Some(use_case_details);
+    }
+    if let Some(activity_details) = args.activity_details {
+        element.activity_details = Some(activity_details);
+    }
+    if let Some(sequence_participant_details) = args.sequence_participant_details {
+        element.sequence_participant_details = Some(sequence_participant_details);
+    }
+
+    Ok(())
+}
+
+fn has_model_element_detail_update(args: &UpdateModelElementDetailsArgs) -> bool {
+    args.name.is_some()
+        || args.aliases.is_some()
+        || args.description.is_some()
+        || args.documentation.is_some()
+        || args.status.is_some()
+        || args.stereotypes.is_some()
+        || args.tags.is_some()
+        || args.provenance.is_some()
+        || args.external_references.is_some()
+        || args.architecture.is_some()
+        || args.classifier.is_some()
+        || args.actor_details.is_some()
+        || args.use_case_details.is_some()
+        || args.activity_details.is_some()
+        || args.sequence_participant_details.is_some()
+        || !args.clear_details.is_empty()
 }
 
 pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
@@ -2547,6 +2693,10 @@ pub fn validate_proposal(proposal: &Proposal) -> Result<()> {
         match operation.op.as_str() {
             "create_requirement" => require_args(&operation.args, &["id", "title", "statement"])?,
             "create_model_element" => require_args(&operation.args, &["id", "kind", "name"])?,
+            "update_model_element_details" => {
+                require_args(&operation.args, &["elementId"])?;
+                require_any_update_arg(&operation.args, "update_model_element_details")?;
+            }
             "create_relationship" => require_args(
                 &operation.args,
                 &["id", "relationshipKind", "sourceId", "targetId"],
@@ -2892,6 +3042,16 @@ fn require_args(args: &Value, required: &[&str]) -> Result<()> {
     Ok(())
 }
 
+fn require_any_update_arg(args: &Value, operation: &str) -> Result<()> {
+    let object = args
+        .as_object()
+        .ok_or_else(|| anyhow!("operation args must be an object"))?;
+    if object.len() < 2 {
+        bail!("{operation} must change at least one field");
+    }
+    Ok(())
+}
+
 fn default_status() -> String {
     "proposed".to_string()
 }
@@ -2946,6 +3106,37 @@ mod tests {
         let encoded = serde_json::to_string_pretty(&proposal).unwrap();
         let decoded: Proposal = serde_json::from_str(&encoded).unwrap();
         assert_eq!(proposal, decoded);
+    }
+
+    #[test]
+    fn proposal_validation_rejects_noop_model_element_detail_update() {
+        let proposal: Proposal = serde_json::from_str(
+            r#"{
+  "proposalId": "proposal.noop-update-details",
+  "schemaVersion": "0.1.0",
+  "state": "accepted",
+  "createdAt": "2026-07-20T22:45:00Z",
+  "intent": "Attempt a no-op model element update.",
+  "operations": [
+    {
+      "opId": "op.noop-update",
+      "op": "update_model_element_details",
+      "args": {
+        "elementId": "component.workbench"
+      },
+      "rationale": "No-op updates should fail validation."
+    }
+  ]
+}
+"#,
+        )
+        .unwrap();
+
+        let error = validate_proposal(&proposal).unwrap_err().to_string();
+        assert!(
+            error.contains("must change at least one field"),
+            "expected no-op update validation error, got {error}"
+        );
     }
 
     #[test]
@@ -3342,6 +3533,77 @@ mod tests {
             connector.style.as_ref().unwrap().line_style.as_deref(),
             Some("dashed")
         );
+    }
+
+    #[test]
+    fn accepted_proposal_updates_model_element_details() {
+        let root = copy_example_to_temp();
+        let proposal_path = root.join("proposals/open/accepted-update-element-details.json");
+        fs::write(
+            &proposal_path,
+            r#"{
+  "proposalId": "proposal.update-workbench-details",
+  "schemaVersion": "0.1.0",
+  "state": "accepted",
+  "createdAt": "2026-07-20T22:35:00Z",
+  "intent": "Update existing workbench semantic element details.",
+  "operations": [
+    {
+      "opId": "op.update-workbench-details",
+      "op": "update_model_element_details",
+      "args": {
+        "elementId": "component.workbench",
+        "name": "Workbench Shell",
+        "documentation": "Semantic details were updated through an accepted proposal.",
+        "status": "proposed",
+        "tags": ["ui", "diagram", "semantic-edit"],
+        "architecture": {
+          "owners": [
+            {
+              "ref": "owner.workbench",
+              "role": "technical",
+              "name": "Workbench Architecture"
+            }
+          ],
+          "lifecycle": {
+            "state": "planned",
+            "phase": "semantic editing"
+          },
+          "criticality": "critical"
+        },
+        "clearDetails": ["classifier"]
+      },
+      "rationale": "Existing model element details should be updated through typed proposal operations."
+    }
+  ]
+}
+"#,
+        )
+        .unwrap();
+
+        let summary = apply_accepted_proposal_file(&root, &proposal_path).unwrap();
+        assert_eq!(summary.model_element_detail_operations_applied, 1);
+
+        let package = load_package(&root).unwrap();
+        validate_package(&package).unwrap();
+        let workbench = package
+            .elements
+            .elements
+            .iter()
+            .find(|element| element.id == "component.workbench")
+            .unwrap();
+        assert_eq!(workbench.name, "Workbench Shell");
+        assert_eq!(workbench.status, "proposed");
+        assert!(workbench.classifier.is_none());
+        assert_eq!(workbench.tags, vec!["ui", "diagram", "semantic-edit"]);
+        assert_eq!(workbench.architecture.criticality, "critical");
+        assert_eq!(workbench.architecture.owners[0].ref_id, "owner.workbench");
+        assert_eq!(
+            workbench.architecture.lifecycle.as_ref().unwrap().phase,
+            "semantic editing"
+        );
+        let applied = fs::read_to_string(summary.applied_proposal_path).unwrap();
+        assert!(applied.contains(r#""op": "update_model_element_details""#));
     }
 
     #[test]
