@@ -163,6 +163,55 @@ fn schema_validation_rejects_proposal_operation_extra_arg() {
 }
 
 #[test]
+fn schema_validation_accepts_model_element_common_metadata() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let valid = json!({
+        "proposalId": "proposal.valid-element-metadata",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T15:30:00Z",
+        "intent": "Create a model element with common metadata.",
+        "operations": [
+            {
+                "opId": "op.create-component",
+                "op": "create_model_element",
+                "args": {
+                    "id": "component.example",
+                    "kind": "component",
+                    "name": "Example Component",
+                    "aliases": ["Example"],
+                    "description": "Short summary.",
+                    "documentation": "Longer documentation for the model element.",
+                    "status": "accepted",
+                    "stereotypes": ["Service"],
+                    "tags": ["example"],
+                    "provenance": {
+                        "sourceRefs": ["source.example"],
+                        "createdBy": "schema-test",
+                        "createdAt": "2026-07-20T15:30:00Z",
+                        "notes": "Seeded by a schema test."
+                    },
+                    "externalReferences": [
+                        {
+                            "id": "ref.example",
+                            "label": "Example docs",
+                            "uri": "docs/MODEL_PACKAGE.md",
+                            "kind": "document"
+                        }
+                    ]
+                },
+                "rationale": "Common metadata should be accepted by create_model_element."
+            }
+        ]
+    });
+
+    if let Err(error) = validator.validate(&valid) {
+        panic!("proposal schema should accept model element metadata: {error}");
+    }
+}
+
+#[test]
 fn schema_validation_accepts_typed_layout_operation_args() {
     let schema = read_json("schemas/proposal.schema.json");
     let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");

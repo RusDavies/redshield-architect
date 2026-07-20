@@ -50,12 +50,57 @@ pub struct ModelElement {
     pub id: String,
     pub kind: String,
     pub name: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
     #[serde(default)]
     pub description: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub documentation: String,
+    #[serde(
+        default = "default_element_status",
+        skip_serializing_if = "is_default_element_status"
+    )]
+    pub status: String,
     #[serde(default)]
     pub stereotypes: Vec<String>,
     #[serde(default)]
     pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "ElementProvenance::is_empty")]
+    pub provenance: ElementProvenance,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub external_references: Vec<ExternalReference>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ElementProvenance {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_by: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+impl ElementProvenance {
+    fn is_empty(&self) -> bool {
+        self.source_refs.is_empty()
+            && self.created_by.is_none()
+            && self.created_at.is_none()
+            && self.notes.is_none()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalReference {
+    pub id: String,
+    pub label: String,
+    pub uri: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -376,11 +421,21 @@ struct CreateModelElementArgs {
     kind: String,
     name: String,
     #[serde(default)]
+    aliases: Vec<String>,
+    #[serde(default)]
     description: String,
+    #[serde(default)]
+    documentation: String,
+    #[serde(default = "default_element_status")]
+    status: String,
     #[serde(default)]
     stereotypes: Vec<String>,
     #[serde(default)]
     tags: Vec<String>,
+    #[serde(default)]
+    provenance: ElementProvenance,
+    #[serde(default)]
+    external_references: Vec<ExternalReference>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -590,9 +645,14 @@ pub fn apply_proposal_operations(
                     id: args.id,
                     kind: args.kind,
                     name: args.name,
+                    aliases: args.aliases,
                     description: args.description,
+                    documentation: args.documentation,
+                    status: args.status,
                     stereotypes: args.stereotypes,
                     tags: args.tags,
+                    provenance: args.provenance,
+                    external_references: args.external_references,
                 });
                 summary.elements_created += 1;
             }
@@ -714,6 +774,19 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
     for element in &package.elements.elements {
         ensure_unique(&mut ids, &element.id)?;
         ensure_non_empty(&element.name, &format!("{} name", element.id))?;
+        for alias in &element.aliases {
+            ensure_non_empty(alias, &format!("{} alias", element.id))?;
+        }
+        if !matches!(
+            element.status.as_str(),
+            "draft" | "proposed" | "accepted" | "deprecated" | "retired"
+        ) {
+            bail!(
+                "{} has unsupported element status {}",
+                element.id,
+                element.status
+            );
+        }
         if !matches!(
             element.kind.as_str(),
             "actor" | "use_case" | "class" | "component" | "activity" | "sequence_participant"
@@ -724,6 +797,14 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
                 element.kind
             );
         }
+        for stereotype in &element.stereotypes {
+            ensure_non_empty(stereotype, &format!("{} stereotype", element.id))?;
+        }
+        for tag in &element.tags {
+            ensure_non_empty(tag, &format!("{} tag", element.id))?;
+        }
+        validate_element_provenance(element)?;
+        validate_external_references(element)?;
         element_kinds.insert(element.id.as_str(), element.kind.as_str());
     }
 
@@ -797,6 +878,35 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
     }
 
     Ok(warnings)
+}
+
+fn validate_element_provenance(element: &ModelElement) -> Result<()> {
+    for source_ref in &element.provenance.source_refs {
+        ensure_non_empty(source_ref, &format!("{} provenance sourceRef", element.id))?;
+    }
+    if let Some(created_by) = &element.provenance.created_by {
+        ensure_non_empty(created_by, &format!("{} provenance createdBy", element.id))?;
+    }
+    if let Some(created_at) = &element.provenance.created_at {
+        ensure_non_empty(created_at, &format!("{} provenance createdAt", element.id))?;
+    }
+    Ok(())
+}
+
+fn validate_external_references(element: &ModelElement) -> Result<()> {
+    let mut refs = BTreeSet::new();
+    for reference in &element.external_references {
+        ensure_unique(&mut refs, &reference.id)?;
+        ensure_non_empty(
+            &reference.label,
+            &format!("{} external reference {} label", element.id, reference.id),
+        )?;
+        ensure_non_empty(
+            &reference.uri,
+            &format!("{} external reference {} uri", element.id, reference.id),
+        )?;
+    }
+    Ok(())
 }
 
 fn validate_diagram_layout(
@@ -1935,6 +2045,14 @@ fn default_priority() -> String {
     "must".to_string()
 }
 
+fn default_element_status() -> String {
+    "accepted".to_string()
+}
+
+fn is_default_element_status(status: &str) -> bool {
+    status == "accepted"
+}
+
 fn default_enabled() -> bool {
     true
 }
@@ -2010,7 +2128,24 @@ mod tests {
       "args": {
         "id": "usecase.export-svg",
         "kind": "use_case",
-        "name": "Export SVG"
+        "name": "Export SVG",
+        "aliases": ["SVG export"],
+        "description": "Export an accepted diagram view as SVG.",
+        "documentation": "The exported SVG remains a delivery artifact; canonical model truth stays in the model package.",
+        "status": "proposed",
+        "provenance": {
+          "sourceRefs": ["source.roadmap"],
+          "createdBy": "test",
+          "createdAt": "2026-07-20T15:30:00Z"
+        },
+        "externalReferences": [
+          {
+            "id": "ref.svg",
+            "label": "SVG export note",
+            "uri": "docs/MODEL_PACKAGE.md#thin-cli",
+            "kind": "document"
+          }
+        ]
       },
       "rationale": "SVG export is part of the thin prototype acceptance path.",
       "sourceRefs": ["source.roadmap"]
@@ -2061,6 +2196,16 @@ mod tests {
                 .iter()
                 .any(|element| element.id == "usecase.export-svg")
         );
+        let exported = package
+            .elements
+            .elements
+            .iter()
+            .find(|element| element.id == "usecase.export-svg")
+            .unwrap();
+        assert_eq!(exported.status, "proposed");
+        assert_eq!(exported.aliases, vec!["SVG export"]);
+        assert_eq!(exported.provenance.source_refs, vec!["source.roadmap"]);
+        assert_eq!(exported.external_references[0].id, "ref.svg");
         let applied = fs::read_to_string(summary.applied_proposal_path).unwrap();
         assert!(applied.contains(r#""state": "applied""#));
     }

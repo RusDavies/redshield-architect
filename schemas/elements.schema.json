@@ -17,10 +17,44 @@
           "id": { "type": "string", "minLength": 1 },
           "kind": { "type": "string", "enum": ["actor", "use_case", "class", "component", "activity", "sequence_participant"] },
           "name": { "type": "string", "minLength": 1 },
+          "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 } },
           "description": { "type": "string" },
+          "documentation": { "type": "string" },
+          "status": { "type": "string", "enum": ["draft", "proposed", "accepted", "deprecated", "retired"] },
           "stereotypes": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-          "tags": { "type": "array", "items": { "type": "string" } }
+          "tags": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "provenance": { "$ref": "#/$defs/provenance" },
+          "externalReferences": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/externalReference" }
+          }
         }
+      }
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sourceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "createdBy": { "type": "string", "minLength": 1 },
+        "createdAt": { "type": "string", "minLength": 1 },
+        "notes": { "type": "string" }
+      }
+    },
+    "externalReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "uri"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "uri": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 }
       }
     }
   }
