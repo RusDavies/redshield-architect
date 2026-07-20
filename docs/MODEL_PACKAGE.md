@@ -50,6 +50,8 @@ The current workbench spike resolves the first profile, applies rule precedence,
 
 The workbench sidebar also includes a draft render-rule editor. It can assign renderer/style rules by element ID, element kind, stereotype, or tag; toggle existing rules; reset to the packaged default profile; and download the current in-memory render profile JSON. These edits are local to the browser session until a later Tauri/backend adapter writes render-profile changes through a typed operation path.
 
+Export behavior for built-in, image-backed, SVG, and custom HTML renderers is defined in [Render Export Behavior](RENDER_EXPORT_BEHAVIOR.md).
+
 Diagram views may now include canonical view metadata under `layout`. This metadata records canvas coordinates separately from semantic model truth:
 
 - `coordinateSystem`: currently `canvas`

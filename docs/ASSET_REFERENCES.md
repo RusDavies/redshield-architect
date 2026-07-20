@@ -46,3 +46,5 @@ Every asset records:
 SVG assets are treated as images, not executable UI. A renderer should sanitize or isolate SVG content before display/export and must not execute scripts, foreign objects, event handlers, or remote references from user assets.
 
 Render profiles can reference `html.custom` renderers, but user-authored HTML is a separate trust boundary from image assets and should require a stricter policy before being enabled.
+
+The export-specific handling for available, referenced, missing, blocked, SVG, and custom HTML assets is defined in [Render Export Behavior](RENDER_EXPORT_BEHAVIOR.md).

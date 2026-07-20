@@ -37,6 +37,7 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 - `docs/security/THREAT_MODEL.md` - public safety and privacy model
 - `docs/research/COMPARABLE_TOOLS.md` - high-level market and tooling context
 - `docs/MODEL_PACKAGE.md` - current text-backed model package shape and CLI usage
+- `docs/RENDER_EXPORT_BEHAVIOR.md` - export contract for built-in, image-backed, SVG, and custom HTML renderers
 
 ## Status
 
