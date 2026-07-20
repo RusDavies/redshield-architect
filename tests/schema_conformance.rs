@@ -317,6 +317,82 @@ fn schema_validation_rejects_image_renderer_without_asset_ref() {
     );
 }
 
+#[test]
+fn schema_validation_rejects_render_asset_outside_package_asset_path() {
+    let schema = read_json("schemas/render-profile.schema.json");
+    let validator =
+        jsonschema::validator_for(&schema).expect("render profile schema should compile");
+    let invalid = json!({
+        "schemaVersion": "0.1.0",
+        "profiles": [
+            {
+                "id": "render-profile.invalid-asset-uri",
+                "title": "Invalid Asset URI Render Profile",
+                "rules": [],
+                "fallback": {
+                    "rendererId": "uml.class"
+                },
+                "assets": [
+                    {
+                        "id": "asset.remote-duck",
+                        "uri": "https://example.com/duck.png",
+                        "kind": "image/png",
+                        "status": "referenced",
+                        "provenance": {
+                            "sourceType": "imported",
+                            "source": "https://example.com/duck.png",
+                            "license": "unknown"
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "render profile schema should reject assets outside assets/render/"
+    );
+}
+
+#[test]
+fn schema_validation_rejects_available_render_asset_without_hash() {
+    let schema = read_json("schemas/render-profile.schema.json");
+    let validator =
+        jsonschema::validator_for(&schema).expect("render profile schema should compile");
+    let invalid = json!({
+        "schemaVersion": "0.1.0",
+        "profiles": [
+            {
+                "id": "render-profile.invalid-available-asset",
+                "title": "Invalid Available Asset Render Profile",
+                "rules": [],
+                "fallback": {
+                    "rendererId": "uml.class"
+                },
+                "assets": [
+                    {
+                        "id": "asset.available-duck",
+                        "uri": "assets/render/duck.png",
+                        "kind": "image/png",
+                        "status": "available",
+                        "provenance": {
+                            "sourceType": "user_provided",
+                            "source": "duck.png",
+                            "license": "user-provided"
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "render profile schema should require a hash for available assets"
+    );
+}
+
 fn assert_conforms(schema_path: &str, instance_path: &str) {
     let schema = read_json(schema_path);
     let instance = read_json(instance_path);

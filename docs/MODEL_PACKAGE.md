@@ -44,7 +44,7 @@ Render profiles define how matching model elements are drawn without changing se
 
 A profile contains ordered rules plus a fallback renderer. Rules match elements by `elementId`, `elementKind`, `stereotype`, or `tag`; higher `precedence` wins when multiple enabled rules match. A render target chooses a renderer ID such as `uml.actor`, `uml.class`, `uml.component`, `image.element`, or `html.custom`, and may supply style, label placement, connector ports, and asset references.
 
-Image-backed renderers use explicit assets with source and license provenance. The schema allows references such as `assets/render/duck.png`, but the example deliberately records only the reference and provenance placeholder rather than committing a binary asset.
+Image-backed renderers use explicit assets with source and license provenance. The schema allows package-relative references such as `assets/render/duck.png`, but the example deliberately records only the reference and provenance placeholder rather than committing a binary asset. The detailed asset rules live in [Asset References](ASSET_REFERENCES.md).
 
 Diagram views may now include canonical view metadata under `layout`. This metadata records canvas coordinates separately from semantic model truth:
 
