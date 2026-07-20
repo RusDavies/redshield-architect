@@ -90,13 +90,23 @@ type RenderProfile = {
   fallback: RenderTarget;
   assets?: RenderAsset[];
 };
+type ExternalReference = {
+  id: string;
+  label: string;
+  uri: string;
+  kind?: string;
+};
 type RedshieldNodeData = {
   label: string;
   modelId: string;
   kind: string;
+  aliases: string[];
   description: string;
+  documentation: string;
+  status: string;
   stereotypes: string[];
   tags: string[];
+  externalReferences: ExternalReference[];
   layoutState: 'generated' | 'manual';
   bounds: { width: number; height: number };
   labelPosition?: { x: number; y: number };
@@ -186,9 +196,13 @@ function toNodeData(
     label: element.name,
     modelId: element.id,
     kind: element.kind,
+    aliases: element.aliases ?? [],
     description: element.description,
+    documentation: element.documentation ?? '',
+    status: element.status ?? 'accepted',
     stereotypes: element.stereotypes ?? [],
     tags: element.tags,
+    externalReferences: element.externalReferences ?? [],
     layoutState: toLayoutState(layout?.layoutState),
     bounds: {
       width: layout?.bounds.width ?? 210,
@@ -1296,6 +1310,8 @@ function InspectorNode({ node }: { node: Node<RedshieldNodeData> }) {
       <dd>{node.data.modelId}</dd>
       <dt>Kind</dt>
       <dd>{node.data.kind}</dd>
+      <dt>Status</dt>
+      <dd>{node.data.status}</dd>
       <dt>Renderer</dt>
       <dd>{node.data.render.rendererId}</dd>
       <dt>Rule</dt>
@@ -1304,8 +1320,16 @@ function InspectorNode({ node }: { node: Node<RedshieldNodeData> }) {
       <dd>{node.data.asset ? `${node.data.asset.id} (${node.data.asset.status})` : 'none'}</dd>
       <dt>Label</dt>
       <dd>{node.data.label}</dd>
+      <dt>Aliases</dt>
+      <dd>{node.data.aliases.length > 0 ? node.data.aliases.join(', ') : 'none'}</dd>
       <dt>Stereotypes</dt>
       <dd>{node.data.stereotypes.length > 0 ? node.data.stereotypes.join(', ') : 'none'}</dd>
+      <dt>External</dt>
+      <dd>
+        {node.data.externalReferences.length > 0
+          ? node.data.externalReferences.map((reference) => reference.label).join(', ')
+          : 'none'}
+      </dd>
       <dt>Layout</dt>
       <dd>{node.data.layoutState}</dd>
       <dt>Bounds</dt>
@@ -1318,6 +1342,8 @@ function InspectorNode({ node }: { node: Node<RedshieldNodeData> }) {
       </dd>
       <dt>Notes</dt>
       <dd>{node.data.description}</dd>
+      <dt>Docs</dt>
+      <dd>{node.data.documentation || 'none'}</dd>
     </dl>
   );
 }

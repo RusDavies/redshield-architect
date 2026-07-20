@@ -38,6 +38,21 @@ The workbench emits proposal-shaped operation drafts for direct manipulation act
 
 The current spike can save/load the draft transaction in browser local storage, mark it accepted, and download proposal JSON that the CLI can apply. Direct filesystem writes from the workbench remain a later Tauri/backend adapter concern.
 
+## Model Elements
+
+Model elements are semantic objects under `model/elements.json`. The common element envelope now supports:
+
+- `id`, `kind`, and `name`
+- `aliases` for alternate names or role labels
+- `description` for a short summary
+- `documentation` for longer notes owned by the model element
+- `status`: `draft`, `proposed`, `accepted`, `deprecated`, or `retired`
+- `stereotypes` and `tags` for classification and render/profile selectors
+- `provenance` with source references, creator, creation timestamp, and notes
+- `externalReferences` for links to documents, standards, tickets, repositories, or imported/source artifacts
+
+This common metadata is intentionally separate from UML classifier details such as attributes, operations, visibility, multiplicity, and type references. Those fields belong to later element-detail schemas rather than the shared metadata envelope.
+
 ## Render Profiles
 
 Render profiles define how matching model elements are drawn without changing semantic model truth. They live under `views/render-profile.json` in the prototype package and are validated by `schemas/render-profile.schema.json`.

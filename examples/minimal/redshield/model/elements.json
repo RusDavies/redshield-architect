@@ -5,7 +5,23 @@
       "id": "actor.architect",
       "kind": "actor",
       "name": "Architect",
+      "aliases": ["Model reviewer"],
       "description": "Human owner of model review and approval.",
+      "documentation": "The architect owns review decisions and is the human approval gate for proposal application.",
+      "status": "accepted",
+      "provenance": {
+        "sourceRefs": ["docs/PRODUCT_BRIEF.md"],
+        "createdBy": "RedShield prototype seed",
+        "createdAt": "2026-07-01T00:00:00Z"
+      },
+      "externalReferences": [
+        {
+          "id": "ref.architect-role",
+          "label": "Product brief stakeholder",
+          "uri": "docs/PRODUCT_BRIEF.md#users--stakeholders",
+          "kind": "document"
+        }
+      ],
       "tags": ["human", "reviewer"]
     },
     {
