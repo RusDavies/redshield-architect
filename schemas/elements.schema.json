@@ -28,7 +28,11 @@
             "type": "array",
             "items": { "$ref": "#/$defs/externalReference" }
           },
-          "classifier": { "$ref": "#/$defs/classifierDetails" }
+          "classifier": { "$ref": "#/$defs/classifierDetails" },
+          "actorDetails": { "$ref": "#/$defs/actorDetails" },
+          "useCaseDetails": { "$ref": "#/$defs/useCaseDetails" },
+          "activityDetails": { "$ref": "#/$defs/activityDetails" },
+          "sequenceParticipantDetails": { "$ref": "#/$defs/sequenceParticipantDetails" }
         },
         "allOf": [
           {
@@ -38,6 +42,22 @@
                 "kind": { "enum": ["class", "component"] }
               }
             }
+          },
+          {
+            "if": { "required": ["actorDetails"] },
+            "then": { "properties": { "kind": { "const": "actor" } } }
+          },
+          {
+            "if": { "required": ["useCaseDetails"] },
+            "then": { "properties": { "kind": { "const": "use_case" } } }
+          },
+          {
+            "if": { "required": ["activityDetails"] },
+            "then": { "properties": { "kind": { "const": "activity" } } }
+          },
+          {
+            "if": { "required": ["sequenceParticipantDetails"] },
+            "then": { "properties": { "kind": { "const": "sequence_participant" } } }
           }
         ]
       }
@@ -146,6 +166,148 @@
     "visibility": {
       "type": "string",
       "enum": ["public", "private", "protected", "package"]
+    },
+    "actorDetails": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "actorType": {
+          "type": "string",
+          "enum": ["person", "role", "organization", "system", "external_system"]
+        },
+        "responsibilities": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "goals": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "constraints": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "useCaseDetails": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primaryActorRef": { "type": "string", "minLength": 1 },
+        "supportingActorRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "preconditions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "postconditions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "mainFlow": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/useCaseStep" }
+        },
+        "alternateFlows": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/useCaseAlternateFlow" }
+        },
+        "extensionPoints": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "useCaseStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["step", "action"],
+      "properties": {
+        "step": { "type": "integer", "minimum": 1 },
+        "actorRef": { "type": "string", "minLength": 1 },
+        "action": { "type": "string", "minLength": 1 }
+      }
+    },
+    "useCaseAlternateFlow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "steps"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "trigger": { "type": "string", "minLength": 1 },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/useCaseStep" }
+        }
+      }
+    },
+    "activityDetails": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "parameters": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/activityParameter" }
+        },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/activityNode" }
+        },
+        "flows": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/activityFlow" }
+        }
+      }
+    },
+    "activityParameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "typeRef": { "type": "string", "minLength": 1 },
+        "direction": { "type": "string", "enum": ["in", "out", "inout"] }
+      }
+    },
+    "activityNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "kind": {
+          "type": "string",
+          "enum": ["initial", "action", "decision", "merge", "fork", "join", "object", "final"]
+        },
+        "description": { "type": "string" }
+      }
+    },
+    "activityFlow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceNodeId", "targetNodeId"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "sourceNodeId": { "type": "string", "minLength": 1 },
+        "targetNodeId": { "type": "string", "minLength": 1 },
+        "guard": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sequenceParticipantDetails": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "participantKind": {
+          "type": "string",
+          "enum": ["actor", "component", "class", "service", "external_system"]
+        },
+        "representsRef": { "type": "string", "minLength": 1 },
+        "lifelineName": { "type": "string", "minLength": 1 },
+        "isExternal": { "type": "boolean" }
+      }
     }
   }
 }

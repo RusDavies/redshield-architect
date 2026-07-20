@@ -134,6 +134,59 @@ type ClassifierDetails = {
   attributes?: ClassifierAttribute[];
   operations?: ClassifierOperation[];
 };
+type ActorDetails = {
+  actorType?: string;
+  responsibilities?: string[];
+  goals?: string[];
+  constraints?: string[];
+};
+type UseCaseStep = {
+  step: number;
+  actorRef?: string;
+  action: string;
+};
+type UseCaseAlternateFlow = {
+  name: string;
+  trigger?: string;
+  steps?: UseCaseStep[];
+};
+type UseCaseDetails = {
+  primaryActorRef?: string;
+  supportingActorRefs?: string[];
+  preconditions?: string[];
+  postconditions?: string[];
+  mainFlow?: UseCaseStep[];
+  alternateFlows?: UseCaseAlternateFlow[];
+  extensionPoints?: string[];
+};
+type ActivityParameter = {
+  name: string;
+  typeRef?: string;
+  direction?: string;
+};
+type ActivityNode = {
+  id: string;
+  name: string;
+  kind: string;
+  description?: string;
+};
+type ActivityFlow = {
+  id: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  guard?: string;
+};
+type ActivityDetails = {
+  parameters?: ActivityParameter[];
+  nodes?: ActivityNode[];
+  flows?: ActivityFlow[];
+};
+type SequenceParticipantDetails = {
+  participantKind?: string;
+  representsRef?: string;
+  lifelineName?: string;
+  isExternal?: boolean;
+};
 type RedshieldNodeData = {
   label: string;
   modelId: string;
@@ -146,6 +199,10 @@ type RedshieldNodeData = {
   tags: string[];
   externalReferences: ExternalReference[];
   classifier?: ClassifierDetails;
+  actorDetails?: ActorDetails;
+  useCaseDetails?: UseCaseDetails;
+  activityDetails?: ActivityDetails;
+  sequenceParticipantDetails?: SequenceParticipantDetails;
   layoutState: 'generated' | 'manual';
   bounds: { width: number; height: number };
   labelPosition?: { x: number; y: number };
@@ -243,6 +300,10 @@ function toNodeData(
     tags: element.tags,
     externalReferences: element.externalReferences ?? [],
     classifier: element.classifier,
+    actorDetails: element.actorDetails,
+    useCaseDetails: element.useCaseDetails,
+    activityDetails: element.activityDetails,
+    sequenceParticipantDetails: element.sequenceParticipantDetails,
     layoutState: toLayoutState(layout?.layoutState),
     bounds: {
       width: layout?.bounds.width ?? 210,
@@ -1398,6 +1459,7 @@ function InspectorNode({ node }: { node: Node<RedshieldNodeData> }) {
           <dd>{operations.map(formatOperation).join('; ')}</dd>
         </>
       ) : null}
+      <SemanticDetails node={node.data} />
       <dt>Layout</dt>
       <dd>{node.data.layoutState}</dd>
       <dt>Bounds</dt>
@@ -1414,6 +1476,75 @@ function InspectorNode({ node }: { node: Node<RedshieldNodeData> }) {
       <dd>{node.data.documentation || 'none'}</dd>
     </dl>
   );
+}
+
+function SemanticDetails({ node }: { node: RedshieldNodeData }) {
+  if (node.actorDetails) {
+    return (
+      <>
+        <dt>Actor type</dt>
+        <dd>{node.actorDetails.actorType ?? 'unspecified'}</dd>
+        <dt>Responsibilities</dt>
+        <dd>{formatList(node.actorDetails.responsibilities)}</dd>
+        <dt>Goals</dt>
+        <dd>{formatList(node.actorDetails.goals)}</dd>
+        <dt>Constraints</dt>
+        <dd>{formatList(node.actorDetails.constraints)}</dd>
+      </>
+    );
+  }
+
+  if (node.useCaseDetails) {
+    return (
+      <>
+        <dt>Primary actor</dt>
+        <dd>{node.useCaseDetails.primaryActorRef || 'none'}</dd>
+        <dt>Preconditions</dt>
+        <dd>{formatList(node.useCaseDetails.preconditions)}</dd>
+        <dt>Main flow</dt>
+        <dd>{formatUseCaseSteps(node.useCaseDetails.mainFlow)}</dd>
+        <dt>Alternate flows</dt>
+        <dd>{formatAlternateFlows(node.useCaseDetails.alternateFlows)}</dd>
+        <dt>Postconditions</dt>
+        <dd>{formatList(node.useCaseDetails.postconditions)}</dd>
+        <dt>Extension points</dt>
+        <dd>{formatList(node.useCaseDetails.extensionPoints)}</dd>
+      </>
+    );
+  }
+
+  if (node.activityDetails) {
+    return (
+      <>
+        <dt>Parameters</dt>
+        <dd>{formatActivityParameters(node.activityDetails.parameters)}</dd>
+        <dt>Activity nodes</dt>
+        <dd>{formatActivityNodes(node.activityDetails.nodes)}</dd>
+        <dt>Activity flows</dt>
+        <dd>{formatActivityFlows(node.activityDetails.flows)}</dd>
+      </>
+    );
+  }
+
+  if (node.sequenceParticipantDetails) {
+    return (
+      <>
+        <dt>Participant</dt>
+        <dd>
+          {[
+            node.sequenceParticipantDetails.participantKind,
+            node.sequenceParticipantDetails.lifelineName,
+            node.sequenceParticipantDetails.representsRef,
+            node.sequenceParticipantDetails.isExternal ? 'external' : undefined,
+          ]
+            .filter(Boolean)
+            .join(' / ') || 'unspecified'}
+        </dd>
+      </>
+    );
+  }
+
+  return null;
 }
 
 function formatAttribute(attribute: ClassifierAttribute): string {
@@ -1466,6 +1597,50 @@ function visibilitySymbol(visibility?: string): string {
   if (visibility === 'protected') return '#';
   if (visibility === 'package') return '~';
   return '+';
+}
+
+function formatList(values?: string[]): string {
+  return values && values.length > 0 ? values.join('; ') : 'none';
+}
+
+function formatUseCaseSteps(steps?: UseCaseStep[]): string {
+  return steps && steps.length > 0
+    ? steps.map((step) => `${step.step}. ${step.actorRef ? `${step.actorRef}: ` : ''}${step.action}`).join('; ')
+    : 'none';
+}
+
+function formatAlternateFlows(flows?: UseCaseAlternateFlow[]): string {
+  return flows && flows.length > 0
+    ? flows
+        .map((flow) => `${flow.name}${flow.trigger ? ` (${flow.trigger})` : ''}: ${formatUseCaseSteps(flow.steps)}`)
+        .join('; ')
+    : 'none';
+}
+
+function formatActivityParameters(parameters?: ActivityParameter[]): string {
+  return parameters && parameters.length > 0
+    ? parameters
+        .map((parameter) =>
+          [parameter.direction, parameter.name, parameter.typeRef ? `: ${parameter.typeRef}` : undefined]
+            .filter(Boolean)
+            .join(' '),
+        )
+        .join('; ')
+    : 'none';
+}
+
+function formatActivityNodes(nodes?: ActivityNode[]): string {
+  return nodes && nodes.length > 0
+    ? nodes.map((node) => `${node.name} (${node.kind})`).join('; ')
+    : 'none';
+}
+
+function formatActivityFlows(flows?: ActivityFlow[]): string {
+  return flows && flows.length > 0
+    ? flows
+        .map((flow) => `${flow.sourceNodeId} -> ${flow.targetNodeId}${flow.guard ? ` [${flow.guard}]` : ''}`)
+        .join('; ')
+    : 'none';
 }
 
 function InspectorEdge({ edge }: { edge: Edge<RedshieldEdgeData> }) {

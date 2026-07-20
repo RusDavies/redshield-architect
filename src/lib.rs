@@ -71,6 +71,14 @@ pub struct ModelElement {
     pub external_references: Vec<ExternalReference>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub classifier: Option<ClassifierDetails>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub actor_details: Option<ActorDetails>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_case_details: Option<UseCaseDetails>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activity_details: Option<ActivityDetails>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sequence_participant_details: Option<SequenceParticipantDetails>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
@@ -188,6 +196,111 @@ pub struct Multiplicity {
 pub enum MultiplicityUpper {
     Count(u64),
     Unbounded(String),
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ActorDetails {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub actor_type: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub responsibilities: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub goals: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub constraints: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct UseCaseDetails {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub primary_actor_ref: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_actor_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub preconditions: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub postconditions: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub main_flow: Vec<UseCaseStep>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub alternate_flows: Vec<UseCaseAlternateFlow>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extension_points: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct UseCaseStep {
+    pub step: u64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub actor_ref: String,
+    pub action: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct UseCaseAlternateFlow {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub trigger: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub steps: Vec<UseCaseStep>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivityDetails {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameters: Vec<ActivityParameter>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub nodes: Vec<ActivityNode>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub flows: Vec<ActivityFlow>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivityParameter {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub type_ref: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub direction: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivityNode {
+    pub id: String,
+    pub name: String,
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivityFlow {
+    pub id: String,
+    pub source_node_id: String,
+    pub target_node_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub guard: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SequenceParticipantDetails {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub participant_kind: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub represents_ref: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub lifeline_name: String,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_external: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -525,6 +638,14 @@ struct CreateModelElementArgs {
     external_references: Vec<ExternalReference>,
     #[serde(default)]
     classifier: Option<ClassifierDetails>,
+    #[serde(default)]
+    actor_details: Option<ActorDetails>,
+    #[serde(default)]
+    use_case_details: Option<UseCaseDetails>,
+    #[serde(default)]
+    activity_details: Option<ActivityDetails>,
+    #[serde(default)]
+    sequence_participant_details: Option<SequenceParticipantDetails>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -743,6 +864,10 @@ pub fn apply_proposal_operations(
                     provenance: args.provenance,
                     external_references: args.external_references,
                     classifier: args.classifier,
+                    actor_details: args.actor_details,
+                    use_case_details: args.use_case_details,
+                    activity_details: args.activity_details,
+                    sequence_participant_details: args.sequence_participant_details,
                 });
                 summary.elements_created += 1;
             }
@@ -896,6 +1021,7 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
         validate_element_provenance(element)?;
         validate_external_references(element)?;
         validate_classifier_details(element)?;
+        validate_specialized_element_details(element)?;
         element_kinds.insert(element.id.as_str(), element.kind.as_str());
     }
 
@@ -1108,6 +1234,237 @@ fn validate_multiplicity(multiplicity: Option<&Multiplicity>, field: &str) -> Re
         if lower > *upper {
             bail!("{field} lower bound {lower} exceeds upper bound {upper}");
         }
+    }
+    Ok(())
+}
+
+fn validate_specialized_element_details(element: &ModelElement) -> Result<()> {
+    validate_detail_kind(
+        element.actor_details.is_some(),
+        element,
+        "actorDetails",
+        "actor",
+    )?;
+    validate_detail_kind(
+        element.use_case_details.is_some(),
+        element,
+        "useCaseDetails",
+        "use_case",
+    )?;
+    validate_detail_kind(
+        element.activity_details.is_some(),
+        element,
+        "activityDetails",
+        "activity",
+    )?;
+    validate_detail_kind(
+        element.sequence_participant_details.is_some(),
+        element,
+        "sequenceParticipantDetails",
+        "sequence_participant",
+    )?;
+
+    if let Some(details) = &element.actor_details {
+        validate_optional_enum(
+            &details.actor_type,
+            &[
+                "person",
+                "role",
+                "organization",
+                "system",
+                "external_system",
+            ],
+            &format!("{} actorDetails actorType", element.id),
+        )?;
+        validate_string_list(
+            &details.responsibilities,
+            &format!("{} actorDetails responsibility", element.id),
+        )?;
+        validate_string_list(&details.goals, &format!("{} actorDetails goal", element.id))?;
+        validate_string_list(
+            &details.constraints,
+            &format!("{} actorDetails constraint", element.id),
+        )?;
+    }
+
+    if let Some(details) = &element.use_case_details {
+        validate_optional_type_ref(
+            &details.primary_actor_ref,
+            &format!("{} useCaseDetails primaryActorRef", element.id),
+        )?;
+        validate_string_list(
+            &details.supporting_actor_refs,
+            &format!("{} useCaseDetails supportingActorRef", element.id),
+        )?;
+        validate_string_list(
+            &details.preconditions,
+            &format!("{} useCaseDetails precondition", element.id),
+        )?;
+        validate_string_list(
+            &details.postconditions,
+            &format!("{} useCaseDetails postcondition", element.id),
+        )?;
+        validate_use_case_steps(
+            &details.main_flow,
+            &format!("{} useCaseDetails mainFlow", element.id),
+        )?;
+        for flow in &details.alternate_flows {
+            ensure_non_empty(
+                &flow.name,
+                &format!("{} useCaseDetails alternateFlow name", element.id),
+            )?;
+            validate_optional_type_ref(
+                &flow.trigger,
+                &format!(
+                    "{} useCaseDetails alternateFlow {} trigger",
+                    element.id, flow.name
+                ),
+            )?;
+            validate_use_case_steps(
+                &flow.steps,
+                &format!(
+                    "{} useCaseDetails alternateFlow {} steps",
+                    element.id, flow.name
+                ),
+            )?;
+        }
+        validate_string_list(
+            &details.extension_points,
+            &format!("{} useCaseDetails extensionPoint", element.id),
+        )?;
+    }
+
+    if let Some(details) = &element.activity_details {
+        let mut parameter_names = BTreeSet::new();
+        for parameter in &details.parameters {
+            ensure_unique(&mut parameter_names, parameter.name.as_str())?;
+            validate_optional_type_ref(
+                &parameter.type_ref,
+                &format!(
+                    "{} activityDetails parameter {} typeRef",
+                    element.id, parameter.name
+                ),
+            )?;
+            validate_optional_enum(
+                &parameter.direction,
+                &["in", "out", "inout"],
+                &format!(
+                    "{} activityDetails parameter {} direction",
+                    element.id, parameter.name
+                ),
+            )?;
+        }
+
+        let mut node_ids = BTreeSet::new();
+        for node in &details.nodes {
+            ensure_unique(&mut node_ids, node.id.as_str())?;
+            ensure_non_empty(
+                &node.name,
+                &format!("{} activityDetails node {} name", element.id, node.id),
+            )?;
+            validate_required_enum(
+                &node.kind,
+                &[
+                    "initial", "action", "decision", "merge", "fork", "join", "object", "final",
+                ],
+                &format!("{} activityDetails node {} kind", element.id, node.id),
+            )?;
+        }
+
+        let mut flow_ids = BTreeSet::new();
+        for flow in &details.flows {
+            ensure_unique(&mut flow_ids, flow.id.as_str())?;
+            if !node_ids.contains(flow.source_node_id.as_str()) {
+                bail!(
+                    "{} activityDetails flow {} references missing source node {}",
+                    element.id,
+                    flow.id,
+                    flow.source_node_id
+                );
+            }
+            if !node_ids.contains(flow.target_node_id.as_str()) {
+                bail!(
+                    "{} activityDetails flow {} references missing target node {}",
+                    element.id,
+                    flow.id,
+                    flow.target_node_id
+                );
+            }
+        }
+    }
+
+    if let Some(details) = &element.sequence_participant_details {
+        validate_optional_enum(
+            &details.participant_kind,
+            &["actor", "component", "class", "service", "external_system"],
+            &format!("{} sequenceParticipantDetails participantKind", element.id),
+        )?;
+        validate_optional_type_ref(
+            &details.represents_ref,
+            &format!("{} sequenceParticipantDetails representsRef", element.id),
+        )?;
+        validate_optional_type_ref(
+            &details.lifeline_name,
+            &format!("{} sequenceParticipantDetails lifelineName", element.id),
+        )?;
+    }
+
+    Ok(())
+}
+
+fn validate_detail_kind(
+    present: bool,
+    element: &ModelElement,
+    details_field: &str,
+    expected_kind: &str,
+) -> Result<()> {
+    if present && element.kind != expected_kind {
+        bail!(
+            "{} has {} but kind {}",
+            element.id,
+            details_field,
+            element.kind
+        );
+    }
+    Ok(())
+}
+
+fn validate_use_case_steps(steps: &[UseCaseStep], field: &str) -> Result<()> {
+    let mut step_numbers = BTreeSet::new();
+    for step in steps {
+        if step.step == 0 {
+            bail!("{field} step number must be greater than zero");
+        }
+        if !step_numbers.insert(step.step) {
+            bail!("{field} has duplicate step {}", step.step);
+        }
+        validate_optional_type_ref(
+            &step.actor_ref,
+            &format!("{field} step {} actorRef", step.step),
+        )?;
+        ensure_non_empty(&step.action, &format!("{field} step {} action", step.step))?;
+    }
+    Ok(())
+}
+
+fn validate_string_list(values: &[String], field: &str) -> Result<()> {
+    for value in values {
+        ensure_non_empty(value, field)?;
+    }
+    Ok(())
+}
+
+fn validate_optional_enum(value: &str, allowed: &[&str], field: &str) -> Result<()> {
+    if value.is_empty() {
+        return Ok(());
+    }
+    validate_required_enum(value, allowed, field)
+}
+
+fn validate_required_enum(value: &str, allowed: &[&str], field: &str) -> Result<()> {
+    ensure_non_empty(value, field)?;
+    if !allowed.contains(&value) {
+        bail!("{field} has unsupported value {value}");
     }
     Ok(())
 }
@@ -2345,6 +2702,18 @@ mod tests {
           "createdBy": "test",
           "createdAt": "2026-07-20T15:30:00Z"
         },
+        "useCaseDetails": {
+          "primaryActorRef": "actor.architect",
+          "preconditions": ["An accepted diagram view exists"],
+          "postconditions": ["An SVG document is generated"],
+          "mainFlow": [
+            {
+              "step": 1,
+              "actorRef": "actor.architect",
+              "action": "Request SVG export for the selected diagram"
+            }
+          ]
+        },
         "externalReferences": [
           {
             "id": "ref.svg",
@@ -2441,6 +2810,12 @@ mod tests {
         assert_eq!(exported.aliases, vec!["SVG export"]);
         assert_eq!(exported.provenance.source_refs, vec!["source.roadmap"]);
         assert_eq!(exported.external_references[0].id, "ref.svg");
+        let use_case_details = exported.use_case_details.as_ref().unwrap();
+        assert_eq!(use_case_details.primary_actor_ref, "actor.architect");
+        assert_eq!(
+            use_case_details.main_flow[0].action,
+            "Request SVG export for the selected diagram"
+        );
         let exporter = package
             .elements
             .elements
