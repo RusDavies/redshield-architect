@@ -98,6 +98,113 @@ fn schema_validation_rejects_unknown_proposal_operation() {
 }
 
 #[test]
+fn schema_validation_rejects_proposal_operation_missing_required_arg() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let invalid = json!({
+        "proposalId": "proposal.invalid-move",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T03:10:00Z",
+        "intent": "Move a diagram node with incomplete args.",
+        "operations": [
+            {
+                "opId": "op.move-without-model-ref",
+                "op": "move_diagram_node",
+                "args": {
+                    "diagramId": "diagram.first-use-case",
+                    "x": 10,
+                    "y": 20
+                },
+                "rationale": "This operation is intentionally malformed."
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "proposal schema should reject missing operation args"
+    );
+}
+
+#[test]
+fn schema_validation_rejects_proposal_operation_extra_arg() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let invalid = json!({
+        "proposalId": "proposal.invalid-extra-arg",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T03:11:00Z",
+        "intent": "Create an element with a stray arg.",
+        "operations": [
+            {
+                "opId": "op.create-element-extra",
+                "op": "create_model_element",
+                "args": {
+                    "id": "actor.architect",
+                    "kind": "actor",
+                    "name": "Architect",
+                    "surprise": "nope"
+                },
+                "rationale": "This operation is intentionally malformed."
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "proposal schema should reject additional operation args"
+    );
+}
+
+#[test]
+fn schema_validation_accepts_typed_layout_operation_args() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let valid = json!({
+        "proposalId": "proposal.valid-layout-ops",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T03:12:00Z",
+        "intent": "Apply typed layout operations.",
+        "operations": [
+            {
+                "opId": "op.move-actor",
+                "op": "move_diagram_node",
+                "args": {
+                    "diagramId": "diagram.first-use-case",
+                    "modelRef": "actor.architect",
+                    "x": 100,
+                    "y": 120
+                },
+                "rationale": "Move a node."
+            },
+            {
+                "opId": "op.route-connector",
+                "op": "route_diagram_connector",
+                "args": {
+                    "diagramId": "diagram.first-use-case",
+                    "relationshipRef": "rel.architect-render",
+                    "routeHint": {
+                        "kind": "orthogonal",
+                        "points": [
+                            { "x": 200, "y": 120 },
+                            { "x": 320, "y": 180 }
+                        ]
+                    }
+                },
+                "rationale": "Route a connector."
+            }
+        ]
+    });
+
+    if let Err(error) = validator.validate(&valid) {
+        panic!("proposal schema should accept typed layout args: {error}");
+    }
+}
+
+#[test]
 fn schema_validation_rejects_invalid_diagram_layout_shape() {
     let schema = read_json("schemas/diagrams.schema.json");
     let validator = jsonschema::validator_for(&schema).expect("diagrams schema should compile");
