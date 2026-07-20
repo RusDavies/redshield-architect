@@ -35,6 +35,39 @@
           "enabled": true
         },
         {
+          "id": "render.component.uml",
+          "description": "Render components with the built-in UML component renderer.",
+          "selector": {
+            "elementKind": "component"
+          },
+          "renderAs": {
+            "rendererId": "uml.component",
+            "style": {
+              "fillColor": "#fef3c7",
+              "strokeColor": "#b45309",
+              "textColor": "#78350f"
+            },
+            "ports": [
+              {
+                "id": "in",
+                "side": "left",
+                "offset": 0.5
+              },
+              {
+                "id": "out",
+                "side": "right",
+                "offset": 0.5
+              }
+            ],
+            "label": {
+              "visible": true,
+              "position": "inside"
+            }
+          },
+          "precedence": 100,
+          "enabled": true
+        },
+        {
           "id": "render.stereotype-duck",
           "description": "Example image-backed renderer for classes carrying stereotype XYZ.",
           "selector": {

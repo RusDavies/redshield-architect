@@ -8,7 +8,9 @@
       "modelRefs": [
         "actor.architect",
         "usecase.review-proposal",
-        "usecase.render-diagram"
+        "usecase.render-diagram",
+        "component.workbench",
+        "class.render-policy"
       ],
       "layout": {
         "coordinateSystem": "canvas",
@@ -48,6 +50,26 @@
               "height": 86
             },
             "layoutState": "generated"
+          },
+          {
+            "modelRef": "component.workbench",
+            "bounds": {
+              "x": 760,
+              "y": 78,
+              "width": 220,
+              "height": 96
+            },
+            "layoutState": "generated"
+          },
+          {
+            "modelRef": "class.render-policy",
+            "bounds": {
+              "x": 760,
+              "y": 216,
+              "width": 180,
+              "height": 140
+            },
+            "layoutState": "generated"
           }
         ],
         "connectors": [
@@ -74,6 +96,13 @@
           },
           {
             "relationshipRef": "rel.architect-render",
+            "layoutState": "generated",
+            "routeHint": {
+              "kind": "smoothstep"
+            }
+          },
+          {
+            "relationshipRef": "rel.workbench-renders",
             "layoutState": "generated",
             "routeHint": {
               "kind": "smoothstep"
