@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   addEdge,
   applyEdgeChanges,
@@ -49,6 +49,14 @@ type RedshieldEdgeData = {
   routeHint: 'straight' | 'step' | 'smoothstep' | 'bezier' | 'orthogonal';
   labelPosition?: { x: number; y: number };
 };
+type ProposalOperation = {
+  opId: string;
+  op: string;
+  args: Record<string, unknown>;
+  rationale: string;
+  sourceRefs?: string[];
+};
+type ProposalOperationDraft = Omit<ProposalOperation, 'opId'>;
 
 const elk = new ELK();
 const diagram = diagramsFile.diagrams[0];
@@ -180,62 +188,126 @@ export default function App() {
     nodes: Node<RedshieldNodeData>[];
     edges: Edge<RedshieldEdgeData>[];
   }>({ nodes: [], edges: [] });
-  const [operationLog, setOperationLog] = useState<string[]>([
-    'Loaded semantic model package from examples/minimal/redshield.',
-  ]);
+  const operationSequence = useRef(1);
+  const [operationLog, setOperationLog] = useState<ProposalOperation[]>([]);
 
   const selectedNodeIds = useMemo(
     () => new Set(selection.nodes.map((node) => node.id)),
     [selection.nodes],
   );
 
-  const onNodesChange = useCallback((changes: NodeChange<Node<RedshieldNodeData>>[]) => {
-    setNodes((currentNodes) => {
-      const changedIds = new Set(
-        changes
-          .filter((change) => change.type === 'position' && change.dragging === false)
-          .map((change) => ('id' in change ? change.id : '')),
-      );
-      return applyNodeChanges(changes, currentNodes).map((node) =>
-        changedIds.has(node.id)
-          ? { ...node, data: { ...node.data, layoutState: 'manual' } }
-          : node,
-      );
+  const recordOperations = useCallback((drafts: ProposalOperationDraft[]) => {
+    if (drafts.length === 0) return;
+    setOperationLog((current) => {
+      const operations = drafts.map((draft) => ({
+        ...draft,
+        opId: `op.view.${operationSequence.current++}`,
+      }));
+      return [...current, ...operations].slice(-12);
     });
   }, []);
+
+  const recordOperation = useCallback(
+    (draft: ProposalOperationDraft) => recordOperations([draft]),
+    [recordOperations],
+  );
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange<Node<RedshieldNodeData>>[]) => {
+      const moveOperations = changes
+        .filter(
+          (
+            change,
+          ): change is NodeChange<Node<RedshieldNodeData>> & {
+            id: string;
+            position: { x: number; y: number };
+          } =>
+            change.type === 'position' &&
+            change.dragging === false &&
+            'position' in change &&
+            change.position !== undefined,
+        )
+        .map((change) => ({
+          op: 'move_diagram_node',
+          args: {
+            diagramId: diagram.id,
+            modelRef: change.id,
+            x: Math.round(change.position.x),
+            y: Math.round(change.position.y),
+          },
+          rationale: 'Node was moved on the workbench canvas.',
+          sourceRefs: ['workbench.canvas'],
+        }));
+
+      setNodes((currentNodes) => {
+        const changedIds = new Set(moveOperations.map((operation) => operation.args.modelRef));
+        return applyNodeChanges(changes, currentNodes).map((node) =>
+          changedIds.has(node.id)
+            ? { ...node, data: { ...node.data, layoutState: 'manual' } }
+            : node,
+        );
+      });
+      recordOperations(moveOperations);
+    },
+    [recordOperations],
+  );
 
   const onEdgesChange = useCallback((changes: EdgeChange<Edge<RedshieldEdgeData>>[]) => {
     setEdges((currentEdges) => applyEdgeChanges(changes, currentEdges));
   }, []);
 
-  const onConnect = useCallback((connection: Connection) => {
-    if (!connection.source || !connection.target) return;
-    const id = `rel.draft.${connection.source}.${connection.target}`;
-    setEdges((currentEdges) =>
-      addEdge(
-        {
-          ...connection,
-          id,
-          type: 'smoothstep',
-          label: 'draft',
-          data: {
-            relationshipId: id,
-            relationshipKind: 'association',
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      if (!connection.source || !connection.target) return;
+      const id = `rel.draft.${connection.source}.${connection.target}`;
+      setEdges((currentEdges) =>
+        addEdge(
+          {
+            ...connection,
+            id,
+            type: 'smoothstep',
             label: 'draft',
-            traceCount: 0,
-            layoutState: 'draft',
-            routeHint: 'smoothstep',
+            data: {
+              relationshipId: id,
+              relationshipKind: 'association',
+              label: 'draft',
+              traceCount: 0,
+              layoutState: 'draft',
+              routeHint: 'smoothstep',
+            },
           },
+          currentEdges,
+        ),
+      );
+      recordOperations([
+        {
+          op: 'create_relationship',
+          args: {
+            id,
+            relationshipKind: 'association',
+            sourceId: connection.source,
+            targetId: connection.target,
+            label: 'draft',
+          },
+          rationale: 'Canvas connector created a draft semantic relationship.',
+          sourceRefs: ['workbench.canvas'],
         },
-        currentEdges,
-      ),
-    );
-    pushOperation(`create_relationship draft ${connection.source} -> ${connection.target}`);
-  }, []);
-
-  const pushOperation = useCallback((entry: string) => {
-    setOperationLog((current) => [entry, ...current].slice(0, 8));
-  }, []);
+        {
+          op: 'connect_diagram_relationship',
+          args: {
+            diagramId: diagram.id,
+            relationshipRef: id,
+            routeHint: {
+              kind: 'smoothstep',
+            },
+          },
+          rationale: 'Canvas connector made the draft relationship visible in this diagram view.',
+          sourceRefs: ['workbench.canvas'],
+        },
+      ]);
+    },
+    [recordOperations],
+  );
 
   const runElkLayout = useCallback(async () => {
     const graph = {
@@ -272,8 +344,38 @@ export default function App() {
         data: { ...node.data, layoutState: 'generated' },
       })),
     );
-    pushOperation('apply_auto_layout elk.layered');
-  }, [edges, nodes, pushOperation]);
+    recordOperation({
+      op: 'apply_diagram_auto_layout',
+      args: {
+        diagramId: diagram.id,
+        layoutEngine: 'elk.layered',
+        nodes: nodes.map((node) => {
+          const position = positions.get(node.id) ?? node.position;
+          return {
+            modelRef: node.id,
+            bounds: {
+              x: Math.round(position.x),
+              y: Math.round(position.y),
+              width: node.data.bounds.width,
+              height: node.data.bounds.height,
+            },
+            layoutState: 'generated',
+            labelPosition: node.data.labelPosition,
+          };
+        }),
+        connectors: edges.map((edge) => ({
+          relationshipRef: edge.data?.relationshipId ?? edge.id,
+          layoutState: 'generated',
+          routeHint: {
+            kind: edge.data?.routeHint ?? 'smoothstep',
+          },
+          labelPosition: edge.data?.labelPosition,
+        })),
+      },
+      rationale: 'ELK auto-layout generated canvas bounds for this diagram view.',
+      sourceRefs: ['workbench.elk'],
+    });
+  }, [edges, nodes, recordOperation]);
 
   const alignSelected = useCallback(
     (mode: 'left' | 'right' | 'top' | 'bottom' | 'hcenter' | 'vcenter') => {
@@ -299,9 +401,18 @@ export default function App() {
           return { ...node, position: next, data: { ...node.data, layoutState: 'manual' } };
         }),
       );
-      pushOperation(`align_diagram_elements ${mode} ${Array.from(selectedNodeIds).join(', ')}`);
+      recordOperation({
+        op: 'align_diagram_nodes',
+        args: {
+          diagramId: diagram.id,
+          modelRefs: Array.from(selectedNodeIds),
+          alignment: mode,
+        },
+        rationale: 'Selected nodes were aligned on the workbench canvas.',
+        sourceRefs: ['workbench.canvas'],
+      });
     },
-    [nodes, pushOperation, selectedNodeIds],
+    [nodes, recordOperation, selectedNodeIds],
   );
 
   const distributeSelected = useCallback(
@@ -330,9 +441,18 @@ export default function App() {
           };
         }),
       );
-      pushOperation(`distribute_diagram_elements ${axis} ${Array.from(selectedNodeIds).join(', ')}`);
+      recordOperation({
+        op: 'distribute_diagram_nodes',
+        args: {
+          diagramId: diagram.id,
+          modelRefs: Array.from(selectedNodeIds),
+          axis,
+        },
+        rationale: 'Selected nodes were distributed on the workbench canvas.',
+        sourceRefs: ['workbench.canvas'],
+      });
     },
-    [nodes, pushOperation, selectedNodeIds],
+    [nodes, recordOperation, selectedNodeIds],
   );
 
   const viewMetadata = useMemo(
@@ -362,6 +482,17 @@ export default function App() {
       })),
     }),
     [edges, nodes],
+  );
+  const proposalDraft = useMemo(
+    () => ({
+      proposalId: 'proposal.workbench-draft',
+      schemaVersion: '0.1.0',
+      state: 'draft',
+      createdAt: 'workbench-session',
+      intent: 'Apply direct manipulation changes from the workbench canvas.',
+      operations: operationLog,
+    }),
+    [operationLog],
   );
 
   return (
@@ -455,9 +586,18 @@ export default function App() {
           </ReactFlow>
         </div>
         <div className="operation-log">
-          {operationLog.map((entry) => (
-            <code key={entry}>{entry}</code>
-          ))}
+          {operationLog.length === 0 ? (
+            <code>No emitted operations yet.</code>
+          ) : (
+            operationLog
+              .slice()
+              .reverse()
+              .map((operation) => (
+                <code key={operation.opId}>
+                  {operation.opId} {operation.op}
+                </code>
+              ))
+          )}
         </div>
       </section>
 
@@ -475,6 +615,10 @@ export default function App() {
         <section>
           <h2>View Metadata</h2>
           <pre>{JSON.stringify(viewMetadata, null, 2)}</pre>
+        </section>
+        <section>
+          <h2>Proposal Operations</h2>
+          <pre>{JSON.stringify(proposalDraft, null, 2)}</pre>
         </section>
       </aside>
     </main>
