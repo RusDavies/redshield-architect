@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   addEdge,
   applyEdgeChanges,
@@ -125,10 +125,9 @@ type ProposalState = 'draft' | 'accepted';
 
 const elk = new ELK();
 const diagram = diagramsFile.diagrams[0];
-const renderProfile = renderProfileFile.profiles[0] as RenderProfile;
+const defaultRenderProfile = renderProfileFile.profiles[0] as RenderProfile;
 const proposalStorageKey = `redshield.workbench.${diagram.id}.proposalDraft`;
 const elementById = new Map(elementsFile.elements.map((element) => [element.id, element]));
-const renderAssetById = new Map((renderProfile.assets ?? []).map((asset) => [asset.id, asset]));
 const nodeLayoutByRef = new Map(
   (diagram.layout?.nodes ?? []).map((nodeLayout) => [nodeLayout.modelRef, nodeLayout]),
 );
@@ -139,7 +138,7 @@ const connectorLayoutByRef = new Map(
   ]),
 );
 
-function initialNodes(): Node<RedshieldNodeData>[] {
+function initialNodes(profile: RenderProfile): Node<RedshieldNodeData>[] {
   return diagram.modelRefs
     .map((modelId, index): Node<RedshieldNodeData> | undefined => {
       const element = elementById.get(modelId);
@@ -151,7 +150,7 @@ function initialNodes(): Node<RedshieldNodeData>[] {
         position: persisted
           ? { x: persisted.bounds.x, y: persisted.bounds.y }
           : { x: element.kind === 'actor' ? 80 : 360, y: 92 + index * 116 },
-        data: toNodeData(element, persisted),
+        data: toNodeData(element, profile, persisted),
       };
     })
     .filter((node): node is Node<RedshieldNodeData> => node !== undefined);
@@ -176,8 +175,13 @@ function initialEdges(): Edge<RedshieldEdgeData>[] {
     }));
 }
 
-function toNodeData(element: ElementRecord, layout?: DiagramNodeLayout): RedshieldNodeData {
-  const resolution = resolveRenderTarget(element);
+function toNodeData(
+  element: ElementRecord,
+  profile: RenderProfile,
+  layout?: DiagramNodeLayout,
+): RedshieldNodeData {
+  const resolution = resolveRenderTarget(element, profile);
+  const renderAssetById = new Map((profile.assets ?? []).map((asset) => [asset.id, asset]));
   return {
     label: element.name,
     modelId: element.id,
@@ -197,14 +201,17 @@ function toNodeData(element: ElementRecord, layout?: DiagramNodeLayout): Redshie
   };
 }
 
-function resolveRenderTarget(element: ElementRecord): { render: RenderTarget; ruleId: string } {
-  const rule = renderProfile.rules
+function resolveRenderTarget(
+  element: ElementRecord,
+  profile: RenderProfile,
+): { render: RenderTarget; ruleId: string } {
+  const rule = profile.rules
     .filter((candidate) => candidate.enabled !== false && matchesSelector(element, candidate))
     .sort((left, right) => right.precedence - left.precedence)[0];
 
   return rule
     ? { render: rule.renderAs, ruleId: rule.id }
-    : { render: renderProfile.fallback, ruleId: 'fallback' };
+    : { render: profile.fallback, ruleId: 'fallback' };
 }
 
 function matchesSelector(element: ElementRecord, rule: RenderRule) {
@@ -399,9 +406,72 @@ function NodeLabel({ data }: { data: RedshieldNodeData }) {
 }
 
 const nodeTypes = { redshield: RedshieldNode };
+type SelectorMode = keyof RenderSelector;
+
+const selectorModes: { value: SelectorMode; label: string }[] = [
+  { value: 'elementId', label: 'ID' },
+  { value: 'elementKind', label: 'Kind' },
+  { value: 'stereotype', label: 'Stereotype' },
+  { value: 'tag', label: 'Tag' },
+];
+
+const rendererOptions: RendererId[] = [
+  'uml.actor',
+  'uml.use_case',
+  'uml.class',
+  'uml.component',
+  'uml.activity',
+  'uml.sequence_participant',
+  'image.element',
+];
+
+const colorSwatches = ['#ffffff', '#ccfbf1', '#e0f2fe', '#fef3c7', '#fee2e2', '#ede9fe'];
+
+function selectorValueOptions(mode: SelectorMode) {
+  if (mode === 'elementId') {
+    return elementsFile.elements.map((element) => ({
+      value: element.id,
+      label: element.name,
+    }));
+  }
+  if (mode === 'elementKind') {
+    return Array.from(new Set(elementsFile.elements.map((element) => element.kind))).map((kind) => ({
+      value: kind,
+      label: kind.replace('_', ' '),
+    }));
+  }
+  if (mode === 'stereotype') {
+    return Array.from(new Set(elementsFile.elements.flatMap((element) => element.stereotypes ?? []))).map(
+      (stereotype) => ({ value: stereotype, label: stereotype }),
+    );
+  }
+  return Array.from(new Set(elementsFile.elements.flatMap((element) => element.tags))).map((tag) => ({
+    value: tag,
+    label: tag,
+  }));
+}
+
+function sanitizeRuleIdPart(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function defaultPortsForRenderer(rendererId: RendererId): RenderPort[] {
+  if (rendererId === 'uml.actor') return [{ id: 'out', side: 'right', offset: 0.5 }];
+  return [
+    { id: 'in', side: 'left', offset: 0.5 },
+    { id: 'out', side: 'right', offset: 0.5 },
+  ];
+}
 
 export default function App() {
-  const [nodes, setNodes] = useState<Node<RedshieldNodeData>[]>(() => initialNodes());
+  const [renderProfile, setRenderProfile] = useState<RenderProfile>(() => defaultRenderProfile);
+  const [nodes, setNodes] = useState<Node<RedshieldNodeData>[]>(() =>
+    initialNodes(defaultRenderProfile),
+  );
   const [edges, setEdges] = useState<Edge<RedshieldEdgeData>[]>(() => initialEdges());
   const [selection, setSelection] = useState<{
     nodes: Node<RedshieldNodeData>[];
@@ -412,11 +482,43 @@ export default function App() {
   const [operationLog, setOperationLog] = useState<ProposalOperation[]>([]);
   const [proposalState, setProposalState] = useState<ProposalState>('draft');
   const [proposalStatus, setProposalStatus] = useState('No saved proposal draft.');
+  const [renderProfileStatus, setRenderProfileStatus] = useState('Default render profile loaded.');
 
   const selectedNodeIds = useMemo(
     () => new Set(selection.nodes.map((node) => node.id)),
     [selection.nodes],
   );
+  const selectedNode = selection.nodes[0];
+  const renderProfilePreview = useMemo(
+    () => ({
+      schemaVersion: renderProfileFile.schemaVersion,
+      profiles: [renderProfile],
+    }),
+    [renderProfile],
+  );
+
+  useEffect(() => {
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => {
+        const element = elementById.get(node.id);
+        if (!element) return node;
+        return {
+          ...node,
+          data: toNodeData(element, renderProfile, {
+            modelRef: node.id,
+            bounds: {
+              x: node.position.x,
+              y: node.position.y,
+              width: node.data.bounds.width,
+              height: node.data.bounds.height,
+            },
+            layoutState: node.data.layoutState,
+            labelPosition: node.data.labelPosition,
+          }),
+        };
+      }),
+    );
+  }, [renderProfile]);
 
   const recordOperations = useCallback((drafts: ProposalOperationDraft[]) => {
     if (drafts.length === 0) return;
@@ -758,6 +860,18 @@ export default function App() {
     setProposalState('draft');
     setProposalStatus('Cleared in-memory proposal operations.');
   }, []);
+  const downloadRenderProfile = useCallback(() => {
+    const blob = new Blob([`${JSON.stringify(renderProfilePreview, null, 2)}\n`], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'render-profile.workbench-draft.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setRenderProfileStatus('Downloaded draft render profile JSON.');
+  }, [renderProfilePreview]);
 
   return (
     <main className="workbench-shell">
@@ -798,6 +912,32 @@ export default function App() {
             ))}
           </div>
         </section>
+        <RenderRuleEditor
+          profile={renderProfile}
+          selectedNode={selectedNode}
+          status={renderProfileStatus}
+          onApply={(rule) => {
+            setRenderProfile((current) => {
+              const nextRules = current.rules.filter((currentRule) => currentRule.id !== rule.id);
+              return { ...current, rules: [...nextRules, rule] };
+            });
+            setRenderProfileStatus(`Applied ${rule.id} locally.`);
+          }}
+          onToggle={(ruleId) => {
+            setRenderProfile((current) => ({
+              ...current,
+              rules: current.rules.map((rule) =>
+                rule.id === ruleId ? { ...rule, enabled: rule.enabled === false } : rule,
+              ),
+            }));
+            setRenderProfileStatus(`Toggled ${ruleId}.`);
+          }}
+          onReset={() => {
+            setRenderProfile(defaultRenderProfile);
+            setRenderProfileStatus('Reset to the packaged default render profile.');
+          }}
+          onDownload={downloadRenderProfile}
+        />
       </aside>
 
       <section className="canvas-region">
@@ -900,8 +1040,223 @@ export default function App() {
           <p className="proposal-status">{proposalStatus}</p>
           <pre>{JSON.stringify(proposalDraft, null, 2)}</pre>
         </section>
+        <section>
+          <h2>Render Profile</h2>
+          <pre>{JSON.stringify(renderProfilePreview, null, 2)}</pre>
+        </section>
       </aside>
     </main>
+  );
+}
+
+function RenderRuleEditor({
+  profile,
+  selectedNode,
+  status,
+  onApply,
+  onToggle,
+  onReset,
+  onDownload,
+}: {
+  profile: RenderProfile;
+  selectedNode?: Node<RedshieldNodeData>;
+  status: string;
+  onApply: (rule: RenderRule) => void;
+  onToggle: (ruleId: string) => void;
+  onReset: () => void;
+  onDownload: () => void;
+}) {
+  const [selectorMode, setSelectorMode] = useState<SelectorMode>('elementKind');
+  const [selectorValue, setSelectorValue] = useState('class');
+  const [rendererId, setRendererId] = useState<RendererId>('uml.class');
+  const [assetRef, setAssetRef] = useState(profile.assets?.[0]?.id ?? '');
+  const [fillColor, setFillColor] = useState('#ffffff');
+  const [strokeColor, setStrokeColor] = useState('#334155');
+  const [textColor, setTextColor] = useState('#0f172a');
+  const [precedence, setPrecedence] = useState(150);
+
+  const options = selectorValueOptions(selectorMode);
+  const canApply = selectorValue.trim().length > 0 && rendererId !== 'html.custom';
+
+  const applySelectedNode = () => {
+    if (!selectedNode) return;
+    setSelectorMode('elementId');
+    setSelectorValue(selectedNode.id);
+    setRendererId(selectedNode.data.render.rendererId);
+    setAssetRef(selectedNode.data.render.assetRef ?? profile.assets?.[0]?.id ?? '');
+    setFillColor(selectedNode.data.render.style?.fillColor ?? fillColor);
+    setStrokeColor(selectedNode.data.render.style?.strokeColor ?? strokeColor);
+    setTextColor(selectedNode.data.render.style?.textColor ?? textColor);
+  };
+
+  const applyRule = () => {
+    if (!canApply) return;
+    const selector = { [selectorMode]: selectorValue.trim() } as RenderSelector;
+    const style =
+      rendererId === 'image.element'
+        ? undefined
+        : {
+            fillColor,
+            strokeColor,
+            textColor,
+          };
+    onApply({
+      id: `render.ui.${selectorMode}.${sanitizeRuleIdPart(selectorValue)}`,
+      description: `Workbench-authored rule for ${selectorMode} ${selectorValue}.`,
+      selector,
+      renderAs: {
+        rendererId,
+        assetRef: rendererId === 'image.element' ? assetRef : undefined,
+        style,
+        ports: defaultPortsForRenderer(rendererId),
+        label: {
+          visible: true,
+          position: rendererId === 'uml.actor' || rendererId === 'image.element' ? 'bottom' : 'inside',
+        },
+      },
+      precedence,
+      enabled: true,
+    });
+  };
+
+  return (
+    <section>
+      <h2>Render Rules</h2>
+      <div className="rule-editor">
+        <div className="segmented-control" aria-label="Selector type">
+          {selectorModes.map((mode) => (
+            <button
+              key={mode.value}
+              className={selectorMode === mode.value ? 'is-active' : ''}
+              onClick={() => {
+                setSelectorMode(mode.value);
+                setSelectorValue(selectorValueOptions(mode.value)[0]?.value ?? '');
+              }}
+              type="button"
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+        <label>
+          Match
+          <select
+            onChange={(event) => setSelectorValue(event.target.value)}
+            value={selectorValue}
+          >
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Renderer
+          <select
+            onChange={(event) => setRendererId(event.target.value as RendererId)}
+            value={rendererId}
+          >
+            {rendererOptions.map((renderer) => (
+              <option key={renderer} value={renderer}>
+                {renderer}
+              </option>
+            ))}
+          </select>
+        </label>
+        {rendererId === 'image.element' ? (
+          <label>
+            Asset
+            <select onChange={(event) => setAssetRef(event.target.value)} value={assetRef}>
+              {(profile.assets ?? []).map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.id} ({asset.status})
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <div className="swatch-grid" aria-label="Fill color">
+            {colorSwatches.map((color) => (
+              <button
+                key={color}
+                aria-label={`Fill ${color}`}
+                className={fillColor === color ? 'is-active' : ''}
+                onClick={() => setFillColor(color)}
+                style={{ background: color }}
+                type="button"
+              />
+            ))}
+          </div>
+        )}
+        <div className="color-inputs">
+          <label>
+            Fill
+            <input onChange={(event) => setFillColor(event.target.value)} type="color" value={fillColor} />
+          </label>
+          <label>
+            Stroke
+            <input
+              onChange={(event) => setStrokeColor(event.target.value)}
+              type="color"
+              value={strokeColor}
+            />
+          </label>
+          <label>
+            Text
+            <input onChange={(event) => setTextColor(event.target.value)} type="color" value={textColor} />
+          </label>
+        </div>
+        <label>
+          Precedence
+          <input
+            max="500"
+            min="0"
+            onChange={(event) => setPrecedence(Number(event.target.value))}
+            type="range"
+            value={precedence}
+          />
+          <span>{precedence}</span>
+        </label>
+        <div className="rule-actions">
+          <button disabled={!selectedNode} onClick={applySelectedNode} type="button">
+            Use selection
+          </button>
+          <button disabled={!canApply} onClick={applyRule} type="button">
+            Apply rule
+          </button>
+          <button onClick={onDownload} type="button">
+            Download
+          </button>
+          <button onClick={onReset} type="button">
+            Reset
+          </button>
+        </div>
+        <p className="proposal-status">{status}</p>
+      </div>
+      <div className="rule-list">
+        {profile.rules
+          .slice()
+          .sort((left, right) => right.precedence - left.precedence)
+          .map((rule) => (
+            <button
+              key={rule.id}
+              className={rule.enabled === false ? 'is-disabled' : ''}
+              onClick={() => onToggle(rule.id)}
+              type="button"
+            >
+              <span>{rule.id}</span>
+              <small>
+                {Object.entries(rule.selector)
+                  .map(([key, value]) => `${key}:${value}`)
+                  .join(' ')}{' '}
+                {' -> '}
+                {rule.renderAs.rendererId}
+              </small>
+            </button>
+          ))}
+      </div>
+    </section>
   );
 }
 
