@@ -113,6 +113,92 @@ section {
   padding-left: 8px;
 }
 
+.rule-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.rule-editor label {
+  color: #475569;
+  display: grid;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.rule-editor input,
+.rule-editor select {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #0f172a;
+  font: inherit;
+  min-height: 30px;
+  min-width: 0;
+  padding: 4px 6px;
+}
+
+.segmented-control,
+.rule-actions {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.segmented-control button,
+.rule-actions button {
+  border-radius: 6px;
+  min-height: 30px;
+  padding: 5px 7px;
+}
+
+.swatch-grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(6, 24px);
+}
+
+.swatch-grid button {
+  aspect-ratio: 1;
+  border-radius: 999px;
+  padding: 0;
+}
+
+.color-inputs {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.color-inputs input {
+  min-height: 28px;
+  padding: 2px;
+}
+
+.rule-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.rule-list button {
+  border-radius: 6px;
+  display: grid;
+  gap: 3px;
+  min-height: 46px;
+  padding: 8px;
+  text-align: left;
+}
+
+.rule-list button.is-disabled {
+  opacity: 0.55;
+}
+
+.rule-list small {
+  color: #64748b;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
 .canvas-region {
   display: grid;
   grid-template-rows: auto 1fr auto;

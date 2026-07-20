@@ -48,6 +48,8 @@ Image-backed renderers use explicit assets with source and license provenance. T
 
 The current workbench spike resolves the first profile, applies rule precedence, and renders built-in actor, class, component, and image-backed element nodes. Referenced or missing image assets render as a visible asset-status placeholder until a real package asset is available.
 
+The workbench sidebar also includes a draft render-rule editor. It can assign renderer/style rules by element ID, element kind, stereotype, or tag; toggle existing rules; reset to the packaged default profile; and download the current in-memory render profile JSON. These edits are local to the browser session until a later Tauri/backend adapter writes render-profile changes through a typed operation path.
+
 Diagram views may now include canonical view metadata under `layout`. This metadata records canvas coordinates separately from semantic model truth:
 
 - `coordinateSystem`: currently `canvas`
