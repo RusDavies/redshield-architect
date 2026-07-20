@@ -57,9 +57,11 @@ type ProposalOperation = {
   sourceRefs?: string[];
 };
 type ProposalOperationDraft = Omit<ProposalOperation, 'opId'>;
+type ProposalState = 'draft' | 'accepted';
 
 const elk = new ELK();
 const diagram = diagramsFile.diagrams[0];
+const proposalStorageKey = `redshield.workbench.${diagram.id}.proposalDraft`;
 const elementById = new Map(elementsFile.elements.map((element) => [element.id, element]));
 const nodeLayoutByRef = new Map(
   (diagram.layout?.nodes ?? []).map((nodeLayout) => [nodeLayout.modelRef, nodeLayout]),
@@ -189,7 +191,10 @@ export default function App() {
     edges: Edge<RedshieldEdgeData>[];
   }>({ nodes: [], edges: [] });
   const operationSequence = useRef(1);
+  const proposalCreatedAt = useRef(new Date().toISOString());
   const [operationLog, setOperationLog] = useState<ProposalOperation[]>([]);
+  const [proposalState, setProposalState] = useState<ProposalState>('draft');
+  const [proposalStatus, setProposalStatus] = useState('No saved proposal draft.');
 
   const selectedNodeIds = useMemo(
     () => new Set(selection.nodes.map((node) => node.id)),
@@ -198,6 +203,7 @@ export default function App() {
 
   const recordOperations = useCallback((drafts: ProposalOperationDraft[]) => {
     if (drafts.length === 0) return;
+    setProposalState('draft');
     setOperationLog((current) => {
       const operations = drafts.map((draft) => ({
         ...draft,
@@ -487,13 +493,54 @@ export default function App() {
     () => ({
       proposalId: 'proposal.workbench-draft',
       schemaVersion: '0.1.0',
-      state: 'draft',
-      createdAt: 'workbench-session',
+      state: proposalState,
+      createdAt: proposalCreatedAt.current,
       intent: 'Apply direct manipulation changes from the workbench canvas.',
       operations: operationLog,
     }),
-    [operationLog],
+    [operationLog, proposalState],
   );
+  const saveProposalDraft = useCallback(() => {
+    window.localStorage.setItem(proposalStorageKey, JSON.stringify(proposalDraft, null, 2));
+    setProposalStatus(`Saved ${proposalDraft.operations.length} operations locally.`);
+  }, [proposalDraft]);
+  const loadProposalDraft = useCallback(() => {
+    const saved = window.localStorage.getItem(proposalStorageKey);
+    if (!saved) {
+      setProposalStatus('No local proposal draft to load.');
+      return;
+    }
+    const parsed = JSON.parse(saved) as {
+      state?: string;
+      operations?: ProposalOperation[];
+    };
+    const operations = Array.isArray(parsed.operations) ? parsed.operations : [];
+    setOperationLog(operations);
+    setProposalState(parsed.state === 'accepted' ? 'accepted' : 'draft');
+    const maxSequence = operations.reduce((max, operation) => {
+      const sequence = Number(operation.opId.replace('op.view.', ''));
+      return Number.isFinite(sequence) ? Math.max(max, sequence) : max;
+    }, 0);
+    operationSequence.current = Math.max(operationSequence.current, maxSequence + 1);
+    setProposalStatus(`Loaded ${operations.length} operations from local storage.`);
+  }, []);
+  const downloadProposalDraft = useCallback(() => {
+    const blob = new Blob([`${JSON.stringify(proposalDraft, null, 2)}\n`], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${proposalDraft.proposalId}.${proposalDraft.state}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setProposalStatus(`Downloaded ${proposalDraft.state} proposal JSON.`);
+  }, [proposalDraft]);
+  const clearProposalDraft = useCallback(() => {
+    setOperationLog([]);
+    setProposalState('draft');
+    setProposalStatus('Cleared in-memory proposal operations.');
+  }, []);
 
   return (
     <main className="workbench-shell">
@@ -618,6 +665,22 @@ export default function App() {
         </section>
         <section>
           <h2>Proposal Operations</h2>
+          <div className="proposal-actions">
+            <button disabled={operationLog.length === 0} onClick={saveProposalDraft}>
+              Save draft
+            </button>
+            <button onClick={loadProposalDraft}>Load draft</button>
+            <button disabled={operationLog.length === 0} onClick={() => setProposalState('accepted')}>
+              Accept
+            </button>
+            <button disabled={operationLog.length === 0} onClick={downloadProposalDraft}>
+              Download
+            </button>
+            <button disabled={operationLog.length === 0} onClick={clearProposalDraft}>
+              Clear
+            </button>
+          </div>
+          <p className="proposal-status">{proposalStatus}</p>
           <pre>{JSON.stringify(proposalDraft, null, 2)}</pre>
         </section>
       </aside>

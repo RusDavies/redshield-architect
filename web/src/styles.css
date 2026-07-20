@@ -236,6 +236,25 @@ section {
   padding: 10px;
 }
 
+.proposal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.proposal-actions button {
+  border-radius: 6px;
+  min-height: 30px;
+  padding: 5px 8px;
+}
+
+.proposal-status {
+  color: #64748b;
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+
 .react-flow__edge-path {
   stroke: #475569;
   stroke-width: 2;
