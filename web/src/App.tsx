@@ -814,7 +814,7 @@ export default function App() {
       schemaVersion: '0.1.0',
       state: proposalState,
       createdAt: proposalCreatedAt.current,
-      intent: 'Apply direct manipulation changes from the workbench canvas.',
+      intent: 'Apply direct manipulation and render profile changes from the workbench.',
       operations: operationLog,
     }),
     [operationLog, proposalState],
@@ -872,6 +872,49 @@ export default function App() {
     URL.revokeObjectURL(url);
     setRenderProfileStatus('Downloaded draft render profile JSON.');
   }, [renderProfilePreview]);
+  const applyRenderRule = useCallback(
+    (rule: RenderRule) => {
+      setRenderProfile((current) => {
+        const nextRules = current.rules.filter((currentRule) => currentRule.id !== rule.id);
+        return { ...current, rules: [...nextRules, rule] };
+      });
+      recordOperation({
+        op: 'upsert_render_rule',
+        args: {
+          profileId: renderProfile.id,
+          rule,
+        },
+        rationale: 'Workbench render-rule editor changed renderer/profile metadata.',
+        sourceRefs: ['workbench.render-rules'],
+      });
+      setRenderProfileStatus(`Applied ${rule.id} locally.`);
+    },
+    [recordOperation, renderProfile.id],
+  );
+  const toggleRenderRule = useCallback(
+    (ruleId: string) => {
+      const rule = renderProfile.rules.find((currentRule) => currentRule.id === ruleId);
+      if (!rule) return;
+      const nextRule = { ...rule, enabled: rule.enabled === false };
+      setRenderProfile((current) => ({
+        ...current,
+        rules: current.rules.map((currentRule) =>
+          currentRule.id === ruleId ? nextRule : currentRule,
+        ),
+      }));
+      recordOperation({
+        op: 'upsert_render_rule',
+        args: {
+          profileId: renderProfile.id,
+          rule: nextRule,
+        },
+        rationale: 'Workbench render-rule editor toggled a renderer rule.',
+        sourceRefs: ['workbench.render-rules'],
+      });
+      setRenderProfileStatus(`Toggled ${ruleId}.`);
+    },
+    [recordOperation, renderProfile],
+  );
 
   return (
     <main className="workbench-shell">
@@ -916,22 +959,8 @@ export default function App() {
           profile={renderProfile}
           selectedNode={selectedNode}
           status={renderProfileStatus}
-          onApply={(rule) => {
-            setRenderProfile((current) => {
-              const nextRules = current.rules.filter((currentRule) => currentRule.id !== rule.id);
-              return { ...current, rules: [...nextRules, rule] };
-            });
-            setRenderProfileStatus(`Applied ${rule.id} locally.`);
-          }}
-          onToggle={(ruleId) => {
-            setRenderProfile((current) => ({
-              ...current,
-              rules: current.rules.map((rule) =>
-                rule.id === ruleId ? { ...rule, enabled: rule.enabled === false } : rule,
-              ),
-            }));
-            setRenderProfileStatus(`Toggled ${ruleId}.`);
-          }}
+          onApply={applyRenderRule}
+          onToggle={toggleRenderRule}
           onReset={() => {
             setRenderProfile(defaultRenderProfile);
             setRenderProfileStatus('Reset to the packaged default render profile.');

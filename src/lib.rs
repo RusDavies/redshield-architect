@@ -171,6 +171,124 @@ pub struct DiagramStyle {
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct RenderProfileFile {
+    pub schema_version: String,
+    pub profiles: Vec<RenderProfile>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderProfile {
+    pub id: String,
+    pub title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(default)]
+    pub rules: Vec<RenderRule>,
+    pub fallback: RenderTarget,
+    #[serde(default)]
+    pub assets: Vec<RenderAsset>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderRule {
+    pub id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    pub selector: RenderSelector,
+    pub render_as: RenderTarget,
+    pub precedence: u32,
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderSelector {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stereotype: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderTarget {
+    pub renderer_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_ref: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub style: Option<DiagramStyle>,
+    #[serde(default)]
+    pub ports: Vec<RenderPort>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<RenderLabel>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderPort {
+    pub id: String,
+    pub side: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub offset: Option<f64>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderLabel {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visible: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderAsset {
+    pub id: String,
+    pub uri: String,
+    pub kind: String,
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub byte_size: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dimensions: Option<RenderAssetDimensions>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alt: Option<String>,
+    pub provenance: RenderAssetProvenance,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderAssetDimensions {
+    pub width: u64,
+    pub height: u64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderAssetProvenance {
+    pub source_type: String,
+    pub source: String,
+    pub license: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_by: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct TraceFile {
     pub schema_version: String,
     pub links: Vec<TraceLink>,
@@ -195,6 +313,7 @@ pub struct ModelPackage {
     pub elements: ElementFile,
     pub relationships: RelationshipFile,
     pub diagrams: DiagramFile,
+    pub render_profiles: RenderProfileFile,
     pub trace: TraceFile,
 }
 
@@ -230,6 +349,7 @@ pub struct ApplySummary {
     pub diagrams_created: usize,
     pub trace_links_created: usize,
     pub diagram_layout_operations_applied: usize,
+    pub render_profile_operations_applied: usize,
     pub applied_proposal_path: PathBuf,
 }
 
@@ -368,6 +488,20 @@ struct ApplyDiagramAutoLayoutArgs {
     connectors: Vec<DiagramConnectorLayout>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpsertRenderRuleArgs {
+    profile_id: String,
+    rule: RenderRule,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RemoveRenderRuleArgs {
+    profile_id: String,
+    rule_id: String,
+}
+
 pub fn load_package(root: impl AsRef<Path>) -> Result<ModelPackage> {
     let root = root.as_ref().to_path_buf();
     Ok(ModelPackage {
@@ -376,6 +510,7 @@ pub fn load_package(root: impl AsRef<Path>) -> Result<ModelPackage> {
         elements: read_json(root.join("model/elements.json"))?,
         relationships: read_json(root.join("model/relationships.json"))?,
         diagrams: read_json(root.join("views/diagrams.json"))?,
+        render_profiles: read_json(root.join("views/render-profile.json"))?,
         trace: read_json(root.join("trace/links.json"))?,
         root,
     })
@@ -428,6 +563,7 @@ pub fn apply_proposal_operations(
         diagrams_created: 0,
         trace_links_created: 0,
         diagram_layout_operations_applied: 0,
+        render_profile_operations_applied: 0,
         applied_proposal_path: PathBuf::new(),
     };
 
@@ -536,6 +672,16 @@ pub fn apply_proposal_operations(
                 apply_diagram_auto_layout(package, args)?;
                 summary.diagram_layout_operations_applied += 1;
             }
+            "upsert_render_rule" => {
+                let args: UpsertRenderRuleArgs = parse_args(operation)?;
+                upsert_render_rule(package, args)?;
+                summary.render_profile_operations_applied += 1;
+            }
+            "remove_render_rule" => {
+                let args: RemoveRenderRuleArgs = parse_args(operation)?;
+                remove_render_rule(package, args)?;
+                summary.render_profile_operations_applied += 1;
+            }
             other => bail!("{} uses unsupported operation {}", operation.op_id, other),
         }
     }
@@ -551,6 +697,7 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
     require_version("elements", &package.elements.schema_version)?;
     require_version("relationships", &package.relationships.schema_version)?;
     require_version("diagrams", &package.diagrams.schema_version)?;
+    require_version("render profiles", &package.render_profiles.schema_version)?;
     require_version("trace", &package.trace.schema_version)?;
 
     let mut ids = BTreeSet::new();
@@ -636,6 +783,8 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
             validate_diagram_layout(diagram, layout, &element_kinds, &relationships_by_id)?;
         }
     }
+
+    validate_render_profiles(&package.render_profiles, &element_kinds)?;
 
     for link in &package.trace.links {
         ensure_unique(&mut ids, &link.id)?;
@@ -764,6 +913,199 @@ fn validate_diagram_style(diagram_id: &str, object_ref: &str, style: &DiagramSty
                 "{diagram_id} layout object {object_ref} has unsupported line style {line_style}"
             );
         }
+    }
+    Ok(())
+}
+
+fn validate_render_profiles(
+    render_profiles: &RenderProfileFile,
+    element_kinds: &BTreeMap<&str, &str>,
+) -> Result<()> {
+    let mut profile_ids = BTreeSet::new();
+    for profile in &render_profiles.profiles {
+        ensure_unique(&mut profile_ids, &profile.id)?;
+        ensure_non_empty(&profile.title, &format!("{} title", profile.id))?;
+        let asset_ids: BTreeSet<&str> = profile
+            .assets
+            .iter()
+            .map(|asset| asset.id.as_str())
+            .collect();
+        validate_render_target(&profile.id, "fallback", &profile.fallback, &asset_ids)?;
+
+        let mut rule_ids = BTreeSet::new();
+        for rule in &profile.rules {
+            ensure_unique(&mut rule_ids, &rule.id)?;
+            validate_render_selector(&profile.id, &rule.id, &rule.selector, element_kinds)?;
+            validate_render_target(&profile.id, &rule.id, &rule.render_as, &asset_ids)?;
+        }
+
+        let mut checked_asset_ids = BTreeSet::new();
+        for asset in &profile.assets {
+            ensure_unique(&mut checked_asset_ids, &asset.id)?;
+            validate_render_asset(&profile.id, asset)?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_render_selector(
+    profile_id: &str,
+    rule_id: &str,
+    selector: &RenderSelector,
+    element_kinds: &BTreeMap<&str, &str>,
+) -> Result<()> {
+    let populated = [
+        selector.element_id.as_deref(),
+        selector.element_kind.as_deref(),
+        selector.stereotype.as_deref(),
+        selector.tag.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    .filter(|value| !value.trim().is_empty())
+    .count();
+    if populated == 0 {
+        bail!("{profile_id} rule {rule_id} selector must match at least one field");
+    }
+    if let Some(element_id) = &selector.element_id {
+        if !element_kinds.contains_key(element_id.as_str()) {
+            bail!("{profile_id} rule {rule_id} references missing element {element_id}");
+        }
+    }
+    if let Some(element_kind) = &selector.element_kind {
+        validate_element_kind(profile_id, rule_id, element_kind)?;
+    }
+    Ok(())
+}
+
+fn validate_render_target(
+    profile_id: &str,
+    rule_id: &str,
+    render_target: &RenderTarget,
+    asset_ids: &BTreeSet<&str>,
+) -> Result<()> {
+    if !matches!(
+        render_target.renderer_id.as_str(),
+        "uml.actor"
+            | "uml.use_case"
+            | "uml.class"
+            | "uml.component"
+            | "uml.activity"
+            | "uml.sequence_participant"
+            | "image.element"
+            | "html.custom"
+    ) {
+        bail!(
+            "{profile_id} rule {rule_id} has unsupported renderer {}",
+            render_target.renderer_id
+        );
+    }
+    if render_target.renderer_id == "image.element" {
+        let Some(asset_ref) = &render_target.asset_ref else {
+            bail!("{profile_id} rule {rule_id} image renderer requires assetRef");
+        };
+        if !asset_ids.contains(asset_ref.as_str()) {
+            bail!("{profile_id} rule {rule_id} references missing asset {asset_ref}");
+        }
+    }
+    if let Some(style) = &render_target.style {
+        validate_diagram_style(profile_id, rule_id, style)?;
+    }
+    for port in &render_target.ports {
+        ensure_non_empty(&port.id, "render port id")?;
+        if !matches!(port.side.as_str(), "top" | "right" | "bottom" | "left") {
+            bail!(
+                "{profile_id} rule {rule_id} has unsupported port side {}",
+                port.side
+            );
+        }
+        if let Some(offset) = port.offset {
+            if !(0.0..=1.0).contains(&offset) {
+                bail!(
+                    "{profile_id} rule {rule_id} port {} has invalid offset {offset}",
+                    port.id
+                );
+            }
+        }
+    }
+    if let Some(label) = &render_target.label {
+        if let Some(position) = &label.position {
+            if !matches!(
+                position.as_str(),
+                "inside" | "top" | "right" | "bottom" | "left"
+            ) {
+                bail!("{profile_id} rule {rule_id} has unsupported label position {position}");
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_render_asset(profile_id: &str, asset: &RenderAsset) -> Result<()> {
+    ensure_non_empty(
+        &asset.uri,
+        &format!("{} asset {} uri", profile_id, asset.id),
+    )?;
+    if !asset.uri.starts_with("assets/render/")
+        || !(asset.uri.ends_with(".png")
+            || asset.uri.ends_with(".jpg")
+            || asset.uri.ends_with(".jpeg")
+            || asset.uri.ends_with(".svg"))
+        || asset.uri.contains("..")
+    {
+        bail!(
+            "{profile_id} asset {} uses unsupported uri {}",
+            asset.id,
+            asset.uri
+        );
+    }
+    if !matches!(
+        asset.kind.as_str(),
+        "image/png" | "image/jpeg" | "image/svg+xml"
+    ) {
+        bail!(
+            "{profile_id} asset {} has unsupported kind {}",
+            asset.id,
+            asset.kind
+        );
+    }
+    if !matches!(
+        asset.status.as_str(),
+        "referenced" | "available" | "missing" | "blocked"
+    ) {
+        bail!(
+            "{profile_id} asset {} has unsupported status {}",
+            asset.id,
+            asset.status
+        );
+    }
+    if asset.status == "available" && asset.content_sha256.is_none() {
+        bail!(
+            "{profile_id} asset {} is available without contentSha256",
+            asset.id
+        );
+    }
+    ensure_non_empty(
+        &asset.provenance.source_type,
+        &format!("{} asset {} sourceType", profile_id, asset.id),
+    )?;
+    ensure_non_empty(
+        &asset.provenance.source,
+        &format!("{} asset {} source", profile_id, asset.id),
+    )?;
+    ensure_non_empty(
+        &asset.provenance.license,
+        &format!("{} asset {} license", profile_id, asset.id),
+    )?;
+    Ok(())
+}
+
+fn validate_element_kind(profile_id: &str, rule_id: &str, element_kind: &str) -> Result<()> {
+    if !matches!(
+        element_kind,
+        "actor" | "use_case" | "class" | "component" | "activity" | "sequence_participant"
+    ) {
+        bail!("{profile_id} rule {rule_id} has unsupported selector kind {element_kind}");
     }
     Ok(())
 }
@@ -998,6 +1340,46 @@ fn apply_diagram_auto_layout(
         connector.layout_state = "generated".to_string();
     }
     Ok(())
+}
+
+fn upsert_render_rule(package: &mut ModelPackage, args: UpsertRenderRuleArgs) -> Result<()> {
+    let profile = find_render_profile_mut(package, &args.profile_id)?;
+    if let Some(index) = profile
+        .rules
+        .iter()
+        .position(|rule| rule.id == args.rule.id)
+    {
+        profile.rules[index] = args.rule;
+    } else {
+        profile.rules.push(args.rule);
+    }
+    Ok(())
+}
+
+fn remove_render_rule(package: &mut ModelPackage, args: RemoveRenderRuleArgs) -> Result<()> {
+    let profile = find_render_profile_mut(package, &args.profile_id)?;
+    let before = profile.rules.len();
+    profile.rules.retain(|rule| rule.id != args.rule_id);
+    if profile.rules.len() == before {
+        bail!(
+            "{} is missing render rule {}",
+            args.profile_id,
+            args.rule_id
+        );
+    }
+    Ok(())
+}
+
+fn find_render_profile_mut<'a>(
+    package: &'a mut ModelPackage,
+    profile_id: &str,
+) -> Result<&'a mut RenderProfile> {
+    package
+        .render_profiles
+        .profiles
+        .iter_mut()
+        .find(|profile| profile.id == profile_id)
+        .ok_or_else(|| anyhow!("missing render profile {profile_id}"))
 }
 
 fn find_diagram_mut<'a>(
@@ -1238,6 +1620,8 @@ pub fn validate_proposal(proposal: &Proposal) -> Result<()> {
             "apply_diagram_auto_layout" => {
                 require_args(&operation.args, &["diagramId", "layoutEngine", "nodes"])?
             }
+            "upsert_render_rule" => require_args(&operation.args, &["profileId", "rule"])?,
+            "remove_render_rule" => require_args(&operation.args, &["profileId", "ruleId"])?,
             other => bail!("{} uses unsupported operation {}", operation.op_id, other),
         }
     }
@@ -1431,6 +1815,10 @@ fn write_package(package: &ModelPackage) -> Result<()> {
         &package.relationships,
     )?;
     write_json(package.root.join("views/diagrams.json"), &package.diagrams)?;
+    write_json(
+        package.root.join("views/render-profile.json"),
+        &package.render_profiles,
+    )?;
     write_json(package.root.join("trace/links.json"), &package.trace)?;
     Ok(())
 }
@@ -1491,6 +1879,14 @@ fn sort_package(package: &mut ModelPackage) {
         .diagrams
         .diagrams
         .sort_by(|left, right| left.id.cmp(&right.id));
+    for profile in &mut package.render_profiles.profiles {
+        profile.rules.sort_by(|left, right| left.id.cmp(&right.id));
+        profile.assets.sort_by(|left, right| left.id.cmp(&right.id));
+    }
+    package
+        .render_profiles
+        .profiles
+        .sort_by(|left, right| left.id.cmp(&right.id));
     package
         .trace
         .links
@@ -1537,6 +1933,10 @@ fn default_status() -> String {
 
 fn default_priority() -> String {
     "must".to_string()
+}
+
+fn default_enabled() -> bool {
+    true
 }
 
 fn dot_id(input: &str) -> String {
@@ -1867,6 +2267,90 @@ mod tests {
                 .nodes
                 .iter()
                 .all(|node| node.layout_state == "generated")
+        );
+    }
+
+    #[test]
+    fn accepted_proposal_applies_render_profile_operations() {
+        let root = copy_example_to_temp();
+        let proposal_path = root.join("proposals/open/accepted-render-profile-ops.json");
+        fs::write(
+            &proposal_path,
+            r##"{
+  "proposalId": "proposal.render-profile-ops",
+  "schemaVersion": "0.1.0",
+  "state": "accepted",
+  "createdAt": "2026-07-20T14:25:00Z",
+  "intent": "Persist workbench render profile edits.",
+  "operations": [
+    {
+      "opId": "op.upsert-review-rule",
+      "op": "upsert_render_rule",
+      "args": {
+        "profileId": "render-profile.default",
+        "rule": {
+          "id": "render.ui.elementId.usecase.review-proposal",
+          "description": "Render the review use case with a workbench-authored style.",
+          "selector": {
+            "elementId": "usecase.review-proposal"
+          },
+          "renderAs": {
+            "rendererId": "uml.use_case",
+            "style": {
+              "fillColor": "#e0f2fe",
+              "strokeColor": "#0369a1",
+              "textColor": "#0c4a6e"
+            },
+            "ports": [
+              {
+                "id": "in",
+                "side": "left",
+                "offset": 0.5
+              }
+            ],
+            "label": {
+              "visible": true,
+              "position": "inside"
+            }
+          },
+          "precedence": 250,
+          "enabled": true
+        }
+      },
+      "rationale": "The workbench render-rule editor changed renderer metadata."
+    },
+    {
+      "opId": "op.remove-duck-rule",
+      "op": "remove_render_rule",
+      "args": {
+        "profileId": "render-profile.default",
+        "ruleId": "render.stereotype-duck"
+      },
+      "rationale": "The workbench render-rule editor removed an example rule."
+    }
+  ]
+}
+"##,
+        )
+        .unwrap();
+
+        let summary = apply_accepted_proposal_file(&root, &proposal_path).unwrap();
+        assert_eq!(summary.render_profile_operations_applied, 2);
+
+        let package = load_package(&root).unwrap();
+        validate_package(&package).unwrap();
+        let profile = &package.render_profiles.profiles[0];
+        assert!(
+            profile
+                .rules
+                .iter()
+                .any(|rule| rule.id == "render.ui.elementId.usecase.review-proposal")
+        );
+        assert!(
+            !profile
+                .rules
+                .iter()
+                .any(|rule| rule.id == "render.stereotype-duck")
         );
     }
 
