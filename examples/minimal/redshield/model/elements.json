@@ -81,6 +81,59 @@
       "kind": "component",
       "name": "Workbench",
       "description": "Interactive diagram surface for reviewing and editing model views.",
+      "architecture": {
+        "owners": [
+          {
+            "ref": "owner.product-architecture",
+            "role": "accountable",
+            "name": "Product Architecture"
+          }
+        ],
+        "lifecycle": {
+          "state": "active",
+          "phase": "prototype",
+          "milestoneRefs": ["milestone.first-local-prototype"],
+          "targetDate": "2026-07-31",
+          "notes": "Prototype workbench shell proving model-backed review and diagram editing."
+        },
+        "criticality": "high",
+        "technologies": [
+          {
+            "ref": "technology.react-flow",
+            "role": "framework",
+            "version": "11",
+            "standardState": "approved"
+          },
+          {
+            "ref": "technology.tauri",
+            "role": "platform",
+            "version": "2",
+            "standardState": "approved"
+          }
+        ],
+        "risks": [
+          {
+            "ref": "risk.silent-model-mutation",
+            "severity": "high",
+            "status": "mitigating",
+            "notes": "Workbench edits emit proposals before mutating canonical model files."
+          }
+        ],
+        "capabilities": [
+          {
+            "ref": "capability.model-review",
+            "fit": "primary",
+            "maturity": "developing"
+          }
+        ],
+        "services": [
+          {
+            "ref": "service.proposal-application",
+            "relationship": "consumes",
+            "interfaceRef": "operation.apply-proposal"
+          }
+        ]
+      },
       "classifier": {
         "operations": [
           {

@@ -50,8 +50,21 @@ Model elements are semantic objects under `model/elements.json`. The common elem
 - `stereotypes` and `tags` for classification and render/profile selectors
 - `provenance` with source references, creator, creation timestamp, and notes
 - `externalReferences` for links to documents, standards, tickets, repositories, or imported/source artifacts
+- `architecture` metadata for owner, lifecycle, criticality, technology, risk, capability, and service mappings
 - `classifier` details for UML class/component elements
 - `actorDetails`, `useCaseDetails`, `activityDetails`, and `sequenceParticipantDetails` for supported UML behavior/interaction elements
+
+Architecture metadata is optional on any model element. It is intended for solution/enterprise architecture facts that attach to the element without changing its UML kind or diagram appearance:
+
+- `owners`: references to accountable, responsible, technical, business, or support owners, with optional display names
+- `lifecycle`: state, phase, milestone references, target date, and notes
+- `criticality`: `low`, `medium`, `high`, or `critical`
+- `technologies`: technology references with role, version, and standard state
+- `risks`: risk references with severity, status, and notes
+- `capabilities`: capability references with fit and maturity
+- `services`: service mappings for provided, consumed, exposed, dependent, or supporting services
+
+The first schema keeps these as bounded mappings rather than a full enterprise architecture repository. Follow-up object types can later make owners, capabilities, services, risks, milestones, and technology standards canonical objects of their own.
 
 Classifier details are optional and currently valid only on `class` and `component` model elements. They support:
 

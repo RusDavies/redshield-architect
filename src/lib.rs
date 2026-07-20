@@ -69,6 +69,8 @@ pub struct ModelElement {
     pub provenance: ElementProvenance,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub external_references: Vec<ExternalReference>,
+    #[serde(default, skip_serializing_if = "ArchitectureDetails::is_empty")]
+    pub architecture: ArchitectureDetails,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub classifier: Option<ClassifierDetails>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -111,6 +113,111 @@ pub struct ExternalReference {
     pub uri: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub kind: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchitectureDetails {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub owners: Vec<ArchitectureOwner>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lifecycle: Option<ArchitectureLifecycle>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub criticality: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub technologies: Vec<TechnologyMapping>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub risks: Vec<RiskMapping>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub capabilities: Vec<CapabilityMapping>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub services: Vec<ServiceMapping>,
+}
+
+impl ArchitectureDetails {
+    fn is_empty(&self) -> bool {
+        self.owners.is_empty()
+            && self.lifecycle.is_none()
+            && self.criticality.is_empty()
+            && self.technologies.is_empty()
+            && self.risks.is_empty()
+            && self.capabilities.is_empty()
+            && self.services.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchitectureOwner {
+    #[serde(rename = "ref")]
+    pub ref_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub role: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchitectureLifecycle {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub phase: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub milestone_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub target_date: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notes: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TechnologyMapping {
+    #[serde(rename = "ref")]
+    pub ref_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub role: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub version: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub standard_state: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RiskMapping {
+    #[serde(rename = "ref")]
+    pub ref_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub severity: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notes: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CapabilityMapping {
+    #[serde(rename = "ref")]
+    pub ref_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub fit: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub maturity: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ServiceMapping {
+    #[serde(rename = "ref")]
+    pub ref_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub relationship: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub interface_ref: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
@@ -637,6 +744,8 @@ struct CreateModelElementArgs {
     #[serde(default)]
     external_references: Vec<ExternalReference>,
     #[serde(default)]
+    architecture: ArchitectureDetails,
+    #[serde(default)]
     classifier: Option<ClassifierDetails>,
     #[serde(default)]
     actor_details: Option<ActorDetails>,
@@ -863,6 +972,7 @@ pub fn apply_proposal_operations(
                     tags: args.tags,
                     provenance: args.provenance,
                     external_references: args.external_references,
+                    architecture: args.architecture,
                     classifier: args.classifier,
                     actor_details: args.actor_details,
                     use_case_details: args.use_case_details,
@@ -1020,6 +1130,7 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
         }
         validate_element_provenance(element)?;
         validate_external_references(element)?;
+        validate_architecture_details(element)?;
         validate_classifier_details(element)?;
         validate_specialized_element_details(element)?;
         element_kinds.insert(element.id.as_str(), element.kind.as_str());
@@ -1123,6 +1234,190 @@ fn validate_external_references(element: &ModelElement) -> Result<()> {
             &format!("{} external reference {} uri", element.id, reference.id),
         )?;
     }
+    Ok(())
+}
+
+fn validate_architecture_details(element: &ModelElement) -> Result<()> {
+    let architecture = &element.architecture;
+
+    validate_optional_enum(
+        &architecture.criticality,
+        &["low", "medium", "high", "critical"],
+        &format!("{} architecture criticality", element.id),
+    )?;
+
+    let mut owner_refs = BTreeSet::new();
+    for owner in &architecture.owners {
+        ensure_unique(&mut owner_refs, owner.ref_id.as_str())?;
+        validate_optional_enum(
+            &owner.role,
+            &[
+                "accountable",
+                "responsible",
+                "technical",
+                "business",
+                "support",
+            ],
+            &format!("{} architecture owner {} role", element.id, owner.ref_id),
+        )?;
+        ensure_non_empty(
+            &owner.ref_id,
+            &format!("{} architecture owner ref", element.id),
+        )?;
+        if !owner.name.is_empty() {
+            ensure_non_empty(
+                &owner.name,
+                &format!("{} architecture owner {} name", element.id, owner.ref_id),
+            )?;
+        }
+    }
+
+    if let Some(lifecycle) = &architecture.lifecycle {
+        validate_optional_enum(
+            &lifecycle.state,
+            &[
+                "idea",
+                "planned",
+                "active",
+                "deprecated",
+                "retiring",
+                "retired",
+            ],
+            &format!("{} architecture lifecycle state", element.id),
+        )?;
+        validate_string_list(
+            &lifecycle.milestone_refs,
+            &format!("{} architecture lifecycle milestoneRef", element.id),
+        )?;
+        if !lifecycle.phase.is_empty() {
+            ensure_non_empty(
+                &lifecycle.phase,
+                &format!("{} architecture lifecycle phase", element.id),
+            )?;
+        }
+        if !lifecycle.target_date.is_empty() {
+            ensure_non_empty(
+                &lifecycle.target_date,
+                &format!("{} architecture lifecycle targetDate", element.id),
+            )?;
+        }
+    }
+
+    let mut technology_refs = BTreeSet::new();
+    for technology in &architecture.technologies {
+        ensure_unique(&mut technology_refs, technology.ref_id.as_str())?;
+        ensure_non_empty(
+            &technology.ref_id,
+            &format!("{} architecture technology ref", element.id),
+        )?;
+        validate_optional_enum(
+            &technology.role,
+            &[
+                "platform",
+                "runtime",
+                "framework",
+                "database",
+                "protocol",
+                "tool",
+                "standard",
+            ],
+            &format!(
+                "{} architecture technology {} role",
+                element.id, technology.ref_id
+            ),
+        )?;
+        validate_optional_enum(
+            &technology.standard_state,
+            &["approved", "tolerated", "discouraged", "banned", "emerging"],
+            &format!(
+                "{} architecture technology {} standardState",
+                element.id, technology.ref_id
+            ),
+        )?;
+    }
+
+    let mut risk_refs = BTreeSet::new();
+    for risk in &architecture.risks {
+        ensure_unique(&mut risk_refs, risk.ref_id.as_str())?;
+        ensure_non_empty(
+            &risk.ref_id,
+            &format!("{} architecture risk ref", element.id),
+        )?;
+        validate_optional_enum(
+            &risk.severity,
+            &["low", "medium", "high", "critical"],
+            &format!("{} architecture risk {} severity", element.id, risk.ref_id),
+        )?;
+        validate_optional_enum(
+            &risk.status,
+            &[
+                "identified",
+                "accepted",
+                "mitigating",
+                "mitigated",
+                "closed",
+            ],
+            &format!("{} architecture risk {} status", element.id, risk.ref_id),
+        )?;
+    }
+
+    let mut capability_refs = BTreeSet::new();
+    for capability in &architecture.capabilities {
+        ensure_unique(&mut capability_refs, capability.ref_id.as_str())?;
+        ensure_non_empty(
+            &capability.ref_id,
+            &format!("{} architecture capability ref", element.id),
+        )?;
+        validate_optional_enum(
+            &capability.fit,
+            &["primary", "supporting", "enabling", "impacted"],
+            &format!(
+                "{} architecture capability {} fit",
+                element.id, capability.ref_id
+            ),
+        )?;
+        validate_optional_enum(
+            &capability.maturity,
+            &[
+                "emerging",
+                "developing",
+                "established",
+                "optimized",
+                "legacy",
+            ],
+            &format!(
+                "{} architecture capability {} maturity",
+                element.id, capability.ref_id
+            ),
+        )?;
+    }
+
+    let mut service_refs = BTreeSet::new();
+    for service in &architecture.services {
+        ensure_unique(&mut service_refs, service.ref_id.as_str())?;
+        ensure_non_empty(
+            &service.ref_id,
+            &format!("{} architecture service ref", element.id),
+        )?;
+        validate_optional_enum(
+            &service.relationship,
+            &["provides", "consumes", "depends_on", "exposes", "supports"],
+            &format!(
+                "{} architecture service {} relationship",
+                element.id, service.ref_id
+            ),
+        )?;
+        if !service.interface_ref.is_empty() {
+            ensure_non_empty(
+                &service.interface_ref,
+                &format!(
+                    "{} architecture service {} interfaceRef",
+                    element.id, service.ref_id
+                ),
+            )?;
+        }
+    }
+
     Ok(())
 }
 
@@ -2702,6 +2997,50 @@ mod tests {
           "createdBy": "test",
           "createdAt": "2026-07-20T15:30:00Z"
         },
+        "architecture": {
+          "owners": [
+            {
+              "ref": "owner.product-architecture",
+              "role": "accountable",
+              "name": "Product Architecture"
+            }
+          ],
+          "lifecycle": {
+            "state": "planned",
+            "phase": "prototype",
+            "milestoneRefs": ["milestone.svg-export"],
+            "targetDate": "2026-08-15"
+          },
+          "criticality": "medium",
+          "technologies": [
+            {
+              "ref": "technology.graphviz",
+              "role": "tool",
+              "standardState": "approved"
+            }
+          ],
+          "risks": [
+            {
+              "ref": "risk.export-drift",
+              "severity": "medium",
+              "status": "identified"
+            }
+          ],
+          "capabilities": [
+            {
+              "ref": "capability.diagram-export",
+              "fit": "primary",
+              "maturity": "emerging"
+            }
+          ],
+          "services": [
+            {
+              "ref": "service.rendering",
+              "relationship": "consumes",
+              "interfaceRef": "operation.render-use-case"
+            }
+          ]
+        },
         "useCaseDetails": {
           "primaryActorRef": "actor.architect",
           "preconditions": ["An accepted diagram view exists"],
@@ -2810,6 +3149,33 @@ mod tests {
         assert_eq!(exported.aliases, vec!["SVG export"]);
         assert_eq!(exported.provenance.source_refs, vec!["source.roadmap"]);
         assert_eq!(exported.external_references[0].id, "ref.svg");
+        assert_eq!(exported.architecture.criticality, "medium");
+        assert_eq!(
+            exported.architecture.owners[0].ref_id,
+            "owner.product-architecture"
+        );
+        assert_eq!(
+            exported
+                .architecture
+                .lifecycle
+                .as_ref()
+                .unwrap()
+                .milestone_refs,
+            vec!["milestone.svg-export"]
+        );
+        assert_eq!(
+            exported.architecture.technologies[0].ref_id,
+            "technology.graphviz"
+        );
+        assert_eq!(exported.architecture.risks[0].ref_id, "risk.export-drift");
+        assert_eq!(
+            exported.architecture.capabilities[0].ref_id,
+            "capability.diagram-export"
+        );
+        assert_eq!(
+            exported.architecture.services[0].ref_id,
+            "service.rendering"
+        );
         let use_case_details = exported.use_case_details.as_ref().unwrap();
         assert_eq!(use_case_details.primary_actor_ref, "actor.architect");
         assert_eq!(

@@ -96,6 +96,49 @@ type ExternalReference = {
   uri: string;
   kind?: string;
 };
+type ArchitectureOwner = {
+  ref: string;
+  role?: string;
+  name?: string;
+};
+type ArchitectureLifecycle = {
+  state?: string;
+  phase?: string;
+  milestoneRefs?: string[];
+  targetDate?: string;
+  notes?: string;
+};
+type TechnologyMapping = {
+  ref: string;
+  role?: string;
+  version?: string;
+  standardState?: string;
+};
+type RiskMapping = {
+  ref: string;
+  severity?: string;
+  status?: string;
+  notes?: string;
+};
+type CapabilityMapping = {
+  ref: string;
+  fit?: string;
+  maturity?: string;
+};
+type ServiceMapping = {
+  ref: string;
+  relationship?: string;
+  interfaceRef?: string;
+};
+type ArchitectureDetails = {
+  owners?: ArchitectureOwner[];
+  lifecycle?: ArchitectureLifecycle;
+  criticality?: string;
+  technologies?: TechnologyMapping[];
+  risks?: RiskMapping[];
+  capabilities?: CapabilityMapping[];
+  services?: ServiceMapping[];
+};
 type Multiplicity = {
   lower?: number;
   upper?: number | string;
@@ -198,6 +241,7 @@ type RedshieldNodeData = {
   stereotypes: string[];
   tags: string[];
   externalReferences: ExternalReference[];
+  architecture?: ArchitectureDetails;
   classifier?: ClassifierDetails;
   actorDetails?: ActorDetails;
   useCaseDetails?: UseCaseDetails;
@@ -299,6 +343,7 @@ function toNodeData(
     stereotypes: element.stereotypes ?? [],
     tags: element.tags,
     externalReferences: element.externalReferences ?? [],
+    architecture: element.architecture,
     classifier: element.classifier,
     actorDetails: element.actorDetails,
     useCaseDetails: element.useCaseDetails,
@@ -1460,6 +1505,7 @@ function InspectorNode({ node }: { node: Node<RedshieldNodeData> }) {
         </>
       ) : null}
       <SemanticDetails node={node.data} />
+      <ArchitectureDetailsView architecture={node.data.architecture} />
       <dt>Layout</dt>
       <dd>{node.data.layoutState}</dd>
       <dt>Bounds</dt>
@@ -1547,6 +1593,41 @@ function SemanticDetails({ node }: { node: RedshieldNodeData }) {
   return null;
 }
 
+function ArchitectureDetailsView({ architecture }: { architecture?: ArchitectureDetails }) {
+  if (!architecture || !hasArchitectureDetails(architecture)) return null;
+
+  return (
+    <>
+      <dt>Criticality</dt>
+      <dd>{architecture.criticality || 'unspecified'}</dd>
+      <dt>Lifecycle</dt>
+      <dd>{formatLifecycle(architecture.lifecycle)}</dd>
+      <dt>Owners</dt>
+      <dd>{formatOwners(architecture.owners)}</dd>
+      <dt>Technologies</dt>
+      <dd>{formatTechnologies(architecture.technologies)}</dd>
+      <dt>Risks</dt>
+      <dd>{formatRisks(architecture.risks)}</dd>
+      <dt>Capabilities</dt>
+      <dd>{formatCapabilities(architecture.capabilities)}</dd>
+      <dt>Services</dt>
+      <dd>{formatServices(architecture.services)}</dd>
+    </>
+  );
+}
+
+function hasArchitectureDetails(architecture: ArchitectureDetails): boolean {
+  return Boolean(
+    architecture.criticality ||
+      architecture.lifecycle ||
+      architecture.owners?.length ||
+      architecture.technologies?.length ||
+      architecture.risks?.length ||
+      architecture.capabilities?.length ||
+      architecture.services?.length,
+  );
+}
+
 function formatAttribute(attribute: ClassifierAttribute): string {
   const flags = [attribute.isStatic ? 'static' : undefined, attribute.isReadOnly ? 'read-only' : undefined]
     .filter(Boolean)
@@ -1601,6 +1682,66 @@ function visibilitySymbol(visibility?: string): string {
 
 function formatList(values?: string[]): string {
   return values && values.length > 0 ? values.join('; ') : 'none';
+}
+
+function formatLifecycle(lifecycle?: ArchitectureLifecycle): string {
+  if (!lifecycle) return 'none';
+  return [
+    lifecycle.state,
+    lifecycle.phase,
+    lifecycle.targetDate ? `target ${lifecycle.targetDate}` : undefined,
+    formatList(lifecycle.milestoneRefs) !== 'none' ? `milestones ${formatList(lifecycle.milestoneRefs)}` : undefined,
+    lifecycle.notes,
+  ]
+    .filter(Boolean)
+    .join('; ');
+}
+
+function formatOwners(owners?: ArchitectureOwner[]): string {
+  return owners && owners.length > 0
+    ? owners.map((owner) => [owner.role, owner.name, owner.ref].filter(Boolean).join(' ')).join('; ')
+    : 'none';
+}
+
+function formatTechnologies(technologies?: TechnologyMapping[]): string {
+  return technologies && technologies.length > 0
+    ? technologies
+        .map((technology) =>
+          [
+            technology.ref,
+            technology.role ? `as ${technology.role}` : undefined,
+            technology.version ? `v${technology.version}` : undefined,
+            technology.standardState,
+          ]
+            .filter(Boolean)
+            .join(' '),
+        )
+        .join('; ')
+    : 'none';
+}
+
+function formatRisks(risks?: RiskMapping[]): string {
+  return risks && risks.length > 0
+    ? risks
+        .map((risk) => [risk.ref, risk.severity, risk.status, risk.notes].filter(Boolean).join(' / '))
+        .join('; ')
+    : 'none';
+}
+
+function formatCapabilities(capabilities?: CapabilityMapping[]): string {
+  return capabilities && capabilities.length > 0
+    ? capabilities
+        .map((capability) => [capability.ref, capability.fit, capability.maturity].filter(Boolean).join(' / '))
+        .join('; ')
+    : 'none';
+}
+
+function formatServices(services?: ServiceMapping[]): string {
+  return services && services.length > 0
+    ? services
+        .map((service) => [service.ref, service.relationship, service.interfaceRef].filter(Boolean).join(' / '))
+        .join('; ')
+    : 'none';
 }
 
 function formatUseCaseSteps(steps?: UseCaseStep[]): string {

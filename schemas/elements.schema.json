@@ -28,6 +28,7 @@
             "type": "array",
             "items": { "$ref": "#/$defs/externalReference" }
           },
+          "architecture": { "$ref": "#/$defs/architectureDetails" },
           "classifier": { "$ref": "#/$defs/classifierDetails" },
           "actorDetails": { "$ref": "#/$defs/actorDetails" },
           "useCaseDetails": { "$ref": "#/$defs/useCaseDetails" },
@@ -86,6 +87,130 @@
         "label": { "type": "string", "minLength": 1 },
         "uri": { "type": "string", "minLength": 1 },
         "kind": { "type": "string", "minLength": 1 }
+      }
+    },
+    "architectureDetails": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "owners": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/architectureOwner" }
+        },
+        "lifecycle": { "$ref": "#/$defs/architectureLifecycle" },
+        "criticality": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "technologies": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/technologyMapping" }
+        },
+        "risks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/riskMapping" }
+        },
+        "capabilities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/capabilityMapping" }
+        },
+        "services": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/serviceMapping" }
+        }
+      }
+    },
+    "architectureOwner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "role": {
+          "type": "string",
+          "enum": ["accountable", "responsible", "technical", "business", "support"]
+        },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "architectureLifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["idea", "planned", "active", "deprecated", "retiring", "retired"]
+        },
+        "phase": { "type": "string", "minLength": 1 },
+        "milestoneRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "targetDate": { "type": "string", "minLength": 1 },
+        "notes": { "type": "string" }
+      }
+    },
+    "technologyMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "role": {
+          "type": "string",
+          "enum": ["platform", "runtime", "framework", "database", "protocol", "tool", "standard"]
+        },
+        "version": { "type": "string", "minLength": 1 },
+        "standardState": {
+          "type": "string",
+          "enum": ["approved", "tolerated", "discouraged", "banned", "emerging"]
+        }
+      }
+    },
+    "riskMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "severity": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["identified", "accepted", "mitigating", "mitigated", "closed"]
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "capabilityMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "fit": {
+          "type": "string",
+          "enum": ["primary", "supporting", "enabling", "impacted"]
+        },
+        "maturity": {
+          "type": "string",
+          "enum": ["emerging", "developing", "established", "optimized", "legacy"]
+        }
+      }
+    },
+    "serviceMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "relationship": {
+          "type": "string",
+          "enum": ["provides", "consumes", "depends_on", "exposes", "supports"]
+        },
+        "interfaceRef": { "type": "string", "minLength": 1 }
       }
     },
     "classifierDetails": {
