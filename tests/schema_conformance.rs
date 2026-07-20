@@ -327,6 +327,74 @@ fn schema_validation_rejects_invalid_architecture_metadata() {
 }
 
 #[test]
+fn schema_validation_accepts_model_element_detail_update_operation() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let valid = json!({
+        "proposalId": "proposal.update-element-details",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T22:30:00Z",
+        "intent": "Update semantic details on an existing element.",
+        "operations": [
+            {
+                "opId": "op.update-workbench-details",
+                "op": "update_model_element_details",
+                "args": {
+                    "elementId": "component.workbench",
+                    "name": "Workbench Shell",
+                    "documentation": "Updated through a reviewed proposal operation.",
+                    "tags": ["ui", "diagram", "semantic-edit"],
+                    "architecture": {
+                        "criticality": "critical",
+                        "owners": [
+                            {
+                                "ref": "owner.platform",
+                                "role": "technical"
+                            }
+                        ]
+                    },
+                    "clearDetails": ["classifier"]
+                },
+                "rationale": "Semantic element updates should use a typed proposal operation."
+            }
+        ]
+    });
+
+    if let Err(error) = validator.validate(&valid) {
+        panic!("proposal schema should accept model element detail updates: {error}");
+    }
+}
+
+#[test]
+fn schema_validation_rejects_noop_model_element_detail_update_operation() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let invalid = json!({
+        "proposalId": "proposal.noop-update-element-details",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T22:32:00Z",
+        "intent": "Attempt a no-op semantic detail update.",
+        "operations": [
+            {
+                "opId": "op.noop-update",
+                "op": "update_model_element_details",
+                "args": {
+                    "elementId": "component.workbench"
+                },
+                "rationale": "No-op updates should not be reviewable operations."
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "proposal schema should reject no-op model element detail updates"
+    );
+}
+
+#[test]
 fn schema_validation_rejects_classifier_details_on_non_classifier_element() {
     let schema = read_json("schemas/proposal.schema.json");
     let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
