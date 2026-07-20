@@ -24,6 +24,10 @@ const SCHEMA_CASES: &[(&str, &str)] = &[
         "examples/minimal/redshield/views/diagrams.json",
     ),
     (
+        "schemas/render-profile.schema.json",
+        "examples/minimal/redshield/views/render-profile.json",
+    ),
+    (
         "schemas/trace.schema.json",
         "examples/minimal/redshield/trace/links.json",
     ),
@@ -240,6 +244,76 @@ fn schema_validation_rejects_invalid_diagram_layout_shape() {
     assert!(
         validator.validate(&invalid).is_err(),
         "diagrams schema should reject non-positive node bounds"
+    );
+}
+
+#[test]
+fn schema_validation_rejects_empty_render_profile_selector() {
+    let schema = read_json("schemas/render-profile.schema.json");
+    let validator =
+        jsonschema::validator_for(&schema).expect("render profile schema should compile");
+    let invalid = json!({
+        "schemaVersion": "0.1.0",
+        "profiles": [
+            {
+                "id": "render-profile.invalid",
+                "title": "Invalid Render Profile",
+                "rules": [
+                    {
+                        "id": "render.empty-selector",
+                        "selector": {},
+                        "renderAs": {
+                            "rendererId": "uml.class"
+                        },
+                        "precedence": 100
+                    }
+                ],
+                "fallback": {
+                    "rendererId": "uml.class"
+                }
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "render profile schema should reject empty selectors"
+    );
+}
+
+#[test]
+fn schema_validation_rejects_image_renderer_without_asset_ref() {
+    let schema = read_json("schemas/render-profile.schema.json");
+    let validator =
+        jsonschema::validator_for(&schema).expect("render profile schema should compile");
+    let invalid = json!({
+        "schemaVersion": "0.1.0",
+        "profiles": [
+            {
+                "id": "render-profile.invalid-image",
+                "title": "Invalid Image Render Profile",
+                "rules": [
+                    {
+                        "id": "render.image-without-asset",
+                        "selector": {
+                            "elementKind": "class"
+                        },
+                        "renderAs": {
+                            "rendererId": "image.element"
+                        },
+                        "precedence": 100
+                    }
+                ],
+                "fallback": {
+                    "rendererId": "uml.class"
+                }
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "render profile schema should reject image renderers without asset refs"
     );
 }
 

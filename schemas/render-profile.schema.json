@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://redshield.dev/schemas/render-profile.schema.json",
+  "title": "RedShield Render Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "profiles"],
+  "properties": {
+    "schemaVersion": { "const": "0.1.0" },
+    "profiles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/renderProfile" }
+    }
+  },
+  "$defs": {
+    "renderProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "rules", "fallback"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "rules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/renderRule" }
+        },
+        "fallback": { "$ref": "#/$defs/renderTarget" },
+        "assets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/assetReference" }
+        }
+      }
+    },
+    "renderRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "selector", "renderAs", "precedence"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "selector": { "$ref": "#/$defs/selector" },
+        "renderAs": { "$ref": "#/$defs/renderTarget" },
+        "precedence": { "type": "integer", "minimum": 0 },
+        "enabled": { "type": "boolean", "default": true }
+      }
+    },
+    "selector": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "elementId": { "type": "string", "minLength": 1 },
+        "elementKind": {
+          "type": "string",
+          "enum": ["actor", "use_case", "class", "component", "activity", "sequence_participant"]
+        },
+        "stereotype": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string", "minLength": 1 }
+      }
+    },
+    "renderTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rendererId"],
+      "properties": {
+        "rendererId": {
+          "type": "string",
+          "enum": [
+            "uml.actor",
+            "uml.use_case",
+            "uml.class",
+            "uml.component",
+            "uml.activity",
+            "uml.sequence_participant",
+            "image.element",
+            "html.custom"
+          ]
+        },
+        "assetRef": { "type": "string", "minLength": 1 },
+        "style": { "$ref": "#/$defs/style" },
+        "ports": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/port" }
+        },
+        "label": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "visible": { "type": "boolean" },
+            "position": { "type": "string", "enum": ["inside", "top", "right", "bottom", "left"] }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "rendererId": { "const": "image.element" } },
+            "required": ["rendererId"]
+          },
+          "then": { "required": ["assetRef"] }
+        }
+      ]
+    },
+    "assetReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "uri", "kind", "provenance"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "uri": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "enum": ["image/png", "image/jpeg", "image/svg+xml"] },
+        "alt": { "type": "string" },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "license"],
+          "properties": {
+            "source": { "type": "string", "minLength": 1 },
+            "license": { "type": "string", "minLength": 1 },
+            "notes": { "type": "string" }
+          }
+        }
+      }
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "side"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "side": { "type": "string", "enum": ["top", "right", "bottom", "left"] },
+        "offset": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fillColor": { "$ref": "#/$defs/color" },
+        "strokeColor": { "$ref": "#/$defs/color" },
+        "textColor": { "$ref": "#/$defs/color" },
+        "lineStyle": { "type": "string", "enum": ["solid", "dashed", "dotted"] }
+      }
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    }
+  }
+}

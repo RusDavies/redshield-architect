@@ -9,6 +9,7 @@ redshield/
   model/elements.json
   model/relationships.json
   views/diagrams.json
+  views/render-profile.json
   trace/links.json
   proposals/open/*.json
 ```
@@ -36,6 +37,14 @@ The `web/` spike loads the same example model into an interactive React Flow can
 The workbench emits proposal-shaped operation drafts for direct manipulation actions. Dragging nodes emits `move_diagram_node`, align/distribute controls emit their matching layout operations, ELK emits `apply_diagram_auto_layout`, and creating a connector emits both a draft `create_relationship` and `connect_diagram_relationship`.
 
 The current spike can save/load the draft transaction in browser local storage, mark it accepted, and download proposal JSON that the CLI can apply. Direct filesystem writes from the workbench remain a later Tauri/backend adapter concern.
+
+## Render Profiles
+
+Render profiles define how matching model elements are drawn without changing semantic model truth. They live under `views/render-profile.json` in the prototype package and are validated by `schemas/render-profile.schema.json`.
+
+A profile contains ordered rules plus a fallback renderer. Rules match elements by `elementId`, `elementKind`, `stereotype`, or `tag`; higher `precedence` wins when multiple enabled rules match. A render target chooses a renderer ID such as `uml.actor`, `uml.class`, `uml.component`, `image.element`, or `html.custom`, and may supply style, label placement, connector ports, and asset references.
+
+Image-backed renderers use explicit assets with source and license provenance. The schema allows references such as `assets/render/duck.png`, but the example deliberately records only the reference and provenance placeholder rather than committing a binary asset.
 
 Diagram views may now include canonical view metadata under `layout`. This metadata records canvas coordinates separately from semantic model truth:
 
