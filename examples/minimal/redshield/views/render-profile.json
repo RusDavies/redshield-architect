@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "0.1.0",
+  "profiles": [
+    {
+      "id": "render-profile.default",
+      "title": "Default Workbench Render Profile",
+      "description": "Renderer selection and presentation rules for the example workbench view.",
+      "rules": [
+        {
+          "id": "render.actor.uml",
+          "description": "Render actors with the built-in UML actor renderer.",
+          "selector": {
+            "elementKind": "actor"
+          },
+          "renderAs": {
+            "rendererId": "uml.actor",
+            "style": {
+              "fillColor": "#ccfbf1",
+              "strokeColor": "#0f766e",
+              "textColor": "#134e4a"
+            },
+            "ports": [
+              {
+                "id": "out",
+                "side": "right",
+                "offset": 0.5
+              }
+            ],
+            "label": {
+              "visible": true,
+              "position": "bottom"
+            }
+          },
+          "precedence": 100,
+          "enabled": true
+        },
+        {
+          "id": "render.stereotype-duck",
+          "description": "Example image-backed renderer for classes carrying stereotype XYZ.",
+          "selector": {
+            "elementKind": "class",
+            "stereotype": "XYZ"
+          },
+          "renderAs": {
+            "rendererId": "image.element",
+            "assetRef": "asset.duck-png",
+            "ports": [
+              {
+                "id": "in",
+                "side": "left",
+                "offset": 0.5
+              },
+              {
+                "id": "out",
+                "side": "right",
+                "offset": 0.5
+              }
+            ],
+            "label": {
+              "visible": true,
+              "position": "bottom"
+            }
+          },
+          "precedence": 200,
+          "enabled": true
+        }
+      ],
+      "fallback": {
+        "rendererId": "uml.class",
+        "style": {
+          "fillColor": "#ffffff",
+          "strokeColor": "#334155",
+          "textColor": "#0f172a"
+        },
+        "label": {
+          "visible": true,
+          "position": "inside"
+        }
+      },
+      "assets": [
+        {
+          "id": "asset.duck-png",
+          "uri": "assets/render/duck.png",
+          "kind": "image/png",
+          "alt": "Duck image used as an example custom class renderer.",
+          "provenance": {
+            "source": "placeholder path for user-provided image asset",
+            "license": "user-provided",
+            "notes": "The example records the reference only; no binary asset is committed."
+          }
+        }
+      ]
+    }
+  ]
+}
