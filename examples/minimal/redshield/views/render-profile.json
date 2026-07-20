@@ -82,8 +82,10 @@
           "id": "asset.duck-png",
           "uri": "assets/render/duck.png",
           "kind": "image/png",
+          "status": "referenced",
           "alt": "Duck image used as an example custom class renderer.",
           "provenance": {
+            "sourceType": "user_provided",
             "source": "placeholder path for user-provided image asset",
             "license": "user-provided",
             "notes": "The example records the reference only; no binary asset is committed."

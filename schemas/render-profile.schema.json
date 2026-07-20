@@ -105,23 +105,56 @@
     "assetReference": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "uri", "kind", "provenance"],
+      "required": ["id", "uri", "kind", "status", "provenance"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
-        "uri": { "type": "string", "minLength": 1 },
+        "uri": {
+          "type": "string",
+          "pattern": "^assets/render/[A-Za-z0-9][A-Za-z0-9._/-]*\\.(png|jpg|jpeg|svg)$"
+        },
         "kind": { "type": "string", "enum": ["image/png", "image/jpeg", "image/svg+xml"] },
+        "status": { "type": "string", "enum": ["referenced", "available", "missing", "blocked"] },
+        "contentSha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "byteSize": { "type": "integer", "minimum": 1 },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          }
+        },
         "alt": { "type": "string" },
         "provenance": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["source", "license"],
+          "required": ["sourceType", "source", "license"],
           "properties": {
+            "sourceType": {
+              "type": "string",
+              "enum": ["user_provided", "generated", "library", "imported", "unknown"]
+            },
             "source": { "type": "string", "minLength": 1 },
             "license": { "type": "string", "minLength": 1 },
+            "createdBy": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" },
             "notes": { "type": "string" }
           }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "available" } },
+            "required": ["status"]
+          },
+          "then": { "required": ["contentSha256"] }
+        }
+      ]
     },
     "port": {
       "type": "object",
