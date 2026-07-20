@@ -8,40 +8,451 @@
   "properties": {
     "proposalId": { "type": "string", "minLength": 1 },
     "schemaVersion": { "const": "0.1.0" },
-    "state": { "type": "string", "enum": ["draft", "validation_pending", "review_ready", "accepted", "rejected", "applied"] },
+    "state": {
+      "type": "string",
+      "enum": ["draft", "validation_pending", "review_ready", "accepted", "rejected", "applied"]
+    },
     "createdAt": { "type": "string", "minLength": 1 },
     "intent": { "type": "string", "minLength": 1 },
     "operations": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["opId", "op", "args", "rationale"],
-        "properties": {
-          "opId": { "type": "string", "minLength": 1 },
-          "op": {
-            "type": "string",
-            "enum": [
-              "create_requirement",
-              "create_model_element",
-              "create_relationship",
-              "create_diagram_view",
-              "create_trace_link",
-              "move_diagram_node",
-              "resize_diagram_node",
-              "align_diagram_nodes",
-              "distribute_diagram_nodes",
-              "connect_diagram_relationship",
-              "route_diagram_connector",
-              "style_diagram_object",
-              "apply_diagram_auto_layout"
-            ]
-          },
-          "args": { "type": "object" },
-          "rationale": { "type": "string", "minLength": 1 },
-          "sourceRefs": { "type": "array", "items": { "type": "string" } }
+      "items": { "$ref": "#/$defs/operation" }
+    }
+  },
+  "$defs": {
+    "operation": {
+      "oneOf": [
+        { "$ref": "#/$defs/createRequirementOperation" },
+        { "$ref": "#/$defs/createModelElementOperation" },
+        { "$ref": "#/$defs/createRelationshipOperation" },
+        { "$ref": "#/$defs/createDiagramViewOperation" },
+        { "$ref": "#/$defs/createTraceLinkOperation" },
+        { "$ref": "#/$defs/moveDiagramNodeOperation" },
+        { "$ref": "#/$defs/resizeDiagramNodeOperation" },
+        { "$ref": "#/$defs/alignDiagramNodesOperation" },
+        { "$ref": "#/$defs/distributeDiagramNodesOperation" },
+        { "$ref": "#/$defs/connectDiagramRelationshipOperation" },
+        { "$ref": "#/$defs/routeDiagramConnectorOperation" },
+        { "$ref": "#/$defs/styleDiagramObjectOperation" },
+        { "$ref": "#/$defs/applyDiagramAutoLayoutOperation" }
+      ]
+    },
+    "operationCommon": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["opId", "op", "args", "rationale"],
+      "properties": {
+        "opId": { "type": "string", "minLength": 1 },
+        "op": { "type": "string", "minLength": 1 },
+        "args": { "type": "object" },
+        "rationale": { "type": "string", "minLength": 1 },
+        "sourceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "createRequirementOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "create_requirement" },
+            "args": { "$ref": "#/$defs/createRequirementArgs" }
+          }
+        }
+      ]
+    },
+    "createModelElementOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "create_model_element" },
+            "args": { "$ref": "#/$defs/createModelElementArgs" }
+          }
+        }
+      ]
+    },
+    "createRelationshipOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "create_relationship" },
+            "args": { "$ref": "#/$defs/createRelationshipArgs" }
+          }
+        }
+      ]
+    },
+    "createDiagramViewOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "create_diagram_view" },
+            "args": { "$ref": "#/$defs/createDiagramViewArgs" }
+          }
+        }
+      ]
+    },
+    "createTraceLinkOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "create_trace_link" },
+            "args": { "$ref": "#/$defs/createTraceLinkArgs" }
+          }
+        }
+      ]
+    },
+    "moveDiagramNodeOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "move_diagram_node" },
+            "args": { "$ref": "#/$defs/moveDiagramNodeArgs" }
+          }
+        }
+      ]
+    },
+    "resizeDiagramNodeOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "resize_diagram_node" },
+            "args": { "$ref": "#/$defs/resizeDiagramNodeArgs" }
+          }
+        }
+      ]
+    },
+    "alignDiagramNodesOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "align_diagram_nodes" },
+            "args": { "$ref": "#/$defs/alignDiagramNodesArgs" }
+          }
+        }
+      ]
+    },
+    "distributeDiagramNodesOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "distribute_diagram_nodes" },
+            "args": { "$ref": "#/$defs/distributeDiagramNodesArgs" }
+          }
+        }
+      ]
+    },
+    "connectDiagramRelationshipOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "connect_diagram_relationship" },
+            "args": { "$ref": "#/$defs/connectDiagramRelationshipArgs" }
+          }
+        }
+      ]
+    },
+    "routeDiagramConnectorOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "route_diagram_connector" },
+            "args": { "$ref": "#/$defs/routeDiagramConnectorArgs" }
+          }
+        }
+      ]
+    },
+    "styleDiagramObjectOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "style_diagram_object" },
+            "args": { "$ref": "#/$defs/styleDiagramObjectArgs" }
+          }
+        }
+      ]
+    },
+    "applyDiagramAutoLayoutOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "apply_diagram_auto_layout" },
+            "args": { "$ref": "#/$defs/applyDiagramAutoLayoutArgs" }
+          }
+        }
+      ]
+    },
+    "createRequirementArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "statement"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "statement": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 },
+        "priority": { "type": "string", "minLength": 1 },
+        "acceptanceCriteria": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "createModelElementArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "createRelationshipArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "relationshipKind", "sourceId", "targetId"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "relationshipKind": { "type": "string", "minLength": 1 },
+        "sourceId": { "type": "string", "minLength": 1 },
+        "targetId": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" }
+      }
+    },
+    "createDiagramViewArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "viewKind", "modelRefs"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "viewKind": { "type": "string", "enum": ["use_case"] },
+        "modelRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "layout": { "$ref": "#/$defs/diagramLayout" }
+      }
+    },
+    "createTraceLinkArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceId", "targetId", "traceKind"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "sourceId": { "type": "string", "minLength": 1 },
+        "targetId": { "type": "string", "minLength": 1 },
+        "traceKind": { "type": "string", "minLength": 1 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "moveDiagramNodeArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagramId", "modelRef", "x", "y"],
+      "properties": {
+        "diagramId": { "type": "string", "minLength": 1 },
+        "modelRef": { "type": "string", "minLength": 1 },
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    },
+    "resizeDiagramNodeArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagramId", "modelRef", "width", "height"],
+      "properties": {
+        "diagramId": { "type": "string", "minLength": 1 },
+        "modelRef": { "type": "string", "minLength": 1 },
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "alignDiagramNodesArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagramId", "modelRefs", "alignment"],
+      "properties": {
+        "diagramId": { "type": "string", "minLength": 1 },
+        "modelRefs": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "alignment": {
+          "type": "string",
+          "enum": ["left", "right", "top", "bottom", "hcenter", "vcenter"]
         }
       }
+    },
+    "distributeDiagramNodesArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagramId", "modelRefs", "axis"],
+      "properties": {
+        "diagramId": { "type": "string", "minLength": 1 },
+        "modelRefs": {
+          "type": "array",
+          "minItems": 3,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "axis": { "type": "string", "enum": ["x", "y"] }
+      }
+    },
+    "connectDiagramRelationshipArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagramId", "relationshipRef"],
+      "properties": {
+        "diagramId": { "type": "string", "minLength": 1 },
+        "relationshipRef": { "type": "string", "minLength": 1 },
+        "routeHint": { "$ref": "#/$defs/routeHint" },
+        "labelPosition": { "$ref": "#/$defs/point" }
+      }
+    },
+    "routeDiagramConnectorArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagramId", "relationshipRef", "routeHint"],
+      "properties": {
+        "diagramId": { "type": "string", "minLength": 1 },
+        "relationshipRef": { "type": "string", "minLength": 1 },
+        "routeHint": { "$ref": "#/$defs/routeHint" }
+      }
+    },
+    "styleDiagramObjectArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagramId", "objectKind", "objectRef", "style"],
+      "properties": {
+        "diagramId": { "type": "string", "minLength": 1 },
+        "objectKind": { "type": "string", "enum": ["node", "connector"] },
+        "objectRef": { "type": "string", "minLength": 1 },
+        "style": { "$ref": "#/$defs/style" }
+      }
+    },
+    "applyDiagramAutoLayoutArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagramId", "layoutEngine", "nodes"],
+      "properties": {
+        "diagramId": { "type": "string", "minLength": 1 },
+        "layoutEngine": { "type": "string", "minLength": 1 },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/diagramNodeLayout" }
+        },
+        "connectors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/diagramConnectorLayout" }
+        }
+      }
+    },
+    "diagramLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coordinateSystem", "layoutState", "nodes", "connectors"],
+      "properties": {
+        "coordinateSystem": { "type": "string", "enum": ["canvas"] },
+        "layoutEngine": { "type": "string", "minLength": 1 },
+        "layoutState": { "type": "string", "enum": ["generated", "manual", "mixed"] },
+        "nodes": { "type": "array", "items": { "$ref": "#/$defs/diagramNodeLayout" } },
+        "connectors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/diagramConnectorLayout" }
+        }
+      }
+    },
+    "diagramNodeLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelRef", "bounds", "layoutState"],
+      "properties": {
+        "modelRef": { "type": "string", "minLength": 1 },
+        "bounds": { "$ref": "#/$defs/bounds" },
+        "layoutState": { "type": "string", "enum": ["generated", "manual"] },
+        "labelPosition": { "$ref": "#/$defs/point" },
+        "style": { "$ref": "#/$defs/style" }
+      }
+    },
+    "diagramConnectorLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relationshipRef", "layoutState"],
+      "properties": {
+        "relationshipRef": { "type": "string", "minLength": 1 },
+        "layoutState": { "type": "string", "enum": ["generated", "manual"] },
+        "routeHint": { "$ref": "#/$defs/routeHint" },
+        "labelPosition": { "$ref": "#/$defs/point" },
+        "style": { "$ref": "#/$defs/style" }
+      }
+    },
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "routeHint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["straight", "step", "smoothstep", "bezier", "orthogonal"]
+        },
+        "points": { "type": "array", "items": { "$ref": "#/$defs/point" } }
+      }
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fillColor": { "$ref": "#/$defs/color" },
+        "strokeColor": { "$ref": "#/$defs/color" },
+        "textColor": { "$ref": "#/$defs/color" },
+        "lineStyle": { "type": "string", "enum": ["solid", "dashed", "dotted"] }
+      }
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
     }
   }
 }

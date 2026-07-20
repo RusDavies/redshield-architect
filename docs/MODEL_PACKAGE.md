@@ -63,6 +63,8 @@ Accepted proposal transactions can now apply typed view/layout operations to can
 
 These operations update only `views/diagrams.json`. They do not create requirements, model elements, trace links, or semantic relationships. Semantic relationship creation still uses `create_relationship`; `connect_diagram_relationship` only makes an existing relationship visible/configured in a diagram view.
 
+The proposal JSON Schema validates operation arguments per operation type. For example, `move_diagram_node` requires `diagramId`, `modelRef`, `x`, and `y`; `align_diagram_nodes` requires at least two model refs and a supported alignment; and unknown or stray args are rejected before the Rust application layer runs.
+
 Apply an accepted proposal transaction:
 
 ```sh
