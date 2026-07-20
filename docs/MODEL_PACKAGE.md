@@ -46,6 +46,8 @@ A profile contains ordered rules plus a fallback renderer. Rules match elements 
 
 Image-backed renderers use explicit assets with source and license provenance. The schema allows package-relative references such as `assets/render/duck.png`, but the example deliberately records only the reference and provenance placeholder rather than committing a binary asset. The detailed asset rules live in [Asset References](ASSET_REFERENCES.md).
 
+The current workbench spike resolves the first profile, applies rule precedence, and renders built-in actor, class, component, and image-backed element nodes. Referenced or missing image assets render as a visible asset-status placeholder until a real package asset is available.
+
 Diagram views may now include canonical view metadata under `layout`. This metadata records canvas coordinates separately from semantic model truth:
 
 - `coordinateSystem`: currently `canvas`

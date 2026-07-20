@@ -14,6 +14,13 @@
       "sourceId": "actor.architect",
       "targetId": "usecase.render-diagram",
       "label": "inspects"
+    },
+    {
+      "id": "rel.workbench-renders",
+      "relationshipKind": "dependency",
+      "sourceId": "component.workbench",
+      "targetId": "class.render-policy",
+      "label": "uses"
     }
   ]
 }

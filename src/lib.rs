@@ -53,6 +53,8 @@ pub struct ModelElement {
     #[serde(default)]
     pub description: String,
     #[serde(default)]
+    pub stereotypes: Vec<String>,
+    #[serde(default)]
     pub tags: Vec<String>,
 }
 
@@ -256,6 +258,8 @@ struct CreateModelElementArgs {
     #[serde(default)]
     description: String,
     #[serde(default)]
+    stereotypes: Vec<String>,
+    #[serde(default)]
     tags: Vec<String>,
 }
 
@@ -451,6 +455,7 @@ pub fn apply_proposal_operations(
                     kind: args.kind,
                     name: args.name,
                     description: args.description,
+                    stereotypes: args.stereotypes,
                     tags: args.tags,
                 });
                 summary.elements_created += 1;
@@ -1574,8 +1579,8 @@ mod tests {
         let layout = package.diagrams.diagrams[0].layout.as_ref().unwrap();
         assert_eq!(layout.coordinate_system, "canvas");
         assert_eq!(layout.layout_state, "mixed");
-        assert_eq!(layout.nodes.len(), 3);
-        assert_eq!(layout.connectors.len(), 2);
+        assert_eq!(layout.nodes.len(), 5);
+        assert_eq!(layout.connectors.len(), 3);
         let proposal_warnings = validate_proposals("examples/minimal/redshield").unwrap();
         assert!(proposal_warnings.is_empty(), "{proposal_warnings:?}");
         let dot = render_use_case_dot(&package, Some("diagram.first-use-case")).unwrap();

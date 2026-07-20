@@ -21,6 +21,21 @@
       "name": "Render diagram",
       "description": "Render an accepted semantic model view as SVG.",
       "tags": ["diagram"]
+    },
+    {
+      "id": "component.workbench",
+      "kind": "component",
+      "name": "Workbench",
+      "description": "Interactive diagram surface for reviewing and editing model views.",
+      "tags": ["ui", "diagram"]
+    },
+    {
+      "id": "class.render-policy",
+      "kind": "class",
+      "name": "Render Policy",
+      "description": "Example class carrying a stereotype that maps to an image-backed renderer.",
+      "stereotypes": ["XYZ"],
+      "tags": ["renderer-demo"]
     }
   ]
 }

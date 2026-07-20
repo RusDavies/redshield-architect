@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   addEdge,
   applyEdgeChanges,
@@ -23,6 +23,7 @@ import manifest from '../../examples/minimal/redshield/manifest.json';
 import elementsFile from '../../examples/minimal/redshield/model/elements.json';
 import relationshipsFile from '../../examples/minimal/redshield/model/relationships.json';
 import diagramsFile from '../../examples/minimal/redshield/views/diagrams.json';
+import renderProfileFile from '../../examples/minimal/redshield/views/render-profile.json';
 import traceFile from '../../examples/minimal/redshield/trace/links.json';
 
 type ElementRecord = (typeof elementsFile.elements)[number];
@@ -30,15 +31,78 @@ type RelationshipRecord = (typeof relationshipsFile.relationships)[number];
 type DiagramLayout = NonNullable<(typeof diagramsFile.diagrams)[number]['layout']>;
 type DiagramNodeLayout = DiagramLayout['nodes'][number];
 type DiagramConnectorLayout = DiagramLayout['connectors'][number];
+type PortSide = 'top' | 'right' | 'bottom' | 'left';
+type RendererId =
+  | 'uml.actor'
+  | 'uml.use_case'
+  | 'uml.class'
+  | 'uml.component'
+  | 'uml.activity'
+  | 'uml.sequence_participant'
+  | 'image.element'
+  | 'html.custom';
+type RenderStyle = {
+  fillColor?: string;
+  strokeColor?: string;
+  textColor?: string;
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
+};
+type RenderPort = {
+  id: string;
+  side: PortSide;
+  offset?: number;
+};
+type RenderTarget = {
+  rendererId: RendererId;
+  assetRef?: string;
+  style?: RenderStyle;
+  ports?: RenderPort[];
+  label?: {
+    visible?: boolean;
+    position?: 'inside' | 'top' | 'right' | 'bottom' | 'left';
+  };
+};
+type RenderSelector = {
+  elementId?: string;
+  elementKind?: string;
+  stereotype?: string;
+  tag?: string;
+};
+type RenderRule = {
+  id: string;
+  description?: string;
+  selector: RenderSelector;
+  renderAs: RenderTarget;
+  precedence: number;
+  enabled?: boolean;
+};
+type RenderAsset = {
+  id: string;
+  uri: string;
+  kind: 'image/png' | 'image/jpeg' | 'image/svg+xml';
+  status: 'referenced' | 'available' | 'missing' | 'blocked';
+  alt?: string;
+};
+type RenderProfile = {
+  id: string;
+  title: string;
+  rules: RenderRule[];
+  fallback: RenderTarget;
+  assets?: RenderAsset[];
+};
 type RedshieldNodeData = {
   label: string;
   modelId: string;
   kind: string;
   description: string;
+  stereotypes: string[];
   tags: string[];
   layoutState: 'generated' | 'manual';
   bounds: { width: number; height: number };
   labelPosition?: { x: number; y: number };
+  render: RenderTarget;
+  matchedRuleId: string;
+  asset?: RenderAsset;
 };
 type RedshieldEdgeData = {
   relationshipId: string;
@@ -61,8 +125,10 @@ type ProposalState = 'draft' | 'accepted';
 
 const elk = new ELK();
 const diagram = diagramsFile.diagrams[0];
+const renderProfile = renderProfileFile.profiles[0] as RenderProfile;
 const proposalStorageKey = `redshield.workbench.${diagram.id}.proposalDraft`;
 const elementById = new Map(elementsFile.elements.map((element) => [element.id, element]));
+const renderAssetById = new Map((renderProfile.assets ?? []).map((asset) => [asset.id, asset]));
 const nodeLayoutByRef = new Map(
   (diagram.layout?.nodes ?? []).map((nodeLayout) => [nodeLayout.modelRef, nodeLayout]),
 );
@@ -111,11 +177,13 @@ function initialEdges(): Edge<RedshieldEdgeData>[] {
 }
 
 function toNodeData(element: ElementRecord, layout?: DiagramNodeLayout): RedshieldNodeData {
+  const resolution = resolveRenderTarget(element);
   return {
     label: element.name,
     modelId: element.id,
     kind: element.kind,
     description: element.description,
+    stereotypes: element.stereotypes ?? [],
     tags: element.tags,
     layoutState: toLayoutState(layout?.layoutState),
     bounds: {
@@ -123,7 +191,31 @@ function toNodeData(element: ElementRecord, layout?: DiagramNodeLayout): Redshie
       height: layout?.bounds.height ?? 86,
     },
     labelPosition: layout?.labelPosition,
+    render: resolution.render,
+    matchedRuleId: resolution.ruleId,
+    asset: resolution.render.assetRef ? renderAssetById.get(resolution.render.assetRef) : undefined,
   };
+}
+
+function resolveRenderTarget(element: ElementRecord): { render: RenderTarget; ruleId: string } {
+  const rule = renderProfile.rules
+    .filter((candidate) => candidate.enabled !== false && matchesSelector(element, candidate))
+    .sort((left, right) => right.precedence - left.precedence)[0];
+
+  return rule
+    ? { render: rule.renderAs, ruleId: rule.id }
+    : { render: renderProfile.fallback, ruleId: 'fallback' };
+}
+
+function matchesSelector(element: ElementRecord, rule: RenderRule) {
+  const selector = rule.selector;
+  if ('elementId' in selector && selector.elementId !== element.id) return false;
+  if ('elementKind' in selector && selector.elementKind !== element.kind) return false;
+  if (selector.stereotype && !(element.stereotypes ?? []).includes(selector.stereotype)) {
+    return false;
+  }
+  if (selector.tag && !element.tags.includes(selector.tag)) return false;
+  return true;
 }
 
 function toEdgeData(
@@ -170,13 +262,138 @@ function toRouteHint(value?: string): RedshieldEdgeData['routeHint'] {
 }
 
 function RedshieldNode({ data, selected }: NodeProps<Node<RedshieldNodeData>>) {
+  const style = {
+    '--node-fill': data.render.style?.fillColor,
+    '--node-stroke': data.render.style?.strokeColor,
+    '--node-text': data.render.style?.textColor,
+    width: data.bounds.width,
+    minHeight: data.bounds.height,
+  } as CSSProperties;
+  const className = [
+    'diagram-node',
+    `diagram-node--${data.kind}`,
+    `diagram-node--renderer-${data.render.rendererId.replace('.', '-')}`,
+    selected ? 'is-selected' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className={`diagram-node diagram-node--${data.kind} ${selected ? 'is-selected' : ''}`}>
-      <Handle type="target" position={Position.Left} />
+    <div className={className} style={style}>
+      <RenderHandles render={data.render} />
+      <NodeRenderer data={data} />
+    </div>
+  );
+}
+
+function RenderHandles({ render }: { render: RenderTarget }) {
+  const ports =
+    render.ports && render.ports.length > 0
+      ? render.ports
+      : [
+          { id: 'in', side: 'left' as const, offset: 0.5 },
+          { id: 'out', side: 'right' as const, offset: 0.5 },
+        ];
+
+  return (
+    <>
+      {ports.map((port) => (
+        <Handle
+          key={port.id}
+          id={port.id}
+          type={port.side === 'left' || port.side === 'top' ? 'target' : 'source'}
+          position={toHandlePosition(port.side)}
+          style={toHandleStyle(port.side, port.offset ?? 0.5)}
+        />
+      ))}
+    </>
+  );
+}
+
+function toHandlePosition(side: 'top' | 'right' | 'bottom' | 'left') {
+  if (side === 'top') return Position.Top;
+  if (side === 'right') return Position.Right;
+  if (side === 'bottom') return Position.Bottom;
+  return Position.Left;
+}
+
+function toHandleStyle(side: 'top' | 'right' | 'bottom' | 'left', offset: number) {
+  const percent = `${Math.max(0, Math.min(1, offset)) * 100}%`;
+  if (side === 'top' || side === 'bottom') return { left: percent };
+  return { top: percent };
+}
+
+function NodeRenderer({ data }: { data: RedshieldNodeData }) {
+  if (data.render.rendererId === 'uml.actor') return <ActorNode data={data} />;
+  if (data.render.rendererId === 'uml.component') return <ComponentNode data={data} />;
+  if (data.render.rendererId === 'image.element') return <ImageNode data={data} />;
+  return <ClassLikeNode data={data} />;
+}
+
+function ActorNode({ data }: { data: RedshieldNodeData }) {
+  return (
+    <div className="actor-renderer">
+      <div className="actor-renderer__glyph" aria-hidden="true">
+        <span className="actor-renderer__head" />
+        <span className="actor-renderer__body" />
+        <span className="actor-renderer__arms" />
+        <span className="actor-renderer__legs" />
+      </div>
+      <NodeLabel data={data} />
+    </div>
+  );
+}
+
+function ComponentNode({ data }: { data: RedshieldNodeData }) {
+  return (
+    <>
+      <div className="component-renderer__tabs" aria-hidden="true">
+        <span />
+        <span />
+      </div>
+      <NodeLabel data={data} />
+    </>
+  );
+}
+
+function ImageNode({ data }: { data: RedshieldNodeData }) {
+  const isAvailable = data.asset?.status === 'available';
+  return (
+    <div className="image-renderer">
+      <div className="image-renderer__asset" aria-label={data.asset?.alt ?? data.label}>
+        {isAvailable ? (
+          <img src={`/${data.asset?.uri}`} alt={data.asset?.alt ?? data.label} />
+        ) : (
+          <div className="image-renderer__placeholder">
+            <span>{data.asset?.kind ?? 'image'}</span>
+            <strong>{data.asset?.status ?? 'missing'}</strong>
+          </div>
+        )}
+      </div>
+      <NodeLabel data={data} />
+    </div>
+  );
+}
+
+function ClassLikeNode({ data }: { data: RedshieldNodeData }) {
+  return (
+    <>
+      <NodeLabel data={data} />
+      <div className="class-renderer__compartment">attributes</div>
+      <div className="class-renderer__compartment">operations</div>
+    </>
+  );
+}
+
+function NodeLabel({ data }: { data: RedshieldNodeData }) {
+  return (
+    <div className="diagram-node__content">
       <div className="diagram-node__kind">{data.kind.replace('_', ' ')}</div>
+      {data.stereotypes.length > 0 ? (
+        <div className="diagram-node__stereotype">&lt;&lt;{data.stereotypes.join(', ')}&gt;&gt;</div>
+      ) : null}
       <div className="diagram-node__label">{data.label}</div>
       <div className="diagram-node__id">{data.modelId}</div>
-      <Handle type="source" position={Position.Right} />
     </div>
   );
 }
@@ -695,8 +912,16 @@ function InspectorNode({ node }: { node: Node<RedshieldNodeData> }) {
       <dd>{node.data.modelId}</dd>
       <dt>Kind</dt>
       <dd>{node.data.kind}</dd>
+      <dt>Renderer</dt>
+      <dd>{node.data.render.rendererId}</dd>
+      <dt>Rule</dt>
+      <dd>{node.data.matchedRuleId}</dd>
+      <dt>Asset</dt>
+      <dd>{node.data.asset ? `${node.data.asset.id} (${node.data.asset.status})` : 'none'}</dd>
       <dt>Label</dt>
       <dd>{node.data.label}</dd>
+      <dt>Stereotypes</dt>
+      <dd>{node.data.stereotypes.length > 0 ? node.data.stereotypes.join(', ') : 'none'}</dd>
       <dt>Layout</dt>
       <dd>{node.data.layoutState}</dd>
       <dt>Bounds</dt>
