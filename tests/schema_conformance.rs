@@ -200,6 +200,53 @@ fn schema_validation_accepts_model_element_common_metadata() {
                             "kind": "document"
                         }
                     ],
+                    "architecture": {
+                        "owners": [
+                            {
+                                "ref": "owner.platform",
+                                "role": "accountable",
+                                "name": "Platform Architecture"
+                            }
+                        ],
+                        "lifecycle": {
+                            "state": "active",
+                            "phase": "prototype",
+                            "milestoneRefs": ["milestone.local-first"],
+                            "targetDate": "2026-07-31",
+                            "notes": "Used by the first local workbench."
+                        },
+                        "criticality": "high",
+                        "technologies": [
+                            {
+                                "ref": "technology.rust",
+                                "role": "runtime",
+                                "version": "1.89",
+                                "standardState": "approved"
+                            }
+                        ],
+                        "risks": [
+                            {
+                                "ref": "risk.proposal-integrity",
+                                "severity": "medium",
+                                "status": "mitigating",
+                                "notes": "Accepted proposals are validated before application."
+                            }
+                        ],
+                        "capabilities": [
+                            {
+                                "ref": "capability.model-review",
+                                "fit": "primary",
+                                "maturity": "developing"
+                            }
+                        ],
+                        "services": [
+                            {
+                                "ref": "service.proposal-application",
+                                "relationship": "provides",
+                                "interfaceRef": "operation.apply-proposal"
+                            }
+                        ]
+                    },
                     "classifier": {
                         "isAbstract": false,
                         "attributes": [
@@ -239,6 +286,44 @@ fn schema_validation_accepts_model_element_common_metadata() {
     if let Err(error) = validator.validate(&valid) {
         panic!("proposal schema should accept model element metadata: {error}");
     }
+}
+
+#[test]
+fn schema_validation_rejects_invalid_architecture_metadata() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let invalid = json!({
+        "proposalId": "proposal.invalid-architecture-metadata",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T22:00:00Z",
+        "intent": "Create a component with invalid architecture metadata.",
+        "operations": [
+            {
+                "opId": "op.create-component-invalid-architecture",
+                "op": "create_model_element",
+                "args": {
+                    "id": "component.invalid-architecture",
+                    "kind": "component",
+                    "name": "Invalid Architecture",
+                    "architecture": {
+                        "criticality": "screaming",
+                        "owners": [
+                            {
+                                "role": "accountable"
+                            }
+                        ]
+                    }
+                },
+                "rationale": "Architecture metadata should stay bounded."
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "proposal schema should reject invalid architecture metadata"
+    );
 }
 
 #[test]
