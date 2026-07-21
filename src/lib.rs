@@ -2819,16 +2819,55 @@ pub fn portfolio_summary_lines(package: &ModelPackage, query: Option<&str>) -> V
             None => true,
         })
         .collect();
+    portfolio_summary_lines_for_objects(package, objects, query, None)
+}
+
+pub fn portfolio_summary_lines_for_saved_view(
+    package: &ModelPackage,
+    view_id: &str,
+    query: Option<&str>,
+) -> Result<Vec<String>> {
+    let view = package
+        .portfolio_saved_views
+        .views
+        .iter()
+        .find(|view| view.id == view_id)
+        .ok_or_else(|| anyhow!("missing portfolio saved view {view_id}"))?;
+    if view.scope != "portfolio_summary" {
+        bail!(
+            "{} has scope {}, not portfolio_summary",
+            view.id,
+            view.scope
+        );
+    }
+    let query = query.map(str::trim).filter(|value| !value.is_empty());
+    let mut objects: Vec<&PortfolioObject> = package
+        .portfolio
+        .objects
+        .iter()
+        .filter(|object| portfolio_object_matches_saved_view(object, view))
+        .filter(|object| match query {
+            Some(query) => portfolio_object_matches_query(object, query),
+            None => true,
+        })
+        .collect();
+    sort_portfolio_summary_objects(&mut objects, &view.sort);
+    Ok(portfolio_summary_lines_for_objects(
+        package,
+        objects,
+        query,
+        Some(view),
+    ))
+}
+
+fn portfolio_summary_lines_for_objects(
+    package: &ModelPackage,
+    objects: Vec<&PortfolioObject>,
+    query: Option<&str>,
+    saved_view: Option<&PortfolioSavedView>,
+) -> Vec<String> {
     let mut lines = vec![
-        match query {
-            Some(query) => format!(
-                "portfolio objects: {} of {} matching \"{}\"",
-                objects.len(),
-                package.portfolio.objects.len(),
-                query
-            ),
-            None => format!("portfolio objects: {}", objects.len()),
-        },
+        portfolio_summary_heading(package, objects.len(), query, saved_view),
         format!(
             "related model links: {}",
             objects
@@ -2896,6 +2935,122 @@ pub fn portfolio_summary_lines(package: &ModelPackage, query: Option<&str>) -> V
     }
 
     lines
+}
+
+fn portfolio_summary_heading(
+    package: &ModelPackage,
+    matching_count: usize,
+    query: Option<&str>,
+    saved_view: Option<&PortfolioSavedView>,
+) -> String {
+    match (saved_view, query) {
+        (Some(view), Some(query)) => format!(
+            "portfolio objects: {} of {} matching saved view \"{}\" ({}) and \"{}\"",
+            matching_count,
+            package.portfolio.objects.len(),
+            view.title,
+            view.id,
+            query
+        ),
+        (Some(view), None) => format!(
+            "portfolio objects: {} of {} matching saved view \"{}\" ({})",
+            matching_count,
+            package.portfolio.objects.len(),
+            view.title,
+            view.id
+        ),
+        (None, Some(query)) => format!(
+            "portfolio objects: {} of {} matching \"{}\"",
+            matching_count,
+            package.portfolio.objects.len(),
+            query
+        ),
+        (None, None) => format!("portfolio objects: {matching_count}"),
+    }
+}
+
+fn portfolio_object_matches_saved_view(
+    object: &PortfolioObject,
+    view: &PortfolioSavedView,
+) -> bool {
+    if !view.result_kinds.is_empty() && !view.result_kinds.iter().any(|kind| kind == &object.kind) {
+        return false;
+    }
+    let query = &view.query;
+    if !query.text.is_empty() && !portfolio_object_matches_query(object, &query.text) {
+        return false;
+    }
+    if !matches_any(&query.kinds, &object.kind) {
+        return false;
+    }
+    if !matches_any(&query.statuses, &object.status) {
+        return false;
+    }
+    if !matches_any(&query.lifecycle_states, &object.lifecycle_state) {
+        return false;
+    }
+    if !matches_any(&query.criticalities, &object.criticality) {
+        return false;
+    }
+    if !matches_any(&query.standard_states, &object.standard_state) {
+        return false;
+    }
+    if !query.tags.is_empty()
+        && !query
+            .tags
+            .iter()
+            .all(|tag| object.tags.iter().any(|object_tag| object_tag == tag))
+    {
+        return false;
+    }
+    refs_match_any(&query.owner_refs, &object.owner_refs)
+        && refs_match_any(&query.capability_refs, &object.capability_refs)
+        && refs_match_any(&query.technology_refs, &object.technology_refs)
+        && refs_match_any(&query.risk_refs, &object.risk_refs)
+        && refs_match_any(&query.related_element_refs, &object.related_element_refs)
+}
+
+fn matches_any(allowed: &[String], value: &str) -> bool {
+    allowed.is_empty() || allowed.iter().any(|allowed| allowed == value)
+}
+
+fn refs_match_any(allowed: &[String], values: &[String]) -> bool {
+    allowed.is_empty()
+        || allowed
+            .iter()
+            .any(|allowed| values.iter().any(|value| value == allowed))
+}
+
+fn sort_portfolio_summary_objects(
+    objects: &mut Vec<&PortfolioObject>,
+    sort: &[PortfolioSavedViewSort],
+) {
+    objects.sort_by(|left, right| {
+        for sort_key in sort {
+            let ordering = portfolio_sort_value(left, &sort_key.field)
+                .cmp(portfolio_sort_value(right, &sort_key.field));
+            if !ordering.is_eq() {
+                return if sort_key.direction == "desc" {
+                    ordering.reverse()
+                } else {
+                    ordering
+                };
+            }
+        }
+        left.id.cmp(&right.id)
+    });
+}
+
+fn portfolio_sort_value<'a>(object: &'a PortfolioObject, field: &str) -> &'a str {
+    match field {
+        "name" => object.name.as_str(),
+        "kind" => object.kind.as_str(),
+        "status" => object.status.as_str(),
+        "lifecycleState" => object.lifecycle_state.as_str(),
+        "criticality" => object.criticality.as_str(),
+        "standardState" => object.standard_state.as_str(),
+        _ => object.id.as_str(),
+    }
 }
 
 fn portfolio_object_matches_query(object: &PortfolioObject, query: &str) -> bool {
@@ -6136,6 +6291,67 @@ mod tests {
             filtered
                 .iter()
                 .any(|line| line.contains("technology.tauri"))
+        );
+    }
+
+    #[test]
+    fn portfolio_summary_applies_saved_view_filters() {
+        let root = copy_example_to_temp();
+        let package = load_package(&root).unwrap();
+        let lines = portfolio_summary_lines_for_saved_view(
+            &package,
+            "portfolio-view.active-critical",
+            None,
+        )
+        .unwrap();
+
+        assert!(
+            lines.iter().any(|line| {
+                line == "portfolio objects: 1 of 8 matching saved view \"Active critical portfolio facts\" (portfolio-view.active-critical)"
+            })
+        );
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.starts_with("- application.redshield-architect "))
+        );
+        assert!(
+            lines
+                .iter()
+                .all(|line| !line.starts_with("- capability.model-review "))
+        );
+        assert!(
+            lines
+                .iter()
+                .all(|line| !line.starts_with("- risk.silent-model-mutation "))
+        );
+    }
+
+    #[test]
+    fn portfolio_summary_layers_search_over_saved_view() {
+        let root = copy_example_to_temp();
+        let package = load_package(&root).unwrap();
+        let lines = portfolio_summary_lines_for_saved_view(
+            &package,
+            "portfolio-view.active-critical",
+            Some("Architect"),
+        )
+        .unwrap();
+
+        assert!(
+            lines.iter().any(|line| {
+                line == "portfolio objects: 1 of 8 matching saved view \"Active critical portfolio facts\" (portfolio-view.active-critical) and \"Architect\""
+            })
+        );
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.starts_with("- application.redshield-architect "))
+        );
+        assert!(
+            lines
+                .iter()
+                .all(|line| !line.starts_with("- capability.model-review "))
         );
     }
 

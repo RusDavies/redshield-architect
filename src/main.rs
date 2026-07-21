@@ -1,8 +1,8 @@
 use anyhow::{Context, Result, bail};
 use redshield_architect::{
     apply_accepted_proposal_file, load_package, portfolio_summary_lines,
-    render_lifecycle_roadmap_svg_with_presentation, render_use_case_svg, validate_package,
-    validate_proposals,
+    portfolio_summary_lines_for_saved_view, render_lifecycle_roadmap_svg_with_presentation,
+    render_use_case_svg, validate_package, validate_proposals,
 };
 use std::env;
 use std::fs;
@@ -76,7 +76,7 @@ fn main() -> Result<()> {
             let root = args
                 .next()
                 .unwrap_or_else(|| "examples/minimal/redshield".to_string());
-            let query_parts: Vec<String> = args.collect();
+            let (view_id, query_parts) = parse_portfolio_summary_args(args.collect())?;
             let query = if query_parts.is_empty() {
                 None
             } else {
@@ -84,7 +84,13 @@ fn main() -> Result<()> {
             };
             let package = load_package(&root)?;
             validate_package(&package)?;
-            for line in portfolio_summary_lines(&package, query.as_deref()) {
+            let lines = match view_id {
+                Some(view_id) => {
+                    portfolio_summary_lines_for_saved_view(&package, &view_id, query.as_deref())?
+                }
+                None => portfolio_summary_lines(&package, query.as_deref()),
+            };
+            for line in lines {
                 println!("{line}");
             }
         }
@@ -149,6 +155,31 @@ fn print_usage() {
     println!(
         "  redshield-architect render-lifecycle-roadmap [redshield-dir] [output.svg] [presentation-id]"
     );
-    println!("  redshield-architect portfolio-summary [redshield-dir] [search]");
+    println!(
+        "  redshield-architect portfolio-summary [redshield-dir] [--view <saved-view-id>] [search]"
+    );
     println!("  redshield-architect apply-proposal [redshield-dir] <proposal.json>");
+}
+
+fn parse_portfolio_summary_args(args: Vec<String>) -> Result<(Option<String>, Vec<String>)> {
+    let mut view_id = None;
+    let mut query_parts = Vec::new();
+    let mut iter = args.into_iter();
+    while let Some(arg) = iter.next() {
+        if arg == "--view" {
+            if view_id.is_some() {
+                bail!("portfolio-summary accepts only one --view option");
+            }
+            let Some(value) = iter.next() else {
+                bail!("portfolio-summary --view requires a saved view ID");
+            };
+            if value.trim().is_empty() {
+                bail!("portfolio-summary --view requires a non-empty saved view ID");
+            }
+            view_id = Some(value);
+        } else {
+            query_parts.push(arg);
+        }
+    }
+    Ok((view_id, query_parts))
 }
