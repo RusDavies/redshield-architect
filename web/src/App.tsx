@@ -24,11 +24,49 @@ import elementsFile from '../../examples/minimal/redshield/model/elements.json';
 import portfolioFile from '../../examples/minimal/redshield/model/portfolio.json';
 import relationshipsFile from '../../examples/minimal/redshield/model/relationships.json';
 import diagramsFile from '../../examples/minimal/redshield/views/diagrams.json';
+import portfolioViewsFile from '../../examples/minimal/redshield/views/portfolio-views.json';
 import renderProfileFile from '../../examples/minimal/redshield/views/render-profile.json';
 import traceFile from '../../examples/minimal/redshield/trace/links.json';
 
 type ElementRecord = (typeof elementsFile.elements)[number];
-type PortfolioObjectRecord = (typeof portfolioFile.objects)[number];
+type PortfolioObjectRecord = {
+  id: string;
+  kind: string;
+  name: string;
+  description?: string;
+  status: string;
+  lifecycleState?: string;
+  criticality?: string;
+  standardState?: string;
+  tags?: string[];
+  sourceRefs?: string[];
+  ownerRefs?: string[];
+  capabilityRefs?: string[];
+  technologyRefs?: string[];
+  riskRefs?: string[];
+  relatedElementRefs?: string[];
+};
+type PortfolioSavedViewQuery = {
+  text?: string;
+  kinds?: string[];
+  statuses?: string[];
+  lifecycleStates?: string[];
+  criticalities?: string[];
+  standardStates?: string[];
+  tags?: string[];
+  ownerRefs?: string[];
+  capabilityRefs?: string[];
+  technologyRefs?: string[];
+  riskRefs?: string[];
+  relatedElementRefs?: string[];
+};
+type PortfolioSavedViewRecord = {
+  id: string;
+  title: string;
+  description?: string;
+  resultKinds: string[];
+  query?: PortfolioSavedViewQuery;
+};
 type RelationshipRecord = (typeof relationshipsFile.relationships)[number];
 type DiagramLayout = NonNullable<(typeof diagramsFile.diagrams)[number]['layout']>;
 type DiagramNodeLayout = DiagramLayout['nodes'][number];
@@ -470,13 +508,57 @@ function filterPortfolioObjects(
   search: string,
   kind: string,
   lifecycle: string,
+  savedView?: PortfolioSavedViewRecord,
 ) {
   const normalizedSearch = search.trim().toLowerCase();
+  const query = savedView?.query;
   return objects.filter((object) => {
+    if (savedView && savedView.resultKinds.length > 0 && !savedView.resultKinds.includes(object.kind)) {
+      return false;
+    }
+    if (query) {
+      const queryKinds = query.kinds ?? [];
+      const queryStatuses = query.statuses ?? [];
+      const queryLifecycleStates = query.lifecycleStates ?? [];
+      const queryCriticalities = query.criticalities ?? [];
+      const queryStandardStates = query.standardStates ?? [];
+      const queryTags = query.tags ?? [];
+      if (query.text && !portfolioObjectMatchesText(object, query.text)) return false;
+      if (queryKinds.length > 0 && !queryKinds.includes(object.kind)) return false;
+      if (queryStatuses.length > 0 && !queryStatuses.includes(object.status)) return false;
+      if (
+        queryLifecycleStates.length > 0 &&
+        !queryLifecycleStates.includes(object.lifecycleState ?? 'unspecified')
+      ) {
+        return false;
+      }
+      if (queryCriticalities.length > 0 && !queryCriticalities.includes(object.criticality ?? '')) {
+        return false;
+      }
+      if (
+        queryStandardStates.length > 0 &&
+        !queryStandardStates.includes(object.standardState ?? '')
+      ) {
+        return false;
+      }
+      if (queryTags.length > 0 && !queryTags.every((tag) => object.tags?.includes(tag))) return false;
+      if (!refsIntersect(query.ownerRefs, object.ownerRefs)) return false;
+      if (!refsIntersect(query.capabilityRefs, object.capabilityRefs)) return false;
+      if (!refsIntersect(query.technologyRefs, object.technologyRefs)) return false;
+      if (!refsIntersect(query.riskRefs, object.riskRefs)) return false;
+      if (!refsIntersect(query.relatedElementRefs, object.relatedElementRefs)) return false;
+    }
     if (kind !== 'all' && object.kind !== kind) return false;
     if (lifecycle !== 'all' && (object.lifecycleState ?? 'unspecified') !== lifecycle) return false;
     if (!normalizedSearch) return true;
-    return [
+    return portfolioObjectMatchesText(object, normalizedSearch);
+  });
+}
+
+function portfolioObjectMatchesText(object: PortfolioObjectRecord, query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return true;
+  return [
       object.id,
       object.kind,
       object.name,
@@ -489,8 +571,12 @@ function filterPortfolioObjects(
       ...(object.sourceRefs ?? []),
     ]
       .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(normalizedSearch));
-  });
+      .some((value) => String(value).toLowerCase().includes(normalizedQuery));
+}
+
+function refsIntersect(queryRefs: string[] | undefined, objectRefs: string[] | undefined) {
+  if (!queryRefs || queryRefs.length === 0) return true;
+  return queryRefs.some((ref) => objectRefs?.includes(ref));
 }
 
 function uniquePortfolioValues(
@@ -725,6 +811,7 @@ export default function App() {
   const [portfolioSearch, setPortfolioSearch] = useState('');
   const [portfolioKindFilter, setPortfolioKindFilter] = useState('all');
   const [portfolioLifecycleFilter, setPortfolioLifecycleFilter] = useState('all');
+  const [activePortfolioViewId, setActivePortfolioViewId] = useState('none');
 
   const selectedNodeIds = useMemo(
     () => new Set(selection.nodes.map((node) => node.id)),
@@ -738,6 +825,10 @@ export default function App() {
     }),
     [renderProfile],
   );
+  const activePortfolioView = useMemo(
+    () => portfolioViewsFile.views.find((view) => view.id === activePortfolioViewId),
+    [activePortfolioViewId],
+  );
   const filteredPortfolioObjects = useMemo(
     () =>
       filterPortfolioObjects(
@@ -745,8 +836,9 @@ export default function App() {
         portfolioSearch,
         portfolioKindFilter,
         portfolioLifecycleFilter,
+        activePortfolioView,
       ),
-    [portfolioSearch, portfolioKindFilter, portfolioLifecycleFilter],
+    [portfolioSearch, portfolioKindFilter, portfolioLifecycleFilter, activePortfolioView],
   );
   const portfolioSummary = useMemo(
     () => summarizePortfolioObjects(filteredPortfolioObjects),
@@ -1285,6 +1377,8 @@ export default function App() {
             search={portfolioSearch}
             kindFilter={portfolioKindFilter}
             lifecycleFilter={portfolioLifecycleFilter}
+            savedViews={portfolioViewsFile.views}
+            activeSavedViewId={activePortfolioViewId}
             kindOptions={uniquePortfolioValues(portfolioFile.objects, (object) => object.kind)}
             lifecycleOptions={uniquePortfolioValues(
               portfolioFile.objects,
@@ -1293,6 +1387,7 @@ export default function App() {
             onSearch={setPortfolioSearch}
             onKindFilter={setPortfolioKindFilter}
             onLifecycleFilter={setPortfolioLifecycleFilter}
+            onSavedView={setActivePortfolioViewId}
           />
         </section>
         <section>
@@ -1618,11 +1713,14 @@ function PortfolioSummary({
   search,
   kindFilter,
   lifecycleFilter,
+  savedViews,
+  activeSavedViewId,
   kindOptions,
   lifecycleOptions,
   onSearch,
   onKindFilter,
   onLifecycleFilter,
+  onSavedView,
 }: {
   summary: ReturnType<typeof summarizePortfolioObjects>;
   objects: PortfolioObjectRecord[];
@@ -1630,14 +1728,40 @@ function PortfolioSummary({
   search: string;
   kindFilter: string;
   lifecycleFilter: string;
+  savedViews: PortfolioSavedViewRecord[];
+  activeSavedViewId: string;
   kindOptions: string[];
   lifecycleOptions: string[];
   onSearch: (value: string) => void;
   onKindFilter: (value: string) => void;
   onLifecycleFilter: (value: string) => void;
+  onSavedView: (value: string) => void;
 }) {
   return (
     <div className="portfolio-summary">
+      <div className="portfolio-summary__saved-views">
+        <strong>Saved views</strong>
+        <div>
+          <button
+            className={activeSavedViewId === 'none' ? 'is-active' : ''}
+            onClick={() => onSavedView('none')}
+            type="button"
+          >
+            All portfolio facts
+          </button>
+          {savedViews.map((view) => (
+            <button
+              className={activeSavedViewId === view.id ? 'is-active' : ''}
+              key={view.id}
+              onClick={() => onSavedView(view.id)}
+              title={view.description}
+              type="button"
+            >
+              {view.title}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="portfolio-summary__filters">
         <label>
           <span>Search</span>

@@ -25,6 +25,9 @@
         { "$ref": "#/$defs/createRequirementOperation" },
         { "$ref": "#/$defs/createPortfolioObjectOperation" },
         { "$ref": "#/$defs/updatePortfolioObjectOperation" },
+        { "$ref": "#/$defs/createPortfolioSavedViewOperation" },
+        { "$ref": "#/$defs/updatePortfolioSavedViewOperation" },
+        { "$ref": "#/$defs/removePortfolioSavedViewOperation" },
         { "$ref": "#/$defs/createModelElementOperation" },
         { "$ref": "#/$defs/updateModelElementDetailsOperation" },
         { "$ref": "#/$defs/createRelationshipOperation" },
@@ -98,6 +101,42 @@
           "properties": {
             "op": { "const": "update_portfolio_object" },
             "args": { "$ref": "#/$defs/updatePortfolioObjectArgs" }
+          }
+        }
+      ]
+    },
+    "createPortfolioSavedViewOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "create_portfolio_saved_view" },
+            "args": { "$ref": "#/$defs/createPortfolioSavedViewArgs" }
+          }
+        }
+      ]
+    },
+    "updatePortfolioSavedViewOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "update_portfolio_saved_view" },
+            "args": { "$ref": "#/$defs/updatePortfolioSavedViewArgs" }
+          }
+        }
+      ]
+    },
+    "removePortfolioSavedViewOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "remove_portfolio_saved_view" },
+            "args": { "$ref": "#/$defs/removePortfolioSavedViewArgs" }
           }
         }
       ]
@@ -389,6 +428,73 @@
           "type": "array",
           "items": { "$ref": "#/$defs/externalReference" }
         }
+      }
+    },
+    "createPortfolioSavedViewArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "scope"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "scope": {
+          "type": "string",
+          "enum": ["portfolio_summary", "portfolio_view_source", "export_set"]
+        },
+        "resultKinds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/portfolioKind" }
+        },
+        "query": { "$ref": "#/$defs/portfolioSavedViewQuery" },
+        "sort": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/portfolioSavedViewSort" }
+        },
+        "columns": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/savedViewColumn" }
+        },
+        "presentation": { "$ref": "#/$defs/portfolioSavedViewPresentation" },
+        "provenance": { "$ref": "#/$defs/modelElementProvenance" }
+      }
+    },
+    "updatePortfolioSavedViewArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["viewId"],
+      "minProperties": 2,
+      "properties": {
+        "viewId": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "scope": {
+          "type": "string",
+          "enum": ["portfolio_summary", "portfolio_view_source", "export_set"]
+        },
+        "resultKinds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/portfolioKind" }
+        },
+        "query": { "$ref": "#/$defs/portfolioSavedViewQuery" },
+        "sort": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/portfolioSavedViewSort" }
+        },
+        "columns": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/savedViewColumn" }
+        },
+        "presentation": { "$ref": "#/$defs/portfolioSavedViewPresentation" },
+        "provenance": { "$ref": "#/$defs/modelElementProvenance" }
+      }
+    },
+    "removePortfolioSavedViewArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["viewId"],
+      "properties": {
+        "viewId": { "type": "string", "minLength": 1 }
       }
     },
     "updateModelElementDetailsArgs": {
@@ -705,6 +811,75 @@
         "createdAt": { "type": "string", "minLength": 1 },
         "notes": { "type": "string" }
       }
+    },
+    "portfolioSavedViewQuery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string" },
+        "kinds": { "type": "array", "items": { "$ref": "#/$defs/portfolioKind" } },
+        "statuses": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["draft", "proposed", "accepted", "deprecated", "retired"] }
+        },
+        "lifecycleStates": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["idea", "planned", "active", "deprecated", "retiring", "retired"] }
+        },
+        "criticalities": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["low", "medium", "high", "critical"] }
+        },
+        "standardStates": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["approved", "tolerated", "discouraged", "banned", "emerging"] }
+        },
+        "tags": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "ownerRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "capabilityRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "technologyRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "riskRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "relatedElementRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "portfolioSavedViewSort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field"],
+      "properties": {
+        "field": { "$ref": "#/$defs/savedViewColumn" },
+        "direction": { "type": "string", "enum": ["asc", "desc"] }
+      }
+    },
+    "portfolioSavedViewPresentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "density": { "type": "string", "enum": ["compact", "comfortable", "detailed"] },
+        "groupBy": {
+          "type": "string",
+          "enum": ["kind", "status", "lifecycleState", "criticality", "standardState", "owner", "capability"]
+        },
+        "showCounts": { "type": "boolean" }
+      }
+    },
+    "savedViewColumn": {
+      "type": "string",
+      "enum": [
+        "id",
+        "kind",
+        "name",
+        "status",
+        "lifecycleState",
+        "criticality",
+        "standardState",
+        "ownerRefs",
+        "capabilityRefs",
+        "technologyRefs",
+        "riskRefs",
+        "relatedElementRefs",
+        "tags"
+      ]
     },
     "portfolioKind": {
       "type": "string",

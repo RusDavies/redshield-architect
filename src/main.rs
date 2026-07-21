@@ -100,6 +100,10 @@ fn main() -> Result<()> {
                 "- portfolio objects updated: {}",
                 summary.portfolio_objects_updated
             );
+            println!(
+                "- portfolio saved view operations applied: {}",
+                summary.portfolio_saved_view_operations_applied
+            );
             println!("- elements created: {}", summary.elements_created);
             println!("- relationships created: {}", summary.relationships_created);
             println!("- diagrams created: {}", summary.diagrams_created);

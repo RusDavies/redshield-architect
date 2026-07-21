@@ -1,0 +1,63 @@
+{
+  "proposalId": "proposal.portfolio-saved-view",
+  "schemaVersion": "0.1.0",
+  "state": "accepted",
+  "createdAt": "2026-07-21T00:00:00Z",
+  "intent": "Create and maintain saved portfolio query metadata through typed proposal operations.",
+  "operations": [
+    {
+      "opId": "op.create-saved-view",
+      "op": "create_portfolio_saved_view",
+      "args": {
+        "id": "portfolio-view.prototype-technologies",
+        "title": "Prototype technologies",
+        "description": "Technologies used by the prototype workbench.",
+        "scope": "portfolio_summary",
+        "resultKinds": ["technology_component", "technology_standard"],
+        "query": {
+          "kinds": ["technology_component", "technology_standard"],
+          "tags": ["frontend"]
+        },
+        "sort": [
+          {
+            "field": "name",
+            "direction": "asc"
+          }
+        ],
+        "columns": ["name", "kind", "standardState", "tags"],
+        "presentation": {
+          "density": "compact",
+          "groupBy": "kind",
+          "showCounts": true
+        },
+        "provenance": {
+          "sourceRefs": ["docs/PORTFOLIO_SAVED_VIEWS.md"],
+          "createdBy": "Proposal test",
+          "createdAt": "2026-07-21T00:00:00Z"
+        }
+      },
+      "rationale": "Saved portfolio queries should be canonical package metadata, not browser-local filter state.",
+      "sourceRefs": ["docs/PORTFOLIO_SAVED_VIEWS.md"]
+    },
+    {
+      "opId": "op.update-saved-view",
+      "op": "update_portfolio_saved_view",
+      "args": {
+        "viewId": "portfolio-view.active-critical",
+        "title": "Active and planned critical portfolio facts",
+        "columns": ["name", "kind", "lifecycleState", "criticality", "ownerRefs"]
+      },
+      "rationale": "Existing saved views need typed update operations with no-op protection.",
+      "sourceRefs": ["docs/PORTFOLIO_SAVED_VIEWS.md"]
+    },
+    {
+      "opId": "op.remove-saved-view",
+      "op": "remove_portfolio_saved_view",
+      "args": {
+        "viewId": "portfolio-view.prototype-technologies"
+      },
+      "rationale": "Saved views should be removable through reviewable typed operations.",
+      "sourceRefs": ["docs/PORTFOLIO_SAVED_VIEWS.md"]
+    }
+  ]
+}

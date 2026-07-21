@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "0.1.0",
+  "views": [
+    {
+      "id": "portfolio-view.active-critical",
+      "title": "Active critical portfolio facts",
+      "description": "Saved summary for active, high-criticality portfolio objects linked to the model review capability.",
+      "scope": "portfolio_summary",
+      "resultKinds": ["business_capability", "portfolio_application", "technology_component"],
+      "query": {
+        "lifecycleStates": ["active", "planned"],
+        "criticalities": ["high"],
+        "capabilityRefs": ["capability.model-review"]
+      },
+      "sort": [
+        {
+          "field": "kind",
+          "direction": "asc"
+        },
+        {
+          "field": "name",
+          "direction": "asc"
+        }
+      ],
+      "columns": ["name", "kind", "lifecycleState", "criticality", "capabilityRefs"],
+      "presentation": {
+        "density": "compact",
+        "groupBy": "kind",
+        "showCounts": true
+      },
+      "provenance": {
+        "sourceRefs": ["docs/PORTFOLIO_SAVED_VIEWS.md"],
+        "createdBy": "RedShield prototype seed",
+        "createdAt": "2026-07-21T00:00:00Z"
+      }
+    }
+  ]
+}
