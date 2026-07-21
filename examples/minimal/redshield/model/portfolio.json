@@ -15,6 +15,29 @@
       "tags": ["proposal-review"]
     },
     {
+      "id": "application.redshield-architect",
+      "kind": "portfolio_application",
+      "name": "RedShield Architect",
+      "description": "The local-first architecture workbench product represented by this package.",
+      "status": "accepted",
+      "lifecycleState": "planned",
+      "lifecycle": {
+        "state": "planned",
+        "phase": "thin prototype",
+        "currentFrom": "2026-07-20",
+        "targetState": "active",
+        "targetDate": "2026-09-30",
+        "milestoneRefs": ["milestone.thin-prototype", "milestone.alpha"],
+        "notes": "Lifecycle facts describe product posture without turning the MVP into a roadmap dashboard."
+      },
+      "criticality": "high",
+      "ownerRefs": ["owner.product-architecture"],
+      "capabilityRefs": ["capability.model-review"],
+      "technologyRefs": ["technology.react-flow", "technology.tauri"],
+      "sourceRefs": ["docs/ROADMAP.md", "docs/PRODUCT_BRIEF.md"],
+      "tags": ["product", "linux-first"]
+    },
+    {
       "id": "owner.product-architecture",
       "kind": "owner",
       "name": "Product Architecture",
@@ -41,6 +64,13 @@
       "description": "Interactive graph canvas used by the workbench spike.",
       "status": "accepted",
       "lifecycleState": "active",
+      "lifecycle": {
+        "state": "active",
+        "phase": "prototype dependency",
+        "currentFrom": "2026-07-20",
+        "targetState": "active",
+        "milestoneRefs": ["milestone.thin-prototype"]
+      },
       "standardState": "approved",
       "sourceRefs": ["web/package.json"],
       "tags": ["frontend", "diagram"]
@@ -52,9 +82,36 @@
       "description": "Candidate Linux-first desktop shell for local RedShield package editing.",
       "status": "proposed",
       "lifecycleState": "planned",
+      "lifecycle": {
+        "state": "planned",
+        "phase": "candidate desktop shell",
+        "targetState": "active",
+        "targetDate": "2026-09-30",
+        "milestoneRefs": ["milestone.alpha"]
+      },
       "standardState": "approved",
       "sourceRefs": ["docs/PRODUCT_BRIEF.md"],
       "tags": ["desktop", "linux"]
+    },
+    {
+      "id": "milestone.thin-prototype",
+      "kind": "lifecycle_milestone",
+      "name": "Thin prototype",
+      "description": "Prototype milestone for loading, validating, rendering, and preserving native portfolio facts.",
+      "status": "accepted",
+      "lifecycleState": "active",
+      "sourceRefs": ["docs/ROADMAP.md"],
+      "tags": ["milestone", "prototype"]
+    },
+    {
+      "id": "milestone.alpha",
+      "kind": "lifecycle_milestone",
+      "name": "Alpha readiness",
+      "description": "Target milestone for packaging the first coherent local architecture workbench flow.",
+      "status": "proposed",
+      "lifecycleState": "planned",
+      "sourceRefs": ["docs/ROADMAP.md"],
+      "tags": ["milestone", "alpha"]
     }
   ]
 }

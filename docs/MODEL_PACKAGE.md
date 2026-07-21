@@ -59,7 +59,9 @@ The initial object kinds are deliberately bounded:
 - `governance_decision`
 - `data_source`
 
-Each portfolio object has a stable `id`, `kind`, `name`, optional description, status, lifecycle state, criticality, standard state, tags, source references, external references, and typed reference lists for owners, capabilities, technologies, risks, and related model elements. `relatedElementRefs` are validated against `model/elements.json`, so portfolio facts can point at the same UML-backed components and use cases already used by diagrams and traceability.
+Each portfolio object has a stable `id`, `kind`, `name`, optional description, status, lifecycle state, structured lifecycle details, criticality, standard state, tags, source references, external references, and typed reference lists for owners, capabilities, technologies, risks, and related model elements. `relatedElementRefs` are validated against `model/elements.json`, so portfolio facts can point at the same UML-backed components and use cases already used by diagrams and traceability.
+
+Structured lifecycle details are documented in [Portfolio Lifecycle Semantics](PORTFOLIO_LIFECYCLE.md). They support current state, local phase, target state/date, support/retirement dates, and milestone references for portfolio applications, products represented as applications, portfolio services, technology components, and technology standards.
 
 This is the product wedge: business capabilities, services, technologies, risks, and ownership can be reviewed as deterministic package data while still linking directly to solution-architecture model elements. It is not a broad EA repository yet, and the MVP UI does not need to edit every object kind on day one.
 

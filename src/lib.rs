@@ -66,6 +66,8 @@ pub struct PortfolioObject {
     pub status: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub lifecycle_state: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lifecycle: Option<PortfolioLifecycle>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub criticality: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -86,6 +88,29 @@ pub struct PortfolioObject {
     pub source_refs: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub external_references: Vec<ExternalReference>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioLifecycle {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub phase: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub current_from: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub target_state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub target_date: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub end_of_support_date: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub retirement_date: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub milestone_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notes: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -782,6 +807,8 @@ struct CreatePortfolioObjectArgs {
     #[serde(default)]
     lifecycle_state: String,
     #[serde(default)]
+    lifecycle: Option<PortfolioLifecycle>,
+    #[serde(default)]
     criticality: String,
     #[serde(default)]
     standard_state: String,
@@ -815,6 +842,8 @@ struct UpdatePortfolioObjectArgs {
     status: Option<String>,
     #[serde(default)]
     lifecycle_state: Option<String>,
+    #[serde(default)]
+    lifecycle: Option<PortfolioLifecycle>,
     #[serde(default)]
     criticality: Option<String>,
     #[serde(default)]
@@ -1125,6 +1154,7 @@ pub fn apply_proposal_operations(
                     description: args.description,
                     status: args.status,
                     lifecycle_state: args.lifecycle_state,
+                    lifecycle: args.lifecycle,
                     criticality: args.criticality,
                     standard_state: args.standard_state,
                     tags: args.tags,
@@ -1299,6 +1329,9 @@ fn update_portfolio_object(
     if let Some(lifecycle_state) = args.lifecycle_state {
         object.lifecycle_state = lifecycle_state;
     }
+    if let Some(lifecycle) = args.lifecycle {
+        object.lifecycle = Some(lifecycle);
+    }
     if let Some(criticality) = args.criticality {
         object.criticality = criticality;
     }
@@ -1338,6 +1371,7 @@ fn has_portfolio_object_update(args: &UpdatePortfolioObjectArgs) -> bool {
         || args.description.is_some()
         || args.status.is_some()
         || args.lifecycle_state.is_some()
+        || args.lifecycle.is_some()
         || args.criticality.is_some()
         || args.standard_state.is_some()
         || args.tags.is_some()
@@ -1497,6 +1531,9 @@ fn validate_portfolio_object(object: &PortfolioObject) -> Result<()> {
         ],
         &format!("{} lifecycleState", object.id),
     )?;
+    if let Some(lifecycle) = &object.lifecycle {
+        validate_portfolio_lifecycle(object, lifecycle)?;
+    }
     validate_optional_value(
         &object.criticality,
         &["low", "medium", "high", "critical"],
@@ -1537,6 +1574,53 @@ fn validate_portfolio_object(object: &PortfolioObject) -> Result<()> {
             &format!("{} external reference uri", object.id),
         )?;
     }
+    Ok(())
+}
+
+fn validate_portfolio_lifecycle(
+    object: &PortfolioObject,
+    lifecycle: &PortfolioLifecycle,
+) -> Result<()> {
+    validate_optional_value(
+        &lifecycle.state,
+        &[
+            "idea",
+            "planned",
+            "active",
+            "deprecated",
+            "retiring",
+            "retired",
+        ],
+        &format!("{} lifecycle state", object.id),
+    )?;
+    validate_optional_value(
+        &lifecycle.target_state,
+        &["planned", "active", "deprecated", "retiring", "retired"],
+        &format!("{} lifecycle targetState", object.id),
+    )?;
+    if !lifecycle.phase.is_empty() {
+        ensure_non_empty(&lifecycle.phase, &format!("{} lifecycle phase", object.id))?;
+    }
+    validate_optional_date(
+        &lifecycle.current_from,
+        &format!("{} lifecycle currentFrom", object.id),
+    )?;
+    validate_optional_date(
+        &lifecycle.target_date,
+        &format!("{} lifecycle targetDate", object.id),
+    )?;
+    validate_optional_date(
+        &lifecycle.end_of_support_date,
+        &format!("{} lifecycle endOfSupportDate", object.id),
+    )?;
+    validate_optional_date(
+        &lifecycle.retirement_date,
+        &format!("{} lifecycle retirementDate", object.id),
+    )?;
+    ensure_non_empty_items(
+        &lifecycle.milestone_refs,
+        &format!("{} lifecycle milestoneRef", object.id),
+    )?;
     Ok(())
 }
 
@@ -3390,6 +3474,23 @@ fn validate_optional_value(value: &str, supported: &[&str], field: &str) -> Resu
     bail!("{field} has unsupported value {value}");
 }
 
+fn validate_optional_date(value: &str, field: &str) -> Result<()> {
+    if value.is_empty() {
+        return Ok(());
+    }
+    let bytes = value.as_bytes();
+    if bytes.len() == 10
+        && bytes[0..4].iter().all(u8::is_ascii_digit)
+        && bytes[4] == b'-'
+        && bytes[5..7].iter().all(u8::is_ascii_digit)
+        && bytes[7] == b'-'
+        && bytes[8..10].iter().all(u8::is_ascii_digit)
+    {
+        return Ok(());
+    }
+    bail!("{field} must use YYYY-MM-DD");
+}
+
 fn require_version(label: &str, version: &str) -> Result<()> {
     if version != "0.1.0" {
         bail!("{label} uses unsupported schema version {version}");
@@ -3779,6 +3880,14 @@ mod tests {
         "description": "Applies accepted proposal operations to canonical package files.",
         "status": "accepted",
         "lifecycleState": "active",
+        "lifecycle": {
+          "state": "active",
+          "phase": "supported service",
+          "currentFrom": "2026-07-20",
+          "targetState": "active",
+          "targetDate": "2026-09-30",
+          "milestoneRefs": ["milestone.alpha"]
+        },
         "criticality": "high",
         "capabilityRefs": ["capability.model-review"],
         "technologyRefs": ["technology.tauri"],
@@ -3818,6 +3927,10 @@ mod tests {
             .unwrap();
         assert_eq!(service.kind, "portfolio_service");
         assert_eq!(service.related_element_refs, vec!["component.workbench"]);
+        assert_eq!(
+            service.lifecycle.as_ref().unwrap().milestone_refs,
+            vec!["milestone.alpha"]
+        );
         let capability = package
             .portfolio
             .objects
