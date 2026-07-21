@@ -93,6 +93,8 @@ The CLI `portfolio-summary` command and the workbench sidebar provide read-only 
 
 The CLI `render-lifecycle-roadmap` command renders the first portfolio view kind as generated SVG. It colors referenced portfolio objects by lifecycle state, derives a visible timeline scale from lifecycle dates, uses portfolio-kind swimlanes, renders target-state callouts, renders lifecycle milestones distinctly, and draws milestone links from structured lifecycle metadata when both objects are in the view.
 
+Those roadmap layout semantics remain generated renderer behavior for now. They are not saved/customizable package metadata yet; a durable roadmap presentation contract should be added only after real use proves which timeline, swimlane, target-state, milestone, and layout controls need to be preserved and shared.
+
 ## Model Elements
 
 Model elements are semantic objects under `model/elements.json`. The common element envelope now supports:
