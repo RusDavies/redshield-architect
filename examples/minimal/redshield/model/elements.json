@@ -92,7 +92,7 @@
         "lifecycle": {
           "state": "active",
           "phase": "prototype",
-          "milestoneRefs": ["milestone.first-local-prototype"],
+          "milestoneRefs": ["milestone.thin-prototype"],
           "targetDate": "2026-07-31",
           "notes": "Prototype workbench shell proving model-backed review and diagram editing."
         },
@@ -124,13 +124,6 @@
             "ref": "capability.model-review",
             "fit": "primary",
             "maturity": "developing"
-          }
-        ],
-        "services": [
-          {
-            "ref": "service.proposal-application",
-            "relationship": "consumes",
-            "interfaceRef": "operation.apply-proposal"
           }
         ]
       },
