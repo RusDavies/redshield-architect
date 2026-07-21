@@ -146,7 +146,7 @@ These semantics are generated view behavior, not canonical planning state. They 
 
 Do not promote the first generated roadmap semantics into saved/customizable package metadata yet. Timeline bucket rules, swimlane definitions, target-state label placement, milestone-link styling, and roadmap layout presets should stay renderer-owned defaults until repeated use shows which controls architects actually need to preserve, review, share, or import/export.
 
-When durable customization becomes necessary, it should be introduced as an explicit named portfolio view layout or roadmap presentation contract. That contract should be reviewable package metadata with bounded fields, deterministic validation, and clear separation from portfolio object truth; it should not hide renderer preferences inside ad hoc diagram state.
+When durable customization becomes necessary, it should use the bounded contract in [Portfolio Roadmap Presentation](PORTFOLIO_ROADMAP_PRESENTATION.md). That contract should be reviewable package metadata with deterministic validation and clear separation from portfolio object truth; it should not hide renderer preferences inside ad hoc diagram state.
 
 ## Validation
 
