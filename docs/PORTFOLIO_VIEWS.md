@@ -29,7 +29,7 @@ The historical layout field name `modelRef` is still used for nodes. In portfoli
 
 Portfolio summary filters are temporary local controls for narrowing the current read-only summary. The CLI search argument and workbench search/kind/lifecycle controls do not create saved package state and are not shareable links.
 
-Do not turn these first filters into saved views yet. A saved/shareable filter should become a named portfolio view or query contract only after real usage shows which fields, audience, and stability guarantees are worth preserving. Otherwise RedShield gets stealth dashboard configuration before the model contract deserves it, which is how simple tools grow tentacles and invoice you for them.
+Do not turn these first filters into saved views yet. When repeated use justifies durable sharing, use the bounded contract in [Portfolio Saved Views And Queries](PORTFOLIO_SAVED_VIEWS.md): a named saved query with explicit fields, deterministic validation, and proposal-reviewed changes. Otherwise RedShield gets stealth dashboard configuration before the model contract deserves it, which is how simple tools grow tentacles and invoice you for them.
 
 ## Capability Map
 
