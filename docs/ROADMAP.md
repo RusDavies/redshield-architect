@@ -22,6 +22,7 @@
 - Add read-only CLI/workbench summaries for portfolio objects.
 - Add generated/read-only rendering for the first portfolio lifecycle roadmap.
 - Add search and filters to read-only portfolio summaries.
+- Add richer generated lifecycle-roadmap layout semantics for timeline buckets, swimlanes, and target-state transitions.
 
 ## Milestone 2: Proposal Review Workflow
 

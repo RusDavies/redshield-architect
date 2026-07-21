@@ -3480,6 +3480,8 @@ pub fn render_lifecycle_roadmap_dot(
         .iter()
         .filter_map(|id| portfolio.get(id.as_str()).copied())
         .collect();
+    let nodes = lifecycle_roadmap_nodes(&objects);
+    let timeline_buckets = lifecycle_timeline_buckets(&nodes);
 
     let mut dot = String::new();
     writeln!(
@@ -3489,7 +3491,7 @@ pub fn render_lifecycle_roadmap_dot(
     )?;
     writeln!(
         dot,
-        "  graph [rankdir=LR, bgcolor=\"{}\", pad=\"0.35\", nodesep=\"0.45\", ranksep=\"0.9\", label=\"{}\", labelloc=t, fontsize=20, fontname=\"Inter, Arial, sans-serif\", fontcolor=\"{}\"]",
+        "  graph [rankdir=LR, bgcolor=\"{}\", pad=\"0.35\", nodesep=\"0.55\", ranksep=\"1.0\", label=\"{}\", labelloc=t, fontsize=20, fontname=\"Inter, Arial, sans-serif\", fontcolor=\"{}\", compound=true]",
         "#f8fafc",
         escape_dot_label(&diagram.title),
         "#0f172a"
@@ -3505,33 +3507,51 @@ pub fn render_lifecycle_roadmap_dot(
         "#64748b", "#475569"
     )?;
 
-    for state in [
-        "idea",
-        "planned",
-        "active",
-        "deprecated",
-        "retiring",
-        "retired",
-        "unspecified",
-    ] {
-        let state_objects: Vec<&PortfolioObject> = objects
+    writeln!(
+        dot,
+        "  subgraph cluster_timeline {{\n    label=\"Timeline scale\"\n    color=\"{}\"\n    fillcolor=\"{}\"\n    style=\"rounded,filled\"\n    fontname=\"Inter, Arial, sans-serif\"\n    fontsize=13\n    fontcolor=\"{}\"",
+        "#cbd5e1", "#f8fafc", "#334155"
+    )?;
+    for bucket in &timeline_buckets {
+        writeln!(
+            dot,
+            "    {} [id=\"{}\", label=\"{}\", shape=plain, fontcolor=\"{}\", tooltip=\"{}\"]",
+            timeline_bucket_node_id(bucket),
+            escape_dot_label(&format!("timeline.{}", bucket.key)),
+            escape_dot_label(&bucket.label),
+            "#475569",
+            escape_dot_label(&bucket.label)
+        )?;
+    }
+    for pair in timeline_buckets.windows(2) {
+        writeln!(
+            dot,
+            "    {} -> {} [style=invis, weight=8]",
+            timeline_bucket_node_id(&pair[0]),
+            timeline_bucket_node_id(&pair[1])
+        )?;
+    }
+    writeln!(dot, "  }}")?;
+
+    for lane in lifecycle_swimlanes(&nodes) {
+        let lane_nodes: Vec<&RoadmapNode<'_>> = nodes
             .iter()
-            .copied()
-            .filter(|object| lifecycle_bucket(object) == state)
+            .filter(|node| node.swimlane_key == lane.key)
             .collect();
-        if state_objects.is_empty() {
+        if lane_nodes.is_empty() {
             continue;
         }
         writeln!(
             dot,
-            "  subgraph cluster_{} {{\n    label=\"{}\"\n    color=\"{}\"\n    fillcolor=\"{}\"\n    style=\"rounded,filled\"\n    fontname=\"Inter, Arial, sans-serif\"\n    fontsize=14\n    fontcolor=\"{}\"",
-            dot_id(state),
-            escape_dot_label(&format_lifecycle_state(state)),
+            "  subgraph cluster_lane_{} {{\n    label=\"{}\"\n    color=\"{}\"\n    fillcolor=\"{}\"\n    style=\"rounded,filled\"\n    fontname=\"Inter, Arial, sans-serif\"\n    fontsize=14\n    fontcolor=\"{}\"",
+            dot_id(&lane.key),
+            escape_dot_label(&lane.label),
             "#cbd5e1",
             "#ffffff",
             "#334155"
         )?;
-        for object in state_objects {
+        for node in lane_nodes {
+            let object = node.object;
             let shape = if object.kind == "lifecycle_milestone" {
                 "diamond"
             } else {
@@ -3548,8 +3568,46 @@ pub fn render_lifecycle_roadmap_dot(
                 lifecycle_border_color(object),
                 escape_dot_label(&object.id)
             )?;
+            if let Some(target) = target_transition_label(object) {
+                writeln!(
+                    dot,
+                    "    {} [id=\"{}\", label=\"{}\", shape=note, fillcolor=\"{}\", color=\"{}\", fontcolor=\"{}\", tooltip=\"{}\"]",
+                    target_node_id(object),
+                    escape_dot_label(&format!("{}.target", object.id)),
+                    escape_dot_label(&target),
+                    "#eef2ff",
+                    "#4f46e5",
+                    "#312e81",
+                    escape_dot_label(&target)
+                )?;
+            }
         }
         writeln!(dot, "  }}")?;
+    }
+
+    for node in &nodes {
+        if let Some(bucket) = timeline_buckets
+            .iter()
+            .find(|bucket| bucket.key == node.timeline_key)
+        {
+            writeln!(
+                dot,
+                "  {} -> {} [style=invis, weight=3]",
+                timeline_bucket_node_id(bucket),
+                dot_id(&node.object.id)
+            )?;
+        }
+        if target_transition_label(node.object).is_some() {
+            writeln!(
+                dot,
+                "  {} -> {} [id=\"{}\", label=\"target state\", color=\"{}\", fontcolor=\"{}\"]",
+                dot_id(&node.object.id),
+                target_node_id(node.object),
+                escape_dot_label(&format!("{}.target-state", node.object.id)),
+                "#4f46e5",
+                "#3730a3"
+            )?;
+        }
     }
 
     let included: BTreeSet<&str> = objects.iter().map(|object| object.id.as_str()).collect();
@@ -3661,6 +3719,175 @@ fn format_lifecycle_state(state: &str) -> String {
         Some(first) => format!("{}{}", first.to_ascii_uppercase(), chars.as_str()),
         None => String::new(),
     }
+}
+
+struct RoadmapNode<'a> {
+    object: &'a PortfolioObject,
+    swimlane_key: String,
+    timeline_key: String,
+}
+
+struct TimelineBucket {
+    key: String,
+    label: String,
+}
+
+struct Swimlane {
+    key: String,
+    label: String,
+}
+
+fn lifecycle_roadmap_nodes<'a>(objects: &[&'a PortfolioObject]) -> Vec<RoadmapNode<'a>> {
+    let mut nodes: Vec<RoadmapNode<'a>> = objects
+        .iter()
+        .copied()
+        .map(|object| RoadmapNode {
+            object,
+            swimlane_key: lifecycle_swimlane_key(object),
+            timeline_key: lifecycle_timeline_key(object),
+        })
+        .collect();
+    nodes.sort_by(|left, right| {
+        (
+            left.swimlane_key.as_str(),
+            left.timeline_key.as_str(),
+            left.object.id.as_str(),
+        )
+            .cmp(&(
+                right.swimlane_key.as_str(),
+                right.timeline_key.as_str(),
+                right.object.id.as_str(),
+            ))
+    });
+    nodes
+}
+
+fn lifecycle_timeline_buckets(nodes: &[RoadmapNode<'_>]) -> Vec<TimelineBucket> {
+    let mut keys: BTreeSet<String> = nodes.iter().map(|node| node.timeline_key.clone()).collect();
+    if keys.is_empty() {
+        keys.insert("0000-current".to_string());
+    }
+    keys.into_iter()
+        .map(|key| TimelineBucket {
+            label: format_timeline_key(&key),
+            key,
+        })
+        .collect()
+}
+
+fn lifecycle_swimlanes(nodes: &[RoadmapNode<'_>]) -> Vec<Swimlane> {
+    let keys: BTreeSet<String> = nodes.iter().map(|node| node.swimlane_key.clone()).collect();
+    keys.into_iter()
+        .map(|key| Swimlane {
+            label: format_swimlane_key(&key),
+            key,
+        })
+        .collect()
+}
+
+fn lifecycle_swimlane_key(object: &PortfolioObject) -> String {
+    match object.kind.as_str() {
+        "portfolio_application" => "10.application".to_string(),
+        "portfolio_service" => "20.service".to_string(),
+        "technology_component" => "30.technology-component".to_string(),
+        "technology_standard" => "40.technology-standard".to_string(),
+        "lifecycle_milestone" => "90.milestone".to_string(),
+        other => format!("80.{}", other.replace('_', "-")),
+    }
+}
+
+fn format_swimlane_key(key: &str) -> String {
+    let (_, label) = key.split_once('.').unwrap_or(("80", key));
+    format!(
+        "{} swimlane",
+        label
+            .split('-')
+            .map(format_lifecycle_state)
+            .collect::<Vec<_>>()
+            .join(" ")
+    )
+}
+
+fn lifecycle_timeline_key(object: &PortfolioObject) -> String {
+    let date = object
+        .lifecycle
+        .as_ref()
+        .and_then(primary_lifecycle_date)
+        .unwrap_or_else(|| {
+            if lifecycle_bucket(object) == "active" {
+                "0000-current".to_string()
+            } else {
+                "9999-unscheduled".to_string()
+            }
+        });
+    if date == "0000-current" || date == "9999-unscheduled" {
+        return date;
+    }
+    let mut parts = date.split('-');
+    let year = parts.next().unwrap_or("9999");
+    let month = parts
+        .next()
+        .and_then(|value| value.parse::<u8>().ok())
+        .unwrap_or(12);
+    let quarter = ((month.saturating_sub(1)) / 3) + 1;
+    format!("{}-q{}", year, quarter)
+}
+
+fn primary_lifecycle_date(lifecycle: &PortfolioLifecycle) -> Option<String> {
+    [
+        lifecycle.target_date.as_str(),
+        lifecycle.retirement_date.as_str(),
+        lifecycle.end_of_support_date.as_str(),
+        lifecycle.current_from.as_str(),
+    ]
+    .iter()
+    .find(|date| !date.is_empty())
+    .map(|date| (*date).to_string())
+}
+
+fn format_timeline_key(key: &str) -> String {
+    if key == "0000-current" {
+        return "Current".to_string();
+    }
+    if key == "9999-unscheduled" {
+        return "Unscheduled".to_string();
+    }
+    if let Some((year, quarter)) = key.split_once("-q") {
+        return format!("{year} Q{quarter}");
+    }
+    key.to_string()
+}
+
+fn timeline_bucket_node_id(bucket: &TimelineBucket) -> String {
+    dot_id(&format!("timeline.{}", bucket.key))
+}
+
+fn target_node_id(object: &PortfolioObject) -> String {
+    dot_id(&format!("{}.target", object.id))
+}
+
+fn target_transition_label(object: &PortfolioObject) -> Option<String> {
+    let lifecycle = object.lifecycle.as_ref()?;
+    if lifecycle.target_state.is_empty() {
+        return None;
+    }
+    let current = if lifecycle.state.is_empty() {
+        lifecycle_bucket(object)
+    } else {
+        lifecycle.state.as_str()
+    };
+    if lifecycle.target_state == current && lifecycle.target_date.is_empty() {
+        return None;
+    }
+    let mut label = format!(
+        "Target: {}",
+        format_lifecycle_state(lifecycle.target_state.as_str())
+    );
+    if !lifecycle.target_date.is_empty() {
+        label.push('\n');
+        label.push_str(&lifecycle.target_date);
+    }
+    Some(label)
 }
 
 fn portfolio_roadmap_label(object: &PortfolioObject) -> String {
@@ -4003,11 +4230,19 @@ mod tests {
                 .unwrap();
         assert!(roadmap_dot.contains("application.redshield-architect"));
         assert!(roadmap_dot.contains("milestone.alpha"));
+        assert!(roadmap_dot.contains("Timeline scale"));
+        assert!(roadmap_dot.contains("Application swimlane"));
+        assert!(roadmap_dot.contains("2026 Q3"));
+        assert!(roadmap_dot.contains("Target: Active"));
+        assert!(roadmap_dot.contains("target state"));
         let roadmap_svg =
             render_lifecycle_roadmap_svg(&package, Some("diagram.portfolio-lifecycle-roadmap"))
                 .unwrap();
         assert!(roadmap_svg.contains("<svg"));
         assert!(roadmap_svg.contains("Portfolio Lifecycle Roadmap"));
+        assert!(roadmap_svg.contains("Timeline scale"));
+        assert!(roadmap_svg.contains("Application swimlane"));
+        assert!(roadmap_svg.contains("Target: Active"));
     }
 
     #[test]
