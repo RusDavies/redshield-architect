@@ -91,7 +91,7 @@ The schema rejects unknown object kinds, unsupported lifecycle/criticality/stand
 
 The CLI `portfolio-summary` command and the workbench sidebar provide read-only portfolio summaries: object totals, kind/lifecycle/criticality counts, standard-state hints, related model-link counts, and a compact object list. The CLI accepts an optional search string. The workbench sidebar supports text search plus kind and lifecycle filters. They do not edit portfolio data.
 
-The CLI `render-lifecycle-roadmap` command renders the first portfolio view kind as generated SVG. It groups referenced portfolio objects by lifecycle state, renders lifecycle milestones distinctly, and draws milestone links from structured lifecycle metadata when both objects are in the view.
+The CLI `render-lifecycle-roadmap` command renders the first portfolio view kind as generated SVG. It colors referenced portfolio objects by lifecycle state, derives a visible timeline scale from lifecycle dates, uses portfolio-kind swimlanes, renders target-state callouts, renders lifecycle milestones distinctly, and draws milestone links from structured lifecycle metadata when both objects are in the view.
 
 ## Model Elements
 

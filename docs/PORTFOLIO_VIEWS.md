@@ -127,6 +127,17 @@ Useful questions:
 
 MVP posture: generated/read-only only until portfolio relationship semantics are stronger.
 
+## Roadmap Layout Semantics
+
+Lifecycle roadmap rendering now derives a small set of read-only layout semantics from portfolio object data:
+
+- timeline buckets come from lifecycle target, retirement, end-of-support, or current-from dates and render as a visible scale
+- swimlanes group objects by portfolio kind so applications, services, technologies, and milestones do not collapse into one pile
+- target-state callouts render when an object has a structured `lifecycle.targetState` or `lifecycle.targetDate`
+- milestone links still come from `lifecycle.milestoneRefs` and remain dashed when both endpoint objects are included
+
+These semantics are generated view behavior, not canonical planning state. They do not edit portfolio objects, infer missing dates, persist layout, or introduce a roadmap-planning workflow.
+
 ## Validation
 
 Current validation is deliberately small:
@@ -137,7 +148,7 @@ Current validation is deliberately small:
 - layout nodes must reference listed `modelRefs` or `portfolioRefs`
 - relationship connector layout still points to canonical model relationships
 
-The schema does not yet encode grouping, swimlanes, heatmap buckets, timeline scales, dependency edge semantics, or portfolio relationship kinds. Those should be added only when the renderer or import/export adapter needs them.
+The schema does not yet encode saved grouping preferences, custom swimlane definitions, heatmap buckets, dependency edge semantics, or portfolio relationship kinds. Those should be added only when the renderer, workbench, or import/export adapter needs durable user-controlled semantics.
 
 ## First Renderer
 
@@ -145,7 +156,10 @@ The first generated portfolio renderer is `render-lifecycle-roadmap`.
 
 It renders `lifecycle_roadmap` views to SVG through Graphviz, using the same generated-artifact boundary as the use-case renderer. The renderer:
 
-- groups included portfolio objects by `lifecycleState`
+- colors included portfolio objects by `lifecycleState`
+- derives a visible timeline scale from lifecycle dates
+- derives swimlanes from portfolio object kinds
+- renders target-state callouts from structured lifecycle metadata
 - renders `lifecycle_milestone` objects as milestone nodes
 - includes target dates from structured lifecycle metadata when present
 - draws dashed milestone links from `lifecycle.milestoneRefs` when both endpoint objects are included in the view
