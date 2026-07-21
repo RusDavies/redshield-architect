@@ -56,7 +56,15 @@ The `web/` spike loads the same example model into an interactive React Flow can
 
 The workbench emits proposal-shaped operation drafts for direct manipulation actions. Dragging nodes emits `move_diagram_node`, align/distribute controls emit their matching layout operations, ELK emits `apply_diagram_auto_layout`, creating a connector emits both a draft `create_relationship` and `connect_diagram_relationship`, and the semantic inspector emits `update_model_element_details` for reviewed element detail edits.
 
-The current spike saves, loads, and exports draft transactions through a small workbench persistence service. The first implementation is browser-local storage plus JSON download, but React code calls the adapter boundary instead of `localStorage` directly so a later Tauri filesystem or browser/server implementation can provide the same proposal workflow. Direct filesystem writes from the workbench remain a later Tauri/backend adapter concern.
+The current spike saves, loads, and exports draft transactions through a small workbench persistence service. Browser builds fall back to local storage plus JSON download. Tauri/local builds can provide an invoke bridge and use the `TauriLocalWorkbenchPersistence` adapter instead. React code calls the adapter boundary instead of `localStorage` or Tauri APIs directly so a later browser/server implementation can provide the same proposal workflow.
+
+The Tauri/local proposal persistence adapter expects these host commands:
+
+- `redshield_save_proposal_draft`, with `{ key, draft }`
+- `redshield_load_proposal_draft`, with `{ key }`, returning a proposal draft or `null`
+- `redshield_export_proposal_draft`, with `{ draft }`
+
+The adapter can use `window.__RED_SHIELD_WORKBENCH__.tauriInvoke` for test or host injection, or `window.__TAURI__.core.invoke` when the Tauri shell provides it.
 
 ## Portfolio Objects
 

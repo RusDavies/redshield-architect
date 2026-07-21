@@ -17,6 +17,23 @@ export interface WorkbenchPersistence {
   exportProposalDraft(draft: WorkbenchProposalDraft): Promise<void>;
 }
 
+type TauriInvoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
+
+type RedShieldWorkbenchHost = {
+  tauriInvoke?: TauriInvoke;
+};
+
+declare global {
+  interface Window {
+    __RED_SHIELD_WORKBENCH__?: RedShieldWorkbenchHost;
+    __TAURI__?: {
+      core?: {
+        invoke?: TauriInvoke;
+      };
+    };
+  }
+}
+
 export class BrowserLocalWorkbenchPersistence implements WorkbenchPersistence {
   async saveProposalDraft(key: string, draft: WorkbenchProposalDraft): Promise<void> {
     window.localStorage.setItem(key, JSON.stringify(draft, null, 2));
@@ -44,4 +61,33 @@ export class BrowserLocalWorkbenchPersistence implements WorkbenchPersistence {
   }
 }
 
-export const workbenchPersistence: WorkbenchPersistence = new BrowserLocalWorkbenchPersistence();
+export class TauriLocalWorkbenchPersistence implements WorkbenchPersistence {
+  constructor(private readonly invoke: TauriInvoke) {}
+
+  async saveProposalDraft(key: string, draft: WorkbenchProposalDraft): Promise<void> {
+    await this.invoke('redshield_save_proposal_draft', { key, draft });
+  }
+
+  async loadProposalDraft(key: string): Promise<ProposalDraftLoadResult> {
+    const draft = await this.invoke<WorkbenchProposalDraft | null>('redshield_load_proposal_draft', {
+      key,
+    });
+    return draft ? { status: 'found', draft } : { status: 'missing' };
+  }
+
+  async exportProposalDraft(draft: WorkbenchProposalDraft): Promise<void> {
+    await this.invoke('redshield_export_proposal_draft', { draft });
+  }
+}
+
+function resolveTauriInvoke(): TauriInvoke | undefined {
+  return window.__RED_SHIELD_WORKBENCH__?.tauriInvoke ?? window.__TAURI__?.core?.invoke;
+}
+
+export function createWorkbenchPersistence(): WorkbenchPersistence {
+  const tauriInvoke = resolveTauriInvoke();
+  if (tauriInvoke) return new TauriLocalWorkbenchPersistence(tauriInvoke);
+  return new BrowserLocalWorkbenchPersistence();
+}
+
+export const workbenchPersistence: WorkbenchPersistence = createWorkbenchPersistence();
