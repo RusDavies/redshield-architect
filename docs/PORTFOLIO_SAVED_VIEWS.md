@@ -98,7 +98,7 @@ The first `presentation` object may include:
 - `groupBy`: one of `kind`, `status`, `lifecycleState`, `criticality`, `standardState`, `owner`, or `capability`.
 - `showCounts`: boolean.
 
-Presentation hints are intentionally less powerful than render profiles. If a view needs real diagram or export styling, use a diagram view, render profile, or future roadmap presentation contract instead.
+Presentation hints are intentionally less powerful than render profiles. If a view needs real diagram or export styling, use a diagram view, render profile, or roadmap presentation contract instead.
 
 ## Proposal Operations
 

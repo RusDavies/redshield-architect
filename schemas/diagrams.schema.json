@@ -29,6 +29,7 @@
           },
           "modelRefs": { "type": "array", "items": { "type": "string" } },
           "portfolioRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "roadmapPresentationRef": { "type": "string", "minLength": 1 },
           "layout": {
             "type": "object",
             "additionalProperties": false,

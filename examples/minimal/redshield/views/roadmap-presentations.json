@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "0.1.0",
+  "presentations": [
+    {
+      "id": "roadmap-presentation.default-lifecycle",
+      "title": "Default lifecycle roadmap",
+      "description": "Readable lifecycle-roadmap presentation for the prototype package.",
+      "appliesToViewKinds": ["lifecycle_roadmap"],
+      "timeline": {
+        "bucketSource": "auto",
+        "bucketGranularity": "quarter",
+        "includeUndatedBucket": true,
+        "dateLabelFormat": "quarter"
+      },
+      "swimlanes": {
+        "groupBy": "portfolioKind",
+        "includeEmptyLanes": false,
+        "fallbackLaneTitle": "Other roadmap items"
+      },
+      "targetStates": {
+        "showCallouts": true,
+        "showTargetDates": true,
+        "showNoChangeTargets": false,
+        "states": ["active", "deprecated", "retiring", "retired"]
+      },
+      "milestones": {
+        "showMilestoneNodes": true,
+        "showMilestoneLinks": true,
+        "linkStyle": "dashed",
+        "includeUnreferencedMilestones": true
+      },
+      "styling": {
+        "density": "comfortable",
+        "colorBy": "lifecycleState",
+        "showLegend": true,
+        "showTimelineScale": true
+      },
+      "provenance": {
+        "sourceRefs": ["docs/PORTFOLIO_ROADMAP_PRESENTATION.md"],
+        "createdBy": "RedShield prototype seed",
+        "createdAt": "2026-07-21T00:00:00Z"
+      }
+    }
+  ]
+}

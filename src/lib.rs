@@ -59,6 +59,33 @@ const SAVED_VIEW_COLUMNS: &[&str] = &[
     "relatedElementRefs",
     "tags",
 ];
+const ROADMAP_BUCKET_SOURCES: &[&str] = &[
+    "targetDate",
+    "retirementDate",
+    "endOfSupportDate",
+    "currentFrom",
+    "auto",
+];
+const ROADMAP_BUCKET_GRANULARITIES: &[&str] = &["month", "quarter", "half_year", "year"];
+const ROADMAP_DATE_LABEL_FORMATS: &[&str] = &["date", "month", "quarter", "year"];
+const ROADMAP_SWIMLANE_GROUPS: &[&str] = &[
+    "portfolioKind",
+    "lifecycleState",
+    "criticality",
+    "owner",
+    "capability",
+    "technology",
+    "none",
+];
+const ROADMAP_MILESTONE_LINK_STYLES: &[&str] = &["solid", "dashed", "dotted"];
+const ROADMAP_DENSITIES: &[&str] = &["compact", "comfortable", "detailed"];
+const ROADMAP_COLOR_FIELDS: &[&str] = &[
+    "lifecycleState",
+    "criticality",
+    "standardState",
+    "portfolioKind",
+    "none",
+];
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -265,6 +292,152 @@ pub struct PortfolioSavedViewPresentation {
 impl PortfolioSavedViewPresentation {
     fn is_empty(&self) -> bool {
         self.density.is_empty() && self.group_by.is_empty() && self.show_counts.is_none()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RoadmapPresentationFile {
+    pub schema_version: String,
+    pub presentations: Vec<RoadmapPresentation>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RoadmapPresentation {
+    pub id: String,
+    pub title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub applies_to_view_kinds: Vec<String>,
+    #[serde(default, skip_serializing_if = "RoadmapTimeline::is_empty")]
+    pub timeline: RoadmapTimeline,
+    #[serde(default, skip_serializing_if = "RoadmapSwimlanes::is_empty")]
+    pub swimlanes: RoadmapSwimlanes,
+    #[serde(default, skip_serializing_if = "RoadmapTargetStates::is_empty")]
+    pub target_states: RoadmapTargetStates,
+    #[serde(default, skip_serializing_if = "RoadmapMilestones::is_empty")]
+    pub milestones: RoadmapMilestones,
+    #[serde(default, skip_serializing_if = "RoadmapStyling::is_empty")]
+    pub styling: RoadmapStyling,
+    #[serde(default, skip_serializing_if = "ElementProvenance::is_empty")]
+    pub provenance: ElementProvenance,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RoadmapTimeline {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub bucket_source: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub bucket_granularity: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub range_start: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub range_end: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub include_undated_bucket: Option<bool>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub date_label_format: String,
+}
+
+impl RoadmapTimeline {
+    fn is_empty(&self) -> bool {
+        self.bucket_source.is_empty()
+            && self.bucket_granularity.is_empty()
+            && self.range_start.is_empty()
+            && self.range_end.is_empty()
+            && self.include_undated_bucket.is_none()
+            && self.date_label_format.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RoadmapSwimlanes {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub group_by: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub order: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub include_empty_lanes: Option<bool>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub fallback_lane_title: String,
+}
+
+impl RoadmapSwimlanes {
+    fn is_empty(&self) -> bool {
+        self.group_by.is_empty()
+            && self.order.is_empty()
+            && self.include_empty_lanes.is_none()
+            && self.fallback_lane_title.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RoadmapTargetStates {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_callouts: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_target_dates: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_no_change_targets: Option<bool>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub states: Vec<String>,
+}
+
+impl RoadmapTargetStates {
+    fn is_empty(&self) -> bool {
+        self.show_callouts.is_none()
+            && self.show_target_dates.is_none()
+            && self.show_no_change_targets.is_none()
+            && self.states.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RoadmapMilestones {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_milestone_nodes: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_milestone_links: Option<bool>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub link_style: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub include_unreferenced_milestones: Option<bool>,
+}
+
+impl RoadmapMilestones {
+    fn is_empty(&self) -> bool {
+        self.show_milestone_nodes.is_none()
+            && self.show_milestone_links.is_none()
+            && self.link_style.is_empty()
+            && self.include_unreferenced_milestones.is_none()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RoadmapStyling {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub density: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub color_by: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_legend: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_timeline_scale: Option<bool>,
+}
+
+impl RoadmapStyling {
+    fn is_empty(&self) -> bool {
+        self.density.is_empty()
+            && self.color_by.is_empty()
+            && self.show_legend.is_none()
+            && self.show_timeline_scale.is_none()
     }
 }
 
@@ -669,6 +842,8 @@ pub struct DiagramView {
     pub model_refs: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub portfolio_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub roadmap_presentation_ref: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout: Option<DiagramLayout>,
 }
@@ -891,6 +1066,7 @@ pub struct ModelPackage {
     pub requirements: RequirementFile,
     pub portfolio: PortfolioFile,
     pub portfolio_saved_views: PortfolioSavedViewFile,
+    pub roadmap_presentations: RoadmapPresentationFile,
     pub elements: ElementFile,
     pub relationships: RelationshipFile,
     pub diagrams: DiagramFile,
@@ -928,6 +1104,7 @@ pub struct ApplySummary {
     pub portfolio_objects_created: usize,
     pub portfolio_objects_updated: usize,
     pub portfolio_saved_view_operations_applied: usize,
+    pub roadmap_presentation_operations_applied: usize,
     pub elements_created: usize,
     pub relationships_created: usize,
     pub diagrams_created: usize,
@@ -1080,6 +1257,66 @@ struct RemovePortfolioSavedViewArgs {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct CreateRoadmapPresentationArgs {
+    id: String,
+    title: String,
+    #[serde(default)]
+    description: String,
+    #[serde(default)]
+    applies_to_view_kinds: Vec<String>,
+    #[serde(default)]
+    timeline: RoadmapTimeline,
+    #[serde(default)]
+    swimlanes: RoadmapSwimlanes,
+    #[serde(default)]
+    target_states: RoadmapTargetStates,
+    #[serde(default)]
+    milestones: RoadmapMilestones,
+    #[serde(default)]
+    styling: RoadmapStyling,
+    #[serde(default)]
+    provenance: ElementProvenance,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateRoadmapPresentationArgs {
+    presentation_id: String,
+    #[serde(default)]
+    title: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    applies_to_view_kinds: Option<Vec<String>>,
+    #[serde(default)]
+    timeline: Option<RoadmapTimeline>,
+    #[serde(default)]
+    swimlanes: Option<RoadmapSwimlanes>,
+    #[serde(default)]
+    target_states: Option<RoadmapTargetStates>,
+    #[serde(default)]
+    milestones: Option<RoadmapMilestones>,
+    #[serde(default)]
+    styling: Option<RoadmapStyling>,
+    #[serde(default)]
+    provenance: Option<ElementProvenance>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RemoveRoadmapPresentationArgs {
+    presentation_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AssignRoadmapPresentationArgs {
+    diagram_id: String,
+    presentation_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CreateModelElementArgs {
     id: String,
     kind: String,
@@ -1173,6 +1410,8 @@ struct CreateDiagramViewArgs {
     model_refs: Vec<String>,
     #[serde(default)]
     portfolio_refs: Vec<String>,
+    #[serde(default)]
+    roadmap_presentation_ref: String,
     #[serde(default)]
     layout: Option<DiagramLayout>,
 }
@@ -1281,6 +1520,7 @@ pub fn load_package(root: impl AsRef<Path>) -> Result<ModelPackage> {
         requirements: read_json(root.join("requirements/requirements.json"))?,
         portfolio: read_json(root.join("model/portfolio.json"))?,
         portfolio_saved_views: read_json(root.join("views/portfolio-views.json"))?,
+        roadmap_presentations: read_json(root.join("views/roadmap-presentations.json"))?,
         elements: read_json(root.join("model/elements.json"))?,
         relationships: read_json(root.join("model/relationships.json"))?,
         diagrams: read_json(root.join("views/diagrams.json"))?,
@@ -1335,6 +1575,7 @@ pub fn apply_proposal_operations(
         portfolio_objects_created: 0,
         portfolio_objects_updated: 0,
         portfolio_saved_view_operations_applied: 0,
+        roadmap_presentation_operations_applied: 0,
         elements_created: 0,
         relationships_created: 0,
         diagrams_created: 0,
@@ -1420,6 +1661,41 @@ pub fn apply_proposal_operations(
                 remove_portfolio_saved_view(package, args)?;
                 summary.portfolio_saved_view_operations_applied += 1;
             }
+            "create_roadmap_presentation" => {
+                let args: CreateRoadmapPresentationArgs = parse_args(operation)?;
+                ensure_available_id(package, &args.id)?;
+                package
+                    .roadmap_presentations
+                    .presentations
+                    .push(RoadmapPresentation {
+                        id: args.id,
+                        title: args.title,
+                        description: args.description,
+                        applies_to_view_kinds: args.applies_to_view_kinds,
+                        timeline: args.timeline,
+                        swimlanes: args.swimlanes,
+                        target_states: args.target_states,
+                        milestones: args.milestones,
+                        styling: args.styling,
+                        provenance: args.provenance,
+                    });
+                summary.roadmap_presentation_operations_applied += 1;
+            }
+            "update_roadmap_presentation" => {
+                let args: UpdateRoadmapPresentationArgs = parse_args(operation)?;
+                update_roadmap_presentation(package, args)?;
+                summary.roadmap_presentation_operations_applied += 1;
+            }
+            "remove_roadmap_presentation" => {
+                let args: RemoveRoadmapPresentationArgs = parse_args(operation)?;
+                remove_roadmap_presentation(package, args)?;
+                summary.roadmap_presentation_operations_applied += 1;
+            }
+            "assign_roadmap_presentation" => {
+                let args: AssignRoadmapPresentationArgs = parse_args(operation)?;
+                assign_roadmap_presentation(package, args)?;
+                summary.roadmap_presentation_operations_applied += 1;
+            }
             "create_model_element" => {
                 let args: CreateModelElementArgs = parse_args(operation)?;
                 ensure_available_id(package, &args.id)?;
@@ -1470,6 +1746,7 @@ pub fn apply_proposal_operations(
                     view_kind: args.view_kind,
                     model_refs: args.model_refs,
                     portfolio_refs: args.portfolio_refs,
+                    roadmap_presentation_ref: args.roadmap_presentation_ref,
                     layout: args.layout,
                 });
                 summary.diagrams_created += 1;
@@ -1711,6 +1988,139 @@ fn has_portfolio_saved_view_update(args: &UpdatePortfolioSavedViewArgs) -> bool 
         || args.sort.is_some()
         || args.columns.is_some()
         || args.presentation.is_some()
+        || args.provenance.is_some()
+}
+
+fn update_roadmap_presentation(
+    package: &mut ModelPackage,
+    args: UpdateRoadmapPresentationArgs,
+) -> Result<()> {
+    if args.presentation_id.trim().is_empty() {
+        bail!("update_roadmap_presentation presentationId must not be empty");
+    }
+    if !has_roadmap_presentation_update(&args) {
+        bail!(
+            "update_roadmap_presentation for {} must change at least one field",
+            args.presentation_id
+        );
+    }
+
+    let presentation = package
+        .roadmap_presentations
+        .presentations
+        .iter_mut()
+        .find(|presentation| presentation.id == args.presentation_id)
+        .ok_or_else(|| anyhow!("missing roadmap presentation {}", args.presentation_id))?;
+
+    if let Some(title) = args.title {
+        presentation.title = title;
+    }
+    if let Some(description) = args.description {
+        presentation.description = description;
+    }
+    if let Some(applies_to_view_kinds) = args.applies_to_view_kinds {
+        presentation.applies_to_view_kinds = applies_to_view_kinds;
+    }
+    if let Some(timeline) = args.timeline {
+        presentation.timeline = timeline;
+    }
+    if let Some(swimlanes) = args.swimlanes {
+        presentation.swimlanes = swimlanes;
+    }
+    if let Some(target_states) = args.target_states {
+        presentation.target_states = target_states;
+    }
+    if let Some(milestones) = args.milestones {
+        presentation.milestones = milestones;
+    }
+    if let Some(styling) = args.styling {
+        presentation.styling = styling;
+    }
+    if let Some(provenance) = args.provenance {
+        presentation.provenance = provenance;
+    }
+
+    Ok(())
+}
+
+fn remove_roadmap_presentation(
+    package: &mut ModelPackage,
+    args: RemoveRoadmapPresentationArgs,
+) -> Result<()> {
+    if args.presentation_id.trim().is_empty() {
+        bail!("remove_roadmap_presentation presentationId must not be empty");
+    }
+    if package
+        .diagrams
+        .diagrams
+        .iter()
+        .any(|diagram| diagram.roadmap_presentation_ref == args.presentation_id)
+    {
+        bail!(
+            "cannot remove roadmap presentation {} while it is assigned to a diagram",
+            args.presentation_id
+        );
+    }
+    let initial_len = package.roadmap_presentations.presentations.len();
+    package
+        .roadmap_presentations
+        .presentations
+        .retain(|presentation| presentation.id != args.presentation_id);
+    if package.roadmap_presentations.presentations.len() == initial_len {
+        bail!("missing roadmap presentation {}", args.presentation_id);
+    }
+    Ok(())
+}
+
+fn assign_roadmap_presentation(
+    package: &mut ModelPackage,
+    args: AssignRoadmapPresentationArgs,
+) -> Result<()> {
+    if args.diagram_id.trim().is_empty() {
+        bail!("assign_roadmap_presentation diagramId must not be empty");
+    }
+    if args.presentation_id.trim().is_empty() {
+        bail!("assign_roadmap_presentation presentationId must not be empty");
+    }
+    let presentation = package
+        .roadmap_presentations
+        .presentations
+        .iter()
+        .find(|presentation| presentation.id == args.presentation_id)
+        .ok_or_else(|| anyhow!("missing roadmap presentation {}", args.presentation_id))?;
+    if !roadmap_presentation_applies_to(presentation, "lifecycle_roadmap") {
+        bail!(
+            "{} does not apply to lifecycle_roadmap",
+            args.presentation_id
+        );
+    }
+
+    let diagram = package
+        .diagrams
+        .diagrams
+        .iter_mut()
+        .find(|diagram| diagram.id == args.diagram_id)
+        .ok_or_else(|| anyhow!("missing diagram {}", args.diagram_id))?;
+    if diagram.view_kind != "lifecycle_roadmap" {
+        bail!(
+            "{} is a {} diagram, not lifecycle_roadmap",
+            args.diagram_id,
+            diagram.view_kind
+        );
+    }
+    diagram.roadmap_presentation_ref = args.presentation_id;
+    Ok(())
+}
+
+fn has_roadmap_presentation_update(args: &UpdateRoadmapPresentationArgs) -> bool {
+    args.title.is_some()
+        || args.description.is_some()
+        || args.applies_to_view_kinds.is_some()
+        || args.timeline.is_some()
+        || args.swimlanes.is_some()
+        || args.target_states.is_some()
+        || args.milestones.is_some()
+        || args.styling.is_some()
         || args.provenance.is_some()
 }
 
@@ -2062,6 +2472,115 @@ fn validate_local_portfolio_refs(
     Ok(())
 }
 
+fn validate_roadmap_presentation(presentation: &RoadmapPresentation) -> Result<()> {
+    ensure_non_empty(&presentation.title, &format!("{} title", presentation.id))?;
+    if presentation.applies_to_view_kinds.is_empty() {
+        bail!("{} appliesToViewKinds must not be empty", presentation.id);
+    }
+    for view_kind in &presentation.applies_to_view_kinds {
+        validate_required_value(
+            view_kind,
+            &["lifecycle_roadmap"],
+            &format!("{} appliesToViewKind", presentation.id),
+        )?;
+    }
+
+    if !presentation.timeline.bucket_source.is_empty() {
+        validate_required_value(
+            &presentation.timeline.bucket_source,
+            ROADMAP_BUCKET_SOURCES,
+            &format!("{} timeline bucketSource", presentation.id),
+        )?;
+    }
+    if !presentation.timeline.bucket_granularity.is_empty() {
+        validate_required_value(
+            &presentation.timeline.bucket_granularity,
+            ROADMAP_BUCKET_GRANULARITIES,
+            &format!("{} timeline bucketGranularity", presentation.id),
+        )?;
+    }
+    validate_optional_date(
+        &presentation.timeline.range_start,
+        &format!("{} timeline rangeStart", presentation.id),
+    )?;
+    validate_optional_date(
+        &presentation.timeline.range_end,
+        &format!("{} timeline rangeEnd", presentation.id),
+    )?;
+    if !presentation.timeline.range_start.is_empty()
+        && !presentation.timeline.range_end.is_empty()
+        && presentation.timeline.range_start.as_str() > presentation.timeline.range_end.as_str()
+    {
+        bail!(
+            "{} timeline rangeStart must not be after rangeEnd",
+            presentation.id
+        );
+    }
+    if !presentation.timeline.date_label_format.is_empty() {
+        validate_required_value(
+            &presentation.timeline.date_label_format,
+            ROADMAP_DATE_LABEL_FORMATS,
+            &format!("{} timeline dateLabelFormat", presentation.id),
+        )?;
+    }
+
+    if !presentation.swimlanes.group_by.is_empty() {
+        validate_required_value(
+            &presentation.swimlanes.group_by,
+            ROADMAP_SWIMLANE_GROUPS,
+            &format!("{} swimlanes groupBy", presentation.id),
+        )?;
+    }
+    ensure_non_empty_items(
+        &presentation.swimlanes.order,
+        &format!("{} swimlanes order", presentation.id),
+    )?;
+    if !presentation.swimlanes.fallback_lane_title.is_empty() {
+        ensure_non_empty(
+            &presentation.swimlanes.fallback_lane_title,
+            &format!("{} swimlanes fallbackLaneTitle", presentation.id),
+        )?;
+    }
+
+    for state in &presentation.target_states.states {
+        validate_required_value(
+            state,
+            LIFECYCLE_TARGET_STATES,
+            &format!("{} targetStates state", presentation.id),
+        )?;
+    }
+    if !presentation.milestones.link_style.is_empty() {
+        validate_required_value(
+            &presentation.milestones.link_style,
+            ROADMAP_MILESTONE_LINK_STYLES,
+            &format!("{} milestones linkStyle", presentation.id),
+        )?;
+    }
+    if !presentation.styling.density.is_empty() {
+        validate_required_value(
+            &presentation.styling.density,
+            ROADMAP_DENSITIES,
+            &format!("{} styling density", presentation.id),
+        )?;
+    }
+    if !presentation.styling.color_by.is_empty() {
+        validate_required_value(
+            &presentation.styling.color_by,
+            ROADMAP_COLOR_FIELDS,
+            &format!("{} styling colorBy", presentation.id),
+        )?;
+    }
+    validate_element_provenance_for_id(&presentation.id, &presentation.provenance)?;
+    Ok(())
+}
+
+fn roadmap_presentation_applies_to(presentation: &RoadmapPresentation, view_kind: &str) -> bool {
+    presentation
+        .applies_to_view_kinds
+        .iter()
+        .any(|candidate| candidate == view_kind)
+}
+
 pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
     let mut warnings = Vec::new();
     require_version("manifest", &package.manifest.schema_version)?;
@@ -2070,6 +2589,10 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
     require_version(
         "portfolio saved views",
         &package.portfolio_saved_views.schema_version,
+    )?;
+    require_version(
+        "roadmap presentations",
+        &package.roadmap_presentations.schema_version,
     )?;
     require_version("elements", &package.elements.schema_version)?;
     require_version("relationships", &package.relationships.schema_version)?;
@@ -2156,6 +2679,13 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
         validate_portfolio_saved_view(saved_view, &portfolio_ids, &element_kinds)?;
     }
 
+    let mut roadmap_presentations_by_id = BTreeMap::new();
+    for presentation in &package.roadmap_presentations.presentations {
+        ensure_unique(&mut ids, &presentation.id)?;
+        validate_roadmap_presentation(presentation)?;
+        roadmap_presentations_by_id.insert(presentation.id.as_str(), presentation);
+    }
+
     for relationship in &package.relationships.relationships {
         ensure_unique(&mut ids, &relationship.id)?;
         if !ids.contains(relationship.source_id.as_str()) {
@@ -2222,6 +2752,33 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
                     "{} references missing portfolio object {}",
                     diagram.id,
                     portfolio_ref
+                );
+            }
+        }
+        if !diagram.roadmap_presentation_ref.is_empty() {
+            let Some(presentation) =
+                roadmap_presentations_by_id.get(diagram.roadmap_presentation_ref.as_str())
+            else {
+                bail!(
+                    "{} references missing roadmap presentation {}",
+                    diagram.id,
+                    diagram.roadmap_presentation_ref
+                );
+            };
+            if diagram.view_kind != "lifecycle_roadmap" {
+                bail!(
+                    "{} assigns roadmap presentation {} to non-roadmap view kind {}",
+                    diagram.id,
+                    diagram.roadmap_presentation_ref,
+                    diagram.view_kind
+                );
+            }
+            if !roadmap_presentation_applies_to(presentation, &diagram.view_kind) {
+                bail!(
+                    "{} roadmap presentation {} does not apply to {}",
+                    diagram.id,
+                    diagram.roadmap_presentation_ref,
+                    diagram.view_kind
                 );
             }
         }
@@ -3743,6 +4300,17 @@ pub fn validate_proposal(proposal: &Proposal) -> Result<()> {
                 require_any_update_arg(&operation.args, "update_portfolio_saved_view")?;
             }
             "remove_portfolio_saved_view" => require_args(&operation.args, &["viewId"])?,
+            "create_roadmap_presentation" => {
+                require_args(&operation.args, &["id", "title", "appliesToViewKinds"])?
+            }
+            "update_roadmap_presentation" => {
+                require_args(&operation.args, &["presentationId"])?;
+                require_any_update_arg(&operation.args, "update_roadmap_presentation")?;
+            }
+            "remove_roadmap_presentation" => require_args(&operation.args, &["presentationId"])?,
+            "assign_roadmap_presentation" => {
+                require_args(&operation.args, &["diagramId", "presentationId"])?
+            }
             "create_model_element" => require_args(&operation.args, &["id", "kind", "name"])?,
             "update_model_element_details" => {
                 require_args(&operation.args, &["elementId"])?;
@@ -3800,7 +4368,19 @@ pub fn render_lifecycle_roadmap_svg(
     package: &ModelPackage,
     diagram_id: Option<&str>,
 ) -> Result<String> {
-    render_dot_to_svg(&render_lifecycle_roadmap_dot(package, diagram_id)?)
+    render_lifecycle_roadmap_svg_with_presentation(package, diagram_id, None)
+}
+
+pub fn render_lifecycle_roadmap_svg_with_presentation(
+    package: &ModelPackage,
+    diagram_id: Option<&str>,
+    presentation_id: Option<&str>,
+) -> Result<String> {
+    render_dot_to_svg(&render_lifecycle_roadmap_dot_with_presentation(
+        package,
+        diagram_id,
+        presentation_id,
+    )?)
 }
 
 pub fn render_use_case_dot(package: &ModelPackage, diagram_id: Option<&str>) -> Result<String> {
@@ -3920,7 +4500,16 @@ pub fn render_lifecycle_roadmap_dot(
     package: &ModelPackage,
     diagram_id: Option<&str>,
 ) -> Result<String> {
+    render_lifecycle_roadmap_dot_with_presentation(package, diagram_id, None)
+}
+
+pub fn render_lifecycle_roadmap_dot_with_presentation(
+    package: &ModelPackage,
+    diagram_id: Option<&str>,
+    presentation_id: Option<&str>,
+) -> Result<String> {
     let diagram = find_lifecycle_roadmap_diagram(package, diagram_id)?;
+    let presentation = resolve_roadmap_presentation(package, diagram, presentation_id)?;
     let portfolio: BTreeMap<&str, &PortfolioObject> = package
         .portfolio
         .objects
@@ -3931,9 +4520,14 @@ pub fn render_lifecycle_roadmap_dot(
         .portfolio_refs
         .iter()
         .filter_map(|id| portfolio.get(id.as_str()).copied())
+        .filter(|object| include_roadmap_object(object, &diagram.portfolio_refs, presentation))
         .collect();
-    let nodes = lifecycle_roadmap_nodes(&objects);
-    let timeline_buckets = lifecycle_timeline_buckets(&nodes);
+    let nodes = lifecycle_roadmap_nodes(&objects, presentation);
+    let timeline_buckets = lifecycle_timeline_buckets(&nodes, presentation);
+    let (nodesep, ranksep) = roadmap_spacing(presentation);
+    let show_timeline_scale = presentation
+        .and_then(|presentation| presentation.styling.show_timeline_scale)
+        .unwrap_or(true);
 
     let mut dot = String::new();
     writeln!(
@@ -3943,8 +4537,10 @@ pub fn render_lifecycle_roadmap_dot(
     )?;
     writeln!(
         dot,
-        "  graph [rankdir=LR, bgcolor=\"{}\", pad=\"0.35\", nodesep=\"0.55\", ranksep=\"1.0\", label=\"{}\", labelloc=t, fontsize=20, fontname=\"Inter, Arial, sans-serif\", fontcolor=\"{}\", compound=true]",
+        "  graph [rankdir=LR, bgcolor=\"{}\", pad=\"0.35\", nodesep=\"{}\", ranksep=\"{}\", label=\"{}\", labelloc=t, fontsize=20, fontname=\"Inter, Arial, sans-serif\", fontcolor=\"{}\", compound=true]",
         "#f8fafc",
+        nodesep,
+        ranksep,
         escape_dot_label(&diagram.title),
         "#0f172a"
     )?;
@@ -3959,31 +4555,33 @@ pub fn render_lifecycle_roadmap_dot(
         "#64748b", "#475569"
     )?;
 
-    writeln!(
-        dot,
-        "  subgraph cluster_timeline {{\n    label=\"Timeline scale\"\n    color=\"{}\"\n    fillcolor=\"{}\"\n    style=\"rounded,filled\"\n    fontname=\"Inter, Arial, sans-serif\"\n    fontsize=13\n    fontcolor=\"{}\"",
-        "#cbd5e1", "#f8fafc", "#334155"
-    )?;
-    for bucket in &timeline_buckets {
+    if show_timeline_scale {
         writeln!(
             dot,
-            "    {} [id=\"{}\", label=\"{}\", shape=plain, fontcolor=\"{}\", tooltip=\"{}\"]",
-            timeline_bucket_node_id(bucket),
-            escape_dot_label(&format!("timeline.{}", bucket.key)),
-            escape_dot_label(&bucket.label),
-            "#475569",
-            escape_dot_label(&bucket.label)
+            "  subgraph cluster_timeline {{\n    label=\"Timeline scale\"\n    color=\"{}\"\n    fillcolor=\"{}\"\n    style=\"rounded,filled\"\n    fontname=\"Inter, Arial, sans-serif\"\n    fontsize=13\n    fontcolor=\"{}\"",
+            "#cbd5e1", "#f8fafc", "#334155"
         )?;
+        for bucket in &timeline_buckets {
+            writeln!(
+                dot,
+                "    {} [id=\"{}\", label=\"{}\", shape=plain, fontcolor=\"{}\", tooltip=\"{}\"]",
+                timeline_bucket_node_id(bucket),
+                escape_dot_label(&format!("timeline.{}", bucket.key)),
+                escape_dot_label(&bucket.label),
+                "#475569",
+                escape_dot_label(&bucket.label)
+            )?;
+        }
+        for pair in timeline_buckets.windows(2) {
+            writeln!(
+                dot,
+                "    {} -> {} [style=invis, weight=8]",
+                timeline_bucket_node_id(&pair[0]),
+                timeline_bucket_node_id(&pair[1])
+            )?;
+        }
+        writeln!(dot, "  }}")?;
     }
-    for pair in timeline_buckets.windows(2) {
-        writeln!(
-            dot,
-            "    {} -> {} [style=invis, weight=8]",
-            timeline_bucket_node_id(&pair[0]),
-            timeline_bucket_node_id(&pair[1])
-        )?;
-    }
-    writeln!(dot, "  }}")?;
 
     for lane in lifecycle_swimlanes(&nodes) {
         let lane_nodes: Vec<&RoadmapNode<'_>> = nodes
@@ -4016,11 +4614,11 @@ pub fn render_lifecycle_roadmap_dot(
                 escape_dot_label(&object.id),
                 escape_dot_label(&portfolio_roadmap_label(object)),
                 shape,
-                lifecycle_fill_color(object),
-                lifecycle_border_color(object),
+                roadmap_fill_color(object, presentation),
+                roadmap_border_color(object, presentation),
                 escape_dot_label(&object.id)
             )?;
-            if let Some(target) = target_transition_label(object) {
+            if let Some(target) = target_transition_label(object, presentation) {
                 writeln!(
                     dot,
                     "    {} [id=\"{}\", label=\"{}\", shape=note, fillcolor=\"{}\", color=\"{}\", fontcolor=\"{}\", tooltip=\"{}\"]",
@@ -4038,9 +4636,10 @@ pub fn render_lifecycle_roadmap_dot(
     }
 
     for node in &nodes {
-        if let Some(bucket) = timeline_buckets
-            .iter()
-            .find(|bucket| bucket.key == node.timeline_key)
+        if show_timeline_scale
+            && let Some(bucket) = timeline_buckets
+                .iter()
+                .find(|bucket| bucket.key == node.timeline_key)
         {
             writeln!(
                 dot,
@@ -4049,7 +4648,7 @@ pub fn render_lifecycle_roadmap_dot(
                 dot_id(&node.object.id)
             )?;
         }
-        if target_transition_label(node.object).is_some() {
+        if target_transition_label(node.object, presentation).is_some() {
             writeln!(
                 dot,
                 "  {} -> {} [id=\"{}\", label=\"target state\", color=\"{}\", fontcolor=\"{}\"]",
@@ -4062,22 +4661,43 @@ pub fn render_lifecycle_roadmap_dot(
         }
     }
 
-    let included: BTreeSet<&str> = objects.iter().map(|object| object.id.as_str()).collect();
-    for object in &objects {
-        let Some(lifecycle) = &object.lifecycle else {
-            continue;
-        };
-        for milestone_ref in &lifecycle.milestone_refs {
-            if included.contains(milestone_ref.as_str()) {
-                writeln!(
-                    dot,
-                    "  {} -> {} [id=\"{}\", label=\"milestone\", style=dashed]",
-                    dot_id(&object.id),
-                    dot_id(milestone_ref),
-                    escape_dot_label(&format!("{}.{}", object.id, milestone_ref))
-                )?;
+    if roadmap_show_milestone_links(presentation) {
+        let milestone_link_style = roadmap_milestone_link_style(presentation);
+        let included: BTreeSet<&str> = objects.iter().map(|object| object.id.as_str()).collect();
+        for object in &objects {
+            let Some(lifecycle) = &object.lifecycle else {
+                continue;
+            };
+            for milestone_ref in &lifecycle.milestone_refs {
+                if included.contains(milestone_ref.as_str()) {
+                    writeln!(
+                        dot,
+                        "  {} -> {} [id=\"{}\", label=\"milestone\", style={}]",
+                        dot_id(&object.id),
+                        dot_id(milestone_ref),
+                        escape_dot_label(&format!("{}.{}", object.id, milestone_ref)),
+                        milestone_link_style
+                    )?;
+                }
             }
         }
+    }
+
+    if presentation
+        .and_then(|presentation| presentation.styling.show_legend)
+        .unwrap_or(false)
+    {
+        let color_by = presentation
+            .map(roadmap_color_by)
+            .unwrap_or("lifecycleState");
+        writeln!(
+            dot,
+            "  roadmap_legend [id=\"roadmap.legend\", label=\"Color by: {}\", shape=note, fillcolor=\"{}\", color=\"{}\", fontcolor=\"{}\"]",
+            escape_dot_label(&format_object_label(color_by)),
+            "#f8fafc",
+            "#64748b",
+            "#334155"
+        )?;
     }
 
     writeln!(dot, "}}")?;
@@ -4154,6 +4774,40 @@ fn find_lifecycle_roadmap_diagram<'a>(
     .ok_or_else(|| anyhow!("no matching lifecycle roadmap diagram found"))
 }
 
+fn resolve_roadmap_presentation<'a>(
+    package: &'a ModelPackage,
+    diagram: &DiagramView,
+    presentation_id: Option<&str>,
+) -> Result<Option<&'a RoadmapPresentation>> {
+    let selected_id = presentation_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .or_else(|| {
+            if diagram.roadmap_presentation_ref.is_empty() {
+                None
+            } else {
+                Some(diagram.roadmap_presentation_ref.as_str())
+            }
+        });
+    let Some(selected_id) = selected_id else {
+        return Ok(None);
+    };
+    let presentation = package
+        .roadmap_presentations
+        .presentations
+        .iter()
+        .find(|presentation| presentation.id == selected_id)
+        .ok_or_else(|| anyhow!("missing roadmap presentation {selected_id}"))?;
+    if !roadmap_presentation_applies_to(presentation, &diagram.view_kind) {
+        bail!(
+            "{} does not apply to {}",
+            presentation.id,
+            diagram.view_kind
+        );
+    }
+    Ok(Some(presentation))
+}
+
 fn lifecycle_bucket(object: &PortfolioObject) -> &str {
     if object.lifecycle_state.is_empty() {
         "unspecified"
@@ -4189,14 +4843,17 @@ struct Swimlane {
     label: String,
 }
 
-fn lifecycle_roadmap_nodes<'a>(objects: &[&'a PortfolioObject]) -> Vec<RoadmapNode<'a>> {
+fn lifecycle_roadmap_nodes<'a>(
+    objects: &[&'a PortfolioObject],
+    presentation: Option<&RoadmapPresentation>,
+) -> Vec<RoadmapNode<'a>> {
     let mut nodes: Vec<RoadmapNode<'a>> = objects
         .iter()
         .copied()
         .map(|object| RoadmapNode {
             object,
-            swimlane_key: lifecycle_swimlane_key(object),
-            timeline_key: lifecycle_timeline_key(object),
+            swimlane_key: lifecycle_swimlane_key(object, presentation),
+            timeline_key: lifecycle_timeline_key(object, presentation),
         })
         .collect();
     nodes.sort_by(|left, right| {
@@ -4214,14 +4871,17 @@ fn lifecycle_roadmap_nodes<'a>(objects: &[&'a PortfolioObject]) -> Vec<RoadmapNo
     nodes
 }
 
-fn lifecycle_timeline_buckets(nodes: &[RoadmapNode<'_>]) -> Vec<TimelineBucket> {
+fn lifecycle_timeline_buckets(
+    nodes: &[RoadmapNode<'_>],
+    presentation: Option<&RoadmapPresentation>,
+) -> Vec<TimelineBucket> {
     let mut keys: BTreeSet<String> = nodes.iter().map(|node| node.timeline_key.clone()).collect();
     if keys.is_empty() {
         keys.insert("0000-current".to_string());
     }
     keys.into_iter()
         .map(|key| TimelineBucket {
-            label: format_timeline_key(&key),
+            label: format_timeline_key(&key, presentation),
             key,
         })
         .collect()
@@ -4237,18 +4897,42 @@ fn lifecycle_swimlanes(nodes: &[RoadmapNode<'_>]) -> Vec<Swimlane> {
         .collect()
 }
 
-fn lifecycle_swimlane_key(object: &PortfolioObject) -> String {
-    match object.kind.as_str() {
-        "portfolio_application" => "10.application".to_string(),
-        "portfolio_service" => "20.service".to_string(),
-        "technology_component" => "30.technology-component".to_string(),
-        "technology_standard" => "40.technology-standard".to_string(),
-        "lifecycle_milestone" => "90.milestone".to_string(),
-        other => format!("80.{}", other.replace('_', "-")),
+fn lifecycle_swimlane_key(
+    object: &PortfolioObject,
+    presentation: Option<&RoadmapPresentation>,
+) -> String {
+    match presentation
+        .map(roadmap_swimlane_group_by)
+        .unwrap_or("portfolioKind")
+    {
+        "none" => "10.all".to_string(),
+        "lifecycleState" => format!("20.{}", lifecycle_bucket(object).replace('_', "-")),
+        "criticality" => format!(
+            "30.{}",
+            if object.criticality.is_empty() {
+                "unspecified"
+            } else {
+                object.criticality.as_str()
+            }
+        ),
+        "owner" => keyed_ref_lane("40", &object.owner_refs),
+        "capability" => keyed_ref_lane("50", &object.capability_refs),
+        "technology" => keyed_ref_lane("60", &object.technology_refs),
+        _ => match object.kind.as_str() {
+            "portfolio_application" => "10.application".to_string(),
+            "portfolio_service" => "20.service".to_string(),
+            "technology_component" => "30.technology-component".to_string(),
+            "technology_standard" => "40.technology-standard".to_string(),
+            "lifecycle_milestone" => "90.milestone".to_string(),
+            other => format!("80.{}", other.replace('_', "-")),
+        },
     }
 }
 
 fn format_swimlane_key(key: &str) -> String {
+    if key == "10.all" {
+        return "All roadmap items".to_string();
+    }
     let (_, label) = key.split_once('.').unwrap_or(("80", key));
     format!(
         "{} swimlane",
@@ -4260,18 +4944,23 @@ fn format_swimlane_key(key: &str) -> String {
     )
 }
 
-fn lifecycle_timeline_key(object: &PortfolioObject) -> String {
-    let date = object
-        .lifecycle
-        .as_ref()
-        .and_then(primary_lifecycle_date)
-        .unwrap_or_else(|| {
-            if lifecycle_bucket(object) == "active" {
-                "0000-current".to_string()
-            } else {
-                "9999-unscheduled".to_string()
-            }
-        });
+fn keyed_ref_lane(prefix: &str, refs: &[String]) -> String {
+    refs.first()
+        .map(|reference| format!("{}.{}", prefix, reference.replace('_', "-")))
+        .unwrap_or_else(|| format!("{prefix}.unassigned"))
+}
+
+fn lifecycle_timeline_key(
+    object: &PortfolioObject,
+    presentation: Option<&RoadmapPresentation>,
+) -> String {
+    let date = roadmap_date_for_object(object, presentation).unwrap_or_else(|| {
+        if lifecycle_bucket(object) == "active" {
+            "0000-current".to_string()
+        } else {
+            "9999-unscheduled".to_string()
+        }
+    });
     if date == "0000-current" || date == "9999-unscheduled" {
         return date;
     }
@@ -4281,8 +4970,21 @@ fn lifecycle_timeline_key(object: &PortfolioObject) -> String {
         .next()
         .and_then(|value| value.parse::<u8>().ok())
         .unwrap_or(12);
-    let quarter = ((month.saturating_sub(1)) / 3) + 1;
-    format!("{}-q{}", year, quarter)
+    match presentation
+        .map(roadmap_bucket_granularity)
+        .unwrap_or("quarter")
+    {
+        "month" => format!("{}-m{:02}", year, month),
+        "half_year" => {
+            let half = if month <= 6 { 1 } else { 2 };
+            format!("{}-h{}", year, half)
+        }
+        "year" => year.to_string(),
+        _ => {
+            let quarter = ((month.saturating_sub(1)) / 3) + 1;
+            format!("{}-q{}", year, quarter)
+        }
+    }
 }
 
 fn primary_lifecycle_date(lifecycle: &PortfolioLifecycle) -> Option<String> {
@@ -4297,15 +4999,176 @@ fn primary_lifecycle_date(lifecycle: &PortfolioLifecycle) -> Option<String> {
     .map(|date| (*date).to_string())
 }
 
-fn format_timeline_key(key: &str) -> String {
+fn roadmap_date_for_object(
+    object: &PortfolioObject,
+    presentation: Option<&RoadmapPresentation>,
+) -> Option<String> {
+    let lifecycle = object.lifecycle.as_ref()?;
+    match presentation.map(roadmap_bucket_source).unwrap_or("auto") {
+        "targetDate" => non_empty_string(&lifecycle.target_date),
+        "retirementDate" => non_empty_string(&lifecycle.retirement_date),
+        "endOfSupportDate" => non_empty_string(&lifecycle.end_of_support_date),
+        "currentFrom" => non_empty_string(&lifecycle.current_from),
+        _ => primary_lifecycle_date(lifecycle),
+    }
+}
+
+fn non_empty_string(value: &str) -> Option<String> {
+    if value.is_empty() {
+        None
+    } else {
+        Some(value.to_string())
+    }
+}
+
+fn include_roadmap_object(
+    object: &PortfolioObject,
+    _diagram_portfolio_refs: &[String],
+    presentation: Option<&RoadmapPresentation>,
+) -> bool {
+    if object.kind == "lifecycle_milestone" {
+        if !roadmap_show_milestone_nodes(presentation) {
+            return false;
+        }
+    }
+
+    let Some(date) = roadmap_date_for_object(object, presentation) else {
+        return presentation
+            .and_then(|presentation| presentation.timeline.include_undated_bucket)
+            .unwrap_or(true);
+    };
+    let Some(presentation) = presentation else {
+        return true;
+    };
+    if !presentation.timeline.range_start.is_empty()
+        && date.as_str() < presentation.timeline.range_start.as_str()
+    {
+        return false;
+    }
+    if !presentation.timeline.range_end.is_empty()
+        && date.as_str() > presentation.timeline.range_end.as_str()
+    {
+        return false;
+    }
+    true
+}
+
+fn roadmap_bucket_source(presentation: &RoadmapPresentation) -> &str {
+    if presentation.timeline.bucket_source.is_empty() {
+        "auto"
+    } else {
+        presentation.timeline.bucket_source.as_str()
+    }
+}
+
+fn roadmap_bucket_granularity(presentation: &RoadmapPresentation) -> &str {
+    if presentation.timeline.bucket_granularity.is_empty() {
+        "quarter"
+    } else {
+        presentation.timeline.bucket_granularity.as_str()
+    }
+}
+
+fn roadmap_date_label_format(presentation: &RoadmapPresentation) -> &str {
+    if presentation.timeline.date_label_format.is_empty() {
+        roadmap_bucket_granularity(presentation)
+    } else {
+        presentation.timeline.date_label_format.as_str()
+    }
+}
+
+fn roadmap_swimlane_group_by(presentation: &RoadmapPresentation) -> &str {
+    if presentation.swimlanes.group_by.is_empty() {
+        "portfolioKind"
+    } else {
+        presentation.swimlanes.group_by.as_str()
+    }
+}
+
+fn roadmap_show_target_callouts(presentation: Option<&RoadmapPresentation>) -> bool {
+    presentation
+        .and_then(|presentation| presentation.target_states.show_callouts)
+        .unwrap_or(true)
+}
+
+fn roadmap_show_target_dates(presentation: Option<&RoadmapPresentation>) -> bool {
+    presentation
+        .and_then(|presentation| presentation.target_states.show_target_dates)
+        .unwrap_or(true)
+}
+
+fn roadmap_show_milestone_nodes(presentation: Option<&RoadmapPresentation>) -> bool {
+    presentation
+        .and_then(|presentation| presentation.milestones.show_milestone_nodes)
+        .unwrap_or(true)
+}
+
+fn roadmap_show_milestone_links(presentation: Option<&RoadmapPresentation>) -> bool {
+    presentation
+        .and_then(|presentation| presentation.milestones.show_milestone_links)
+        .unwrap_or(true)
+}
+
+fn roadmap_milestone_link_style(presentation: Option<&RoadmapPresentation>) -> &str {
+    presentation
+        .map(|presentation| presentation.milestones.link_style.as_str())
+        .filter(|style| !style.is_empty())
+        .unwrap_or("dashed")
+}
+
+fn roadmap_color_by(presentation: &RoadmapPresentation) -> &str {
+    if presentation.styling.color_by.is_empty() {
+        "lifecycleState"
+    } else {
+        presentation.styling.color_by.as_str()
+    }
+}
+
+fn roadmap_spacing(presentation: Option<&RoadmapPresentation>) -> (&'static str, &'static str) {
+    match presentation
+        .map(|presentation| presentation.styling.density.as_str())
+        .unwrap_or("comfortable")
+    {
+        "compact" => ("0.35", "0.75"),
+        "detailed" => ("0.75", "1.25"),
+        _ => ("0.55", "1.0"),
+    }
+}
+
+fn format_object_label(value: &str) -> String {
+    value
+        .split(|character: char| character == '_' || character == '-')
+        .map(format_lifecycle_state)
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn format_timeline_key(key: &str, presentation: Option<&RoadmapPresentation>) -> String {
     if key == "0000-current" {
         return "Current".to_string();
     }
     if key == "9999-unscheduled" {
         return "Unscheduled".to_string();
     }
+    if let Some((year, month)) = key.split_once("-m") {
+        return match presentation
+            .map(roadmap_date_label_format)
+            .unwrap_or("quarter")
+        {
+            "date" | "month" => format!("{year}-{month}"),
+            "year" => year.to_string(),
+            _ => {
+                let month = month.parse::<u8>().unwrap_or(12);
+                let quarter = ((month.saturating_sub(1)) / 3) + 1;
+                format!("{year} Q{quarter}")
+            }
+        };
+    }
     if let Some((year, quarter)) = key.split_once("-q") {
         return format!("{year} Q{quarter}");
+    }
+    if let Some((year, half)) = key.split_once("-h") {
+        return format!("{year} H{half}");
     }
     key.to_string()
 }
@@ -4318,9 +5181,25 @@ fn target_node_id(object: &PortfolioObject) -> String {
     dot_id(&format!("{}.target", object.id))
 }
 
-fn target_transition_label(object: &PortfolioObject) -> Option<String> {
+fn target_transition_label(
+    object: &PortfolioObject,
+    presentation: Option<&RoadmapPresentation>,
+) -> Option<String> {
+    if !roadmap_show_target_callouts(presentation) {
+        return None;
+    }
     let lifecycle = object.lifecycle.as_ref()?;
     if lifecycle.target_state.is_empty() {
+        return None;
+    }
+    if let Some(presentation) = presentation
+        && !presentation.target_states.states.is_empty()
+        && !presentation
+            .target_states
+            .states
+            .iter()
+            .any(|state| state == &lifecycle.target_state)
+    {
         return None;
     }
     let current = if lifecycle.state.is_empty() {
@@ -4328,14 +5207,18 @@ fn target_transition_label(object: &PortfolioObject) -> Option<String> {
     } else {
         lifecycle.state.as_str()
     };
-    if lifecycle.target_state == current && lifecycle.target_date.is_empty() {
+    if lifecycle.target_state == current
+        && !presentation
+            .and_then(|presentation| presentation.target_states.show_no_change_targets)
+            .unwrap_or(false)
+    {
         return None;
     }
     let mut label = format!(
         "Target: {}",
         format_lifecycle_state(lifecycle.target_state.as_str())
     );
-    if !lifecycle.target_date.is_empty() {
+    if roadmap_show_target_dates(presentation) && !lifecycle.target_date.is_empty() {
         label.push('\n');
         label.push_str(&lifecycle.target_date);
     }
@@ -4374,6 +5257,78 @@ fn lifecycle_fill_color(object: &PortfolioObject) -> &'static str {
     }
 }
 
+fn roadmap_fill_color(
+    object: &PortfolioObject,
+    presentation: Option<&RoadmapPresentation>,
+) -> &'static str {
+    match presentation
+        .map(roadmap_color_by)
+        .unwrap_or("lifecycleState")
+    {
+        "criticality" => match object.criticality.as_str() {
+            "critical" => "#fef2f2",
+            "high" => "#fff7ed",
+            "medium" => "#fefce8",
+            "low" => "#ecfdf5",
+            _ => "#ffffff",
+        },
+        "standardState" => match object.standard_state.as_str() {
+            "approved" => "#ecfdf5",
+            "tolerated" => "#eff6ff",
+            "discouraged" => "#fff7ed",
+            "banned" => "#fef2f2",
+            "emerging" => "#f5f3ff",
+            _ => "#ffffff",
+        },
+        "portfolioKind" => match object.kind.as_str() {
+            "portfolio_application" => "#eff6ff",
+            "portfolio_service" => "#ecfeff",
+            "technology_component" => "#f5f3ff",
+            "technology_standard" => "#eef2ff",
+            "lifecycle_milestone" => "#f8fafc",
+            _ => "#ffffff",
+        },
+        "none" => "#ffffff",
+        _ => lifecycle_fill_color(object),
+    }
+}
+
+fn roadmap_border_color(
+    object: &PortfolioObject,
+    presentation: Option<&RoadmapPresentation>,
+) -> &'static str {
+    match presentation
+        .map(roadmap_color_by)
+        .unwrap_or("lifecycleState")
+    {
+        "criticality" => match object.criticality.as_str() {
+            "critical" => "#dc2626",
+            "high" => "#ea580c",
+            "medium" => "#ca8a04",
+            "low" => "#059669",
+            _ => "#94a3b8",
+        },
+        "standardState" => match object.standard_state.as_str() {
+            "approved" => "#059669",
+            "tolerated" => "#2563eb",
+            "discouraged" => "#ea580c",
+            "banned" => "#dc2626",
+            "emerging" => "#7c3aed",
+            _ => "#94a3b8",
+        },
+        "portfolioKind" => match object.kind.as_str() {
+            "portfolio_application" => "#2563eb",
+            "portfolio_service" => "#0891b2",
+            "technology_component" => "#7c3aed",
+            "technology_standard" => "#4f46e5",
+            "lifecycle_milestone" => "#64748b",
+            _ => "#94a3b8",
+        },
+        "none" => "#94a3b8",
+        _ => lifecycle_border_color(object),
+    }
+}
+
 fn lifecycle_border_color(object: &PortfolioObject) -> &'static str {
     match lifecycle_bucket(object) {
         "idea" => "#64748b",
@@ -4406,6 +5361,10 @@ fn write_package(package: &ModelPackage) -> Result<()> {
     write_json(
         package.root.join("views/portfolio-views.json"),
         &package.portfolio_saved_views,
+    )?;
+    write_json(
+        package.root.join("views/roadmap-presentations.json"),
+        &package.roadmap_presentations,
     )?;
     write_json(package.root.join("model/elements.json"), &package.elements)?;
     write_json(
@@ -4448,6 +5407,9 @@ fn ensure_available_id(package: &ModelPackage, id: &str) -> Result<()> {
     for existing in &package.portfolio_saved_views.views {
         ids.insert(existing.id.as_str());
     }
+    for existing in &package.roadmap_presentations.presentations {
+        ids.insert(existing.id.as_str());
+    }
     for existing in &package.elements.elements {
         ids.insert(existing.id.as_str());
     }
@@ -4478,6 +5440,10 @@ fn sort_package(package: &mut ModelPackage) {
     package
         .portfolio_saved_views
         .views
+        .sort_by(|left, right| left.id.cmp(&right.id));
+    package
+        .roadmap_presentations
+        .presentations
         .sort_by(|left, right| left.id.cmp(&right.id));
     package
         .elements
@@ -5064,6 +6030,35 @@ mod tests {
         assert_eq!(
             saved_view.columns,
             vec!["name", "kind", "lifecycleState", "criticality", "ownerRefs"]
+        );
+    }
+
+    #[test]
+    fn accepted_proposal_applies_roadmap_presentation_operations() {
+        let root = copy_example_to_temp();
+        let proposal_path = root.join("proposals/open/accepted-roadmap-presentation.json");
+
+        let summary = apply_accepted_proposal_file(&root, &proposal_path).unwrap();
+        assert_eq!(summary.roadmap_presentation_operations_applied, 5);
+
+        let package = load_package(&root).unwrap();
+        validate_package(&package).unwrap();
+        assert!(
+            package
+                .roadmap_presentations
+                .presentations
+                .iter()
+                .all(|presentation| presentation.id != "roadmap-presentation.prototype-critical")
+        );
+        let diagram = package
+            .diagrams
+            .diagrams
+            .iter()
+            .find(|diagram| diagram.id == "diagram.portfolio-lifecycle-roadmap")
+            .unwrap();
+        assert_eq!(
+            diagram.roadmap_presentation_ref,
+            "roadmap-presentation.default-lifecycle"
         );
     }
 

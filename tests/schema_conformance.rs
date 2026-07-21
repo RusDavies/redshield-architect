@@ -24,6 +24,10 @@ const SCHEMA_CASES: &[(&str, &str)] = &[
         "examples/minimal/redshield/views/portfolio-views.json",
     ),
     (
+        "schemas/roadmap-presentations.schema.json",
+        "examples/minimal/redshield/views/roadmap-presentations.json",
+    ),
+    (
         "schemas/relationships.schema.json",
         "examples/minimal/redshield/model/relationships.json",
     ),
@@ -1091,6 +1095,116 @@ fn schema_validation_rejects_invalid_portfolio_saved_view_query() {
     assert!(
         validator.validate(&invalid).is_err(),
         "portfolio saved view schema should reject unsupported lifecycle states"
+    );
+}
+
+#[test]
+fn schema_validation_accepts_roadmap_presentation_operations() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let valid = json!({
+        "proposalId": "proposal.roadmap-presentation",
+        "schemaVersion": "0.1.0",
+        "state": "review_ready",
+        "createdAt": "2026-07-21T00:20:00Z",
+        "intent": "Maintain a lifecycle roadmap presentation.",
+        "operations": [
+            {
+                "opId": "op.create-roadmap-presentation",
+                "op": "create_roadmap_presentation",
+                "args": {
+                    "id": "roadmap-presentation.prototype",
+                    "title": "Prototype roadmap",
+                    "appliesToViewKinds": ["lifecycle_roadmap"],
+                    "timeline": {
+                        "bucketSource": "targetDate",
+                        "bucketGranularity": "quarter",
+                        "rangeStart": "2026-07-01",
+                        "rangeEnd": "2026-12-31",
+                        "includeUndatedBucket": true,
+                        "dateLabelFormat": "quarter"
+                    },
+                    "swimlanes": {
+                        "groupBy": "lifecycleState",
+                        "includeEmptyLanes": false,
+                        "fallbackLaneTitle": "Other roadmap items"
+                    },
+                    "targetStates": {
+                        "showCallouts": true,
+                        "showTargetDates": false,
+                        "states": ["active"]
+                    },
+                    "milestones": {
+                        "showMilestoneNodes": true,
+                        "showMilestoneLinks": true,
+                        "linkStyle": "dotted"
+                    },
+                    "styling": {
+                        "density": "compact",
+                        "colorBy": "criticality",
+                        "showLegend": true,
+                        "showTimelineScale": true
+                    }
+                },
+                "rationale": "Roadmap presentation should be typed package metadata."
+            },
+            {
+                "opId": "op.assign-roadmap-presentation",
+                "op": "assign_roadmap_presentation",
+                "args": {
+                    "diagramId": "diagram.portfolio-lifecycle-roadmap",
+                    "presentationId": "roadmap-presentation.prototype"
+                },
+                "rationale": "Roadmap diagrams need explicit presentation assignment."
+            },
+            {
+                "opId": "op.update-roadmap-presentation",
+                "op": "update_roadmap_presentation",
+                "args": {
+                    "presentationId": "roadmap-presentation.prototype",
+                    "title": "Prototype lifecycle roadmap"
+                },
+                "rationale": "Roadmap presentations need typed updates."
+            },
+            {
+                "opId": "op.remove-roadmap-presentation",
+                "op": "remove_roadmap_presentation",
+                "args": {
+                    "presentationId": "roadmap-presentation.prototype"
+                },
+                "rationale": "Roadmap presentations need typed removal."
+            }
+        ]
+    });
+
+    if let Err(error) = validator.validate(&valid) {
+        panic!("proposal schema should accept roadmap presentation operations: {error}");
+    }
+}
+
+#[test]
+fn schema_validation_rejects_invalid_roadmap_presentation_range() {
+    let schema = read_json("schemas/roadmap-presentations.schema.json");
+    let validator =
+        jsonschema::validator_for(&schema).expect("roadmap presentation schema should compile");
+    let invalid = json!({
+        "schemaVersion": "0.1.0",
+        "presentations": [
+            {
+                "id": "roadmap-presentation.invalid",
+                "title": "Invalid",
+                "appliesToViewKinds": ["lifecycle_roadmap"],
+                "timeline": {
+                    "rangeStart": "soon",
+                    "rangeEnd": "2026-12-31"
+                }
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "roadmap presentation schema should reject invalid dates"
     );
 }
 

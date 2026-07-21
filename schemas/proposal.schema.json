@@ -28,6 +28,10 @@
         { "$ref": "#/$defs/createPortfolioSavedViewOperation" },
         { "$ref": "#/$defs/updatePortfolioSavedViewOperation" },
         { "$ref": "#/$defs/removePortfolioSavedViewOperation" },
+        { "$ref": "#/$defs/createRoadmapPresentationOperation" },
+        { "$ref": "#/$defs/updateRoadmapPresentationOperation" },
+        { "$ref": "#/$defs/removeRoadmapPresentationOperation" },
+        { "$ref": "#/$defs/assignRoadmapPresentationOperation" },
         { "$ref": "#/$defs/createModelElementOperation" },
         { "$ref": "#/$defs/updateModelElementDetailsOperation" },
         { "$ref": "#/$defs/createRelationshipOperation" },
@@ -137,6 +141,54 @@
           "properties": {
             "op": { "const": "remove_portfolio_saved_view" },
             "args": { "$ref": "#/$defs/removePortfolioSavedViewArgs" }
+          }
+        }
+      ]
+    },
+    "createRoadmapPresentationOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "create_roadmap_presentation" },
+            "args": { "$ref": "#/$defs/createRoadmapPresentationArgs" }
+          }
+        }
+      ]
+    },
+    "updateRoadmapPresentationOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "update_roadmap_presentation" },
+            "args": { "$ref": "#/$defs/updateRoadmapPresentationArgs" }
+          }
+        }
+      ]
+    },
+    "removeRoadmapPresentationOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "remove_roadmap_presentation" },
+            "args": { "$ref": "#/$defs/removeRoadmapPresentationArgs" }
+          }
+        }
+      ]
+    },
+    "assignRoadmapPresentationOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "assign_roadmap_presentation" },
+            "args": { "$ref": "#/$defs/assignRoadmapPresentationArgs" }
           }
         }
       ]
@@ -497,6 +549,66 @@
         "viewId": { "type": "string", "minLength": 1 }
       }
     },
+    "createRoadmapPresentationArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "appliesToViewKinds"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "appliesToViewKinds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "enum": ["lifecycle_roadmap"] }
+        },
+        "timeline": { "$ref": "#/$defs/roadmapTimeline" },
+        "swimlanes": { "$ref": "#/$defs/roadmapSwimlanes" },
+        "targetStates": { "$ref": "#/$defs/roadmapTargetStates" },
+        "milestones": { "$ref": "#/$defs/roadmapMilestones" },
+        "styling": { "$ref": "#/$defs/roadmapStyling" },
+        "provenance": { "$ref": "#/$defs/modelElementProvenance" }
+      }
+    },
+    "updateRoadmapPresentationArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["presentationId"],
+      "minProperties": 2,
+      "properties": {
+        "presentationId": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "appliesToViewKinds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "enum": ["lifecycle_roadmap"] }
+        },
+        "timeline": { "$ref": "#/$defs/roadmapTimeline" },
+        "swimlanes": { "$ref": "#/$defs/roadmapSwimlanes" },
+        "targetStates": { "$ref": "#/$defs/roadmapTargetStates" },
+        "milestones": { "$ref": "#/$defs/roadmapMilestones" },
+        "styling": { "$ref": "#/$defs/roadmapStyling" },
+        "provenance": { "$ref": "#/$defs/modelElementProvenance" }
+      }
+    },
+    "removeRoadmapPresentationArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["presentationId"],
+      "properties": {
+        "presentationId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "assignRoadmapPresentationArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagramId", "presentationId"],
+      "properties": {
+        "diagramId": { "type": "string", "minLength": 1 },
+        "presentationId": { "type": "string", "minLength": 1 }
+      }
+    },
     "updateModelElementDetailsArgs": {
       "type": "object",
       "additionalProperties": false,
@@ -570,6 +682,7 @@
         },
         "modelRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
         "portfolioRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "roadmapPresentationRef": { "type": "string", "minLength": 1 },
         "layout": { "$ref": "#/$defs/diagramLayout" }
       }
     },
@@ -861,6 +974,90 @@
           "enum": ["kind", "status", "lifecycleState", "criticality", "standardState", "owner", "capability"]
         },
         "showCounts": { "type": "boolean" }
+      }
+    },
+    "roadmapTimeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bucketSource": {
+          "type": "string",
+          "enum": ["targetDate", "retirementDate", "endOfSupportDate", "currentFrom", "auto"]
+        },
+        "bucketGranularity": {
+          "type": "string",
+          "enum": ["month", "quarter", "half_year", "year"]
+        },
+        "rangeStart": { "$ref": "#/$defs/date" },
+        "rangeEnd": { "$ref": "#/$defs/date" },
+        "includeUndatedBucket": { "type": "boolean" },
+        "dateLabelFormat": {
+          "type": "string",
+          "enum": ["date", "month", "quarter", "year"]
+        }
+      }
+    },
+    "roadmapSwimlanes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "groupBy": {
+          "type": "string",
+          "enum": [
+            "portfolioKind",
+            "lifecycleState",
+            "criticality",
+            "owner",
+            "capability",
+            "technology",
+            "none"
+          ]
+        },
+        "order": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "includeEmptyLanes": { "type": "boolean" },
+        "fallbackLaneTitle": { "type": "string", "minLength": 1 }
+      }
+    },
+    "roadmapTargetStates": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "showCallouts": { "type": "boolean" },
+        "showTargetDates": { "type": "boolean" },
+        "showNoChangeTargets": { "type": "boolean" },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["planned", "active", "deprecated", "retiring", "retired"]
+          }
+        }
+      }
+    },
+    "roadmapMilestones": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "showMilestoneNodes": { "type": "boolean" },
+        "showMilestoneLinks": { "type": "boolean" },
+        "linkStyle": { "type": "string", "enum": ["solid", "dashed", "dotted"] },
+        "includeUnreferencedMilestones": { "type": "boolean" }
+      }
+    },
+    "roadmapStyling": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "density": { "type": "string", "enum": ["compact", "comfortable", "detailed"] },
+        "colorBy": {
+          "type": "string",
+          "enum": ["lifecycleState", "criticality", "standardState", "portfolioKind", "none"]
+        },
+        "showLegend": { "type": "boolean" },
+        "showTimelineScale": { "type": "boolean" }
       }
     },
     "savedViewColumn": {
