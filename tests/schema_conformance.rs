@@ -20,6 +20,10 @@ const SCHEMA_CASES: &[(&str, &str)] = &[
         "examples/minimal/redshield/model/portfolio.json",
     ),
     (
+        "schemas/portfolio-saved-views.schema.json",
+        "examples/minimal/redshield/views/portfolio-views.json",
+    ),
+    (
         "schemas/relationships.schema.json",
         "examples/minimal/redshield/model/relationships.json",
     ),
@@ -1004,6 +1008,89 @@ fn schema_validation_rejects_noop_portfolio_update_operation() {
     assert!(
         validator.validate(&invalid).is_err(),
         "proposal schema should reject no-op portfolio updates"
+    );
+}
+
+#[test]
+fn schema_validation_accepts_portfolio_saved_view_operations() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let valid = json!({
+        "proposalId": "proposal.saved-view",
+        "schemaVersion": "0.1.0",
+        "state": "review_ready",
+        "createdAt": "2026-07-21T00:00:00Z",
+        "intent": "Maintain a saved portfolio query.",
+        "operations": [
+            {
+                "opId": "op.create-saved-view",
+                "op": "create_portfolio_saved_view",
+                "args": {
+                    "id": "portfolio-view.active-tech",
+                    "title": "Active technology",
+                    "scope": "portfolio_summary",
+                    "resultKinds": ["technology_component"],
+                    "query": {
+                        "kinds": ["technology_component"],
+                        "lifecycleStates": ["active"]
+                    },
+                    "sort": [{ "field": "name", "direction": "asc" }],
+                    "columns": ["name", "kind", "lifecycleState"],
+                    "presentation": {
+                        "density": "compact",
+                        "groupBy": "kind",
+                        "showCounts": true
+                    }
+                },
+                "rationale": "Saved filters should be typed package metadata."
+            },
+            {
+                "opId": "op.update-saved-view",
+                "op": "update_portfolio_saved_view",
+                "args": {
+                    "viewId": "portfolio-view.active-tech",
+                    "title": "Active technologies"
+                },
+                "rationale": "Saved views need typed updates."
+            },
+            {
+                "opId": "op.remove-saved-view",
+                "op": "remove_portfolio_saved_view",
+                "args": {
+                    "viewId": "portfolio-view.active-tech"
+                },
+                "rationale": "Saved views need typed removal."
+            }
+        ]
+    });
+
+    if let Err(error) = validator.validate(&valid) {
+        panic!("proposal schema should accept saved view operations: {error}");
+    }
+}
+
+#[test]
+fn schema_validation_rejects_invalid_portfolio_saved_view_query() {
+    let schema = read_json("schemas/portfolio-saved-views.schema.json");
+    let validator =
+        jsonschema::validator_for(&schema).expect("portfolio saved view schema should compile");
+    let invalid = json!({
+        "schemaVersion": "0.1.0",
+        "views": [
+            {
+                "id": "portfolio-view.invalid",
+                "title": "Invalid",
+                "scope": "portfolio_summary",
+                "query": {
+                    "lifecycleStates": ["maybe-later"]
+                }
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "portfolio saved view schema should reject unsupported lifecycle states"
     );
 }
 

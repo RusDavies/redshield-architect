@@ -1,12 +1,12 @@
 # Portfolio Saved Views And Queries
 
-This document defines the first named portfolio saved-view/query contract for a future package version. It is a design target, not implemented prototype schema yet. Current CLI and workbench filters remain temporary local controls until implementation work deliberately adds this contract to validation and proposal application.
+This document defines the first named portfolio saved-view/query contract. The prototype validates saved portfolio views, applies typed proposal operations for them, and exposes them as read-only workbench summary filters.
 
-The contract exists so saved summary filters do not grow into invisible dashboard state. A saved portfolio view should be a named, reviewable package object with bounded query fields, stable output expectations, and clear provenance.
+The contract exists so saved summary filters do not grow into invisible dashboard state. A saved portfolio view is a named, reviewable package object with bounded query fields, stable output expectations, and clear provenance.
 
 ## Storage Shape
 
-When implemented, saved portfolio views should live in a dedicated package file:
+Saved portfolio views live in a dedicated package file:
 
 ```text
 redshield/
@@ -27,7 +27,7 @@ Do not store saved portfolio summary filters inside `views/diagrams.json`. Diagr
 
 ## Saved View Object
 
-A saved portfolio view should contain:
+A saved portfolio view contains:
 
 - `id`: stable package-local ID such as `portfolio-view.active-critical-apps`.
 - `title`: human-readable name.
@@ -40,11 +40,11 @@ A saved portfolio view should contain:
 - `presentation`: optional display hints that do not change query truth.
 - `provenance`: optional source references and creator/review notes.
 
-The first implementation should support only `scope: "portfolio_summary"` unless a renderer or exporter needs the others.
+The first implementation supports only `scope: "portfolio_summary"` unless a renderer or exporter later needs the others.
 
 ## Query Fields
 
-The initial `query` object should be deliberately boring:
+The initial `query` object is deliberately boring:
 
 - `text`: case-insensitive search across ID, name, description, lifecycle state, criticality, standard state, tags, and external-reference labels.
 - `kinds`: portfolio object kinds.
@@ -63,7 +63,7 @@ Every populated array uses OR semantics within the field. Different fields combi
 
 ## Sorting And Columns
 
-Supported `sort` fields should start with:
+Supported `sort` fields start with:
 
 - `name`
 - `kind`
@@ -72,7 +72,7 @@ Supported `sort` fields should start with:
 - `criticality`
 - `standardState`
 
-Supported `columns` should start with:
+Supported `columns` start with:
 
 - `id`
 - `kind`
@@ -102,13 +102,13 @@ Presentation hints are intentionally less powerful than render profiles. If a vi
 
 ## Proposal Operations
 
-Saved portfolio views should be created and changed through typed proposal operations, not silent UI writes:
+Saved portfolio views are created and changed through typed proposal operations, not silent UI writes:
 
 - `create_portfolio_saved_view`
 - `update_portfolio_saved_view`
 - `remove_portfolio_saved_view`
 
-The validator should reject unknown query fields, unsupported enum values, duplicate IDs, empty titles, no-op updates, and references to missing owners, capabilities, technologies, risks, or model elements when those reference targets are local package objects.
+The validator rejects unknown query fields, unsupported enum values, duplicate IDs, empty titles, no-op updates, and references to missing owners, capabilities, technologies, risks, or model elements when those reference targets are local package objects.
 
 ## Boundaries
 

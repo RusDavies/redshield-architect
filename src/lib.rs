@@ -8,6 +8,58 @@ use std::io::Write as IoWrite;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+const PORTFOLIO_KINDS: &[&str] = &[
+    "business_capability",
+    "portfolio_application",
+    "portfolio_service",
+    "technology_component",
+    "technology_standard",
+    "organization_unit",
+    "owner",
+    "lifecycle_milestone",
+    "roadmap_item",
+    "risk",
+    "control",
+    "governance_decision",
+    "data_source",
+];
+const PORTFOLIO_STATUSES: &[&str] = &["draft", "proposed", "accepted", "deprecated", "retired"];
+const LIFECYCLE_STATES: &[&str] = &[
+    "idea",
+    "planned",
+    "active",
+    "deprecated",
+    "retiring",
+    "retired",
+];
+const LIFECYCLE_TARGET_STATES: &[&str] =
+    &["planned", "active", "deprecated", "retiring", "retired"];
+const CRITICALITIES: &[&str] = &["low", "medium", "high", "critical"];
+const STANDARD_STATES: &[&str] = &["approved", "tolerated", "discouraged", "banned", "emerging"];
+const SAVED_VIEW_SORT_FIELDS: &[&str] = &[
+    "name",
+    "kind",
+    "status",
+    "lifecycleState",
+    "criticality",
+    "standardState",
+];
+const SAVED_VIEW_COLUMNS: &[&str] = &[
+    "id",
+    "kind",
+    "name",
+    "status",
+    "lifecycleState",
+    "criticality",
+    "standardState",
+    "ownerRefs",
+    "capabilityRefs",
+    "technologyRefs",
+    "riskRefs",
+    "relatedElementRefs",
+    "tags",
+];
+
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
@@ -111,6 +163,109 @@ pub struct PortfolioLifecycle {
     pub milestone_refs: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub notes: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioSavedViewFile {
+    pub schema_version: String,
+    pub views: Vec<PortfolioSavedView>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioSavedView {
+    pub id: String,
+    pub title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    pub scope: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub result_kinds: Vec<String>,
+    #[serde(default, skip_serializing_if = "PortfolioSavedViewQuery::is_empty")]
+    pub query: PortfolioSavedViewQuery,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sort: Vec<PortfolioSavedViewSort>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub columns: Vec<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "PortfolioSavedViewPresentation::is_empty"
+    )]
+    pub presentation: PortfolioSavedViewPresentation,
+    #[serde(default, skip_serializing_if = "ElementProvenance::is_empty")]
+    pub provenance: ElementProvenance,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioSavedViewQuery {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub text: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub kinds: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub statuses: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub lifecycle_states: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub criticalities: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub standard_states: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub owner_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub capability_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub technology_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub risk_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_element_refs: Vec<String>,
+}
+
+impl PortfolioSavedViewQuery {
+    fn is_empty(&self) -> bool {
+        self.text.is_empty()
+            && self.kinds.is_empty()
+            && self.statuses.is_empty()
+            && self.lifecycle_states.is_empty()
+            && self.criticalities.is_empty()
+            && self.standard_states.is_empty()
+            && self.tags.is_empty()
+            && self.owner_refs.is_empty()
+            && self.capability_refs.is_empty()
+            && self.technology_refs.is_empty()
+            && self.risk_refs.is_empty()
+            && self.related_element_refs.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioSavedViewSort {
+    pub field: String,
+    #[serde(default = "default_sort_direction")]
+    pub direction: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioSavedViewPresentation {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub density: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub group_by: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_counts: Option<bool>,
+}
+
+impl PortfolioSavedViewPresentation {
+    fn is_empty(&self) -> bool {
+        self.density.is_empty() && self.group_by.is_empty() && self.show_counts.is_none()
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -735,6 +890,7 @@ pub struct ModelPackage {
     pub manifest: Manifest,
     pub requirements: RequirementFile,
     pub portfolio: PortfolioFile,
+    pub portfolio_saved_views: PortfolioSavedViewFile,
     pub elements: ElementFile,
     pub relationships: RelationshipFile,
     pub diagrams: DiagramFile,
@@ -771,6 +927,7 @@ pub struct ApplySummary {
     pub requirements_created: usize,
     pub portfolio_objects_created: usize,
     pub portfolio_objects_updated: usize,
+    pub portfolio_saved_view_operations_applied: usize,
     pub elements_created: usize,
     pub relationships_created: usize,
     pub diagrams_created: usize,
@@ -867,6 +1024,58 @@ struct UpdatePortfolioObjectArgs {
     source_refs: Option<Vec<String>>,
     #[serde(default)]
     external_references: Option<Vec<ExternalReference>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreatePortfolioSavedViewArgs {
+    id: String,
+    title: String,
+    #[serde(default)]
+    description: String,
+    scope: String,
+    #[serde(default)]
+    result_kinds: Vec<String>,
+    #[serde(default)]
+    query: PortfolioSavedViewQuery,
+    #[serde(default)]
+    sort: Vec<PortfolioSavedViewSort>,
+    #[serde(default)]
+    columns: Vec<String>,
+    #[serde(default)]
+    presentation: PortfolioSavedViewPresentation,
+    #[serde(default)]
+    provenance: ElementProvenance,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdatePortfolioSavedViewArgs {
+    view_id: String,
+    #[serde(default)]
+    title: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    scope: Option<String>,
+    #[serde(default)]
+    result_kinds: Option<Vec<String>>,
+    #[serde(default)]
+    query: Option<PortfolioSavedViewQuery>,
+    #[serde(default)]
+    sort: Option<Vec<PortfolioSavedViewSort>>,
+    #[serde(default)]
+    columns: Option<Vec<String>>,
+    #[serde(default)]
+    presentation: Option<PortfolioSavedViewPresentation>,
+    #[serde(default)]
+    provenance: Option<ElementProvenance>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RemovePortfolioSavedViewArgs {
+    view_id: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1071,6 +1280,7 @@ pub fn load_package(root: impl AsRef<Path>) -> Result<ModelPackage> {
         manifest: read_json(root.join("manifest.json"))?,
         requirements: read_json(root.join("requirements/requirements.json"))?,
         portfolio: read_json(root.join("model/portfolio.json"))?,
+        portfolio_saved_views: read_json(root.join("views/portfolio-views.json"))?,
         elements: read_json(root.join("model/elements.json"))?,
         relationships: read_json(root.join("model/relationships.json"))?,
         diagrams: read_json(root.join("views/diagrams.json"))?,
@@ -1124,6 +1334,7 @@ pub fn apply_proposal_operations(
         requirements_created: 0,
         portfolio_objects_created: 0,
         portfolio_objects_updated: 0,
+        portfolio_saved_view_operations_applied: 0,
         elements_created: 0,
         relationships_created: 0,
         diagrams_created: 0,
@@ -1178,6 +1389,36 @@ pub fn apply_proposal_operations(
                 let args: UpdatePortfolioObjectArgs = parse_args(operation)?;
                 update_portfolio_object(package, args)?;
                 summary.portfolio_objects_updated += 1;
+            }
+            "create_portfolio_saved_view" => {
+                let args: CreatePortfolioSavedViewArgs = parse_args(operation)?;
+                ensure_available_id(package, &args.id)?;
+                package
+                    .portfolio_saved_views
+                    .views
+                    .push(PortfolioSavedView {
+                        id: args.id,
+                        title: args.title,
+                        description: args.description,
+                        scope: args.scope,
+                        result_kinds: args.result_kinds,
+                        query: args.query,
+                        sort: args.sort,
+                        columns: args.columns,
+                        presentation: args.presentation,
+                        provenance: args.provenance,
+                    });
+                summary.portfolio_saved_view_operations_applied += 1;
+            }
+            "update_portfolio_saved_view" => {
+                let args: UpdatePortfolioSavedViewArgs = parse_args(operation)?;
+                update_portfolio_saved_view(package, args)?;
+                summary.portfolio_saved_view_operations_applied += 1;
+            }
+            "remove_portfolio_saved_view" => {
+                let args: RemovePortfolioSavedViewArgs = parse_args(operation)?;
+                remove_portfolio_saved_view(package, args)?;
+                summary.portfolio_saved_view_operations_applied += 1;
             }
             "create_model_element" => {
                 let args: CreateModelElementArgs = parse_args(operation)?;
@@ -1391,6 +1632,88 @@ fn has_portfolio_object_update(args: &UpdatePortfolioObjectArgs) -> bool {
         || args.external_references.is_some()
 }
 
+fn update_portfolio_saved_view(
+    package: &mut ModelPackage,
+    args: UpdatePortfolioSavedViewArgs,
+) -> Result<()> {
+    if args.view_id.trim().is_empty() {
+        bail!("update_portfolio_saved_view viewId must not be empty");
+    }
+    if !has_portfolio_saved_view_update(&args) {
+        bail!(
+            "update_portfolio_saved_view for {} must change at least one field",
+            args.view_id
+        );
+    }
+
+    let view = package
+        .portfolio_saved_views
+        .views
+        .iter_mut()
+        .find(|view| view.id == args.view_id)
+        .ok_or_else(|| anyhow!("missing portfolio saved view {}", args.view_id))?;
+
+    if let Some(title) = args.title {
+        view.title = title;
+    }
+    if let Some(description) = args.description {
+        view.description = description;
+    }
+    if let Some(scope) = args.scope {
+        view.scope = scope;
+    }
+    if let Some(result_kinds) = args.result_kinds {
+        view.result_kinds = result_kinds;
+    }
+    if let Some(query) = args.query {
+        view.query = query;
+    }
+    if let Some(sort) = args.sort {
+        view.sort = sort;
+    }
+    if let Some(columns) = args.columns {
+        view.columns = columns;
+    }
+    if let Some(presentation) = args.presentation {
+        view.presentation = presentation;
+    }
+    if let Some(provenance) = args.provenance {
+        view.provenance = provenance;
+    }
+
+    Ok(())
+}
+
+fn remove_portfolio_saved_view(
+    package: &mut ModelPackage,
+    args: RemovePortfolioSavedViewArgs,
+) -> Result<()> {
+    if args.view_id.trim().is_empty() {
+        bail!("remove_portfolio_saved_view viewId must not be empty");
+    }
+    let initial_len = package.portfolio_saved_views.views.len();
+    package
+        .portfolio_saved_views
+        .views
+        .retain(|view| view.id != args.view_id);
+    if package.portfolio_saved_views.views.len() == initial_len {
+        bail!("missing portfolio saved view {}", args.view_id);
+    }
+    Ok(())
+}
+
+fn has_portfolio_saved_view_update(args: &UpdatePortfolioSavedViewArgs) -> bool {
+    args.title.is_some()
+        || args.description.is_some()
+        || args.scope.is_some()
+        || args.result_kinds.is_some()
+        || args.query.is_some()
+        || args.sort.is_some()
+        || args.columns.is_some()
+        || args.presentation.is_some()
+        || args.provenance.is_some()
+}
+
 fn update_model_element_details(
     package: &mut ModelPackage,
     args: UpdateModelElementDetailsArgs,
@@ -1494,32 +1817,14 @@ fn has_model_element_detail_update(args: &UpdateModelElementDetailsArgs) -> bool
 
 fn validate_portfolio_object(object: &PortfolioObject) -> Result<()> {
     ensure_non_empty(&object.name, &format!("{} name", object.id))?;
-    if !matches!(
-        object.kind.as_str(),
-        "business_capability"
-            | "portfolio_application"
-            | "portfolio_service"
-            | "technology_component"
-            | "technology_standard"
-            | "organization_unit"
-            | "owner"
-            | "lifecycle_milestone"
-            | "roadmap_item"
-            | "risk"
-            | "control"
-            | "governance_decision"
-            | "data_source"
-    ) {
+    if !PORTFOLIO_KINDS.contains(&object.kind.as_str()) {
         bail!(
             "{} has unsupported portfolio object kind {}",
             object.id,
             object.kind
         );
     }
-    if !matches!(
-        object.status.as_str(),
-        "draft" | "proposed" | "accepted" | "deprecated" | "retired"
-    ) {
+    if !PORTFOLIO_STATUSES.contains(&object.status.as_str()) {
         bail!(
             "{} has unsupported portfolio object status {}",
             object.id,
@@ -1528,14 +1833,7 @@ fn validate_portfolio_object(object: &PortfolioObject) -> Result<()> {
     }
     validate_optional_value(
         &object.lifecycle_state,
-        &[
-            "idea",
-            "planned",
-            "active",
-            "deprecated",
-            "retiring",
-            "retired",
-        ],
+        LIFECYCLE_STATES,
         &format!("{} lifecycleState", object.id),
     )?;
     if let Some(lifecycle) = &object.lifecycle {
@@ -1543,12 +1841,12 @@ fn validate_portfolio_object(object: &PortfolioObject) -> Result<()> {
     }
     validate_optional_value(
         &object.criticality,
-        &["low", "medium", "high", "critical"],
+        CRITICALITIES,
         &format!("{} criticality", object.id),
     )?;
     validate_optional_value(
         &object.standard_state,
-        &["approved", "tolerated", "discouraged", "banned", "emerging"],
+        STANDARD_STATES,
         &format!("{} standardState", object.id),
     )?;
     ensure_non_empty_items(&object.tags, &format!("{} tag", object.id))?;
@@ -1590,19 +1888,12 @@ fn validate_portfolio_lifecycle(
 ) -> Result<()> {
     validate_optional_value(
         &lifecycle.state,
-        &[
-            "idea",
-            "planned",
-            "active",
-            "deprecated",
-            "retiring",
-            "retired",
-        ],
+        LIFECYCLE_STATES,
         &format!("{} lifecycle state", object.id),
     )?;
     validate_optional_value(
         &lifecycle.target_state,
-        &["planned", "active", "deprecated", "retiring", "retired"],
+        LIFECYCLE_TARGET_STATES,
         &format!("{} lifecycle targetState", object.id),
     )?;
     if !lifecycle.phase.is_empty() {
@@ -1631,11 +1922,155 @@ fn validate_portfolio_lifecycle(
     Ok(())
 }
 
+fn validate_portfolio_saved_view(
+    view: &PortfolioSavedView,
+    portfolio_ids: &BTreeSet<&str>,
+    element_kinds: &BTreeMap<&str, &str>,
+) -> Result<()> {
+    ensure_non_empty(&view.title, &format!("{} title", view.id))?;
+    validate_required_value(
+        &view.scope,
+        &["portfolio_summary", "portfolio_view_source", "export_set"],
+        &format!("{} scope", view.id),
+    )?;
+    for kind in &view.result_kinds {
+        validate_required_value(kind, PORTFOLIO_KINDS, &format!("{} resultKind", view.id))?;
+    }
+    validate_portfolio_saved_view_query(view, portfolio_ids, element_kinds)?;
+    for sort in &view.sort {
+        validate_required_value(
+            &sort.field,
+            SAVED_VIEW_SORT_FIELDS,
+            &format!("{} sort field", view.id),
+        )?;
+        validate_required_value(
+            &sort.direction,
+            &["asc", "desc"],
+            &format!("{} sort direction", view.id),
+        )?;
+    }
+    for column in &view.columns {
+        validate_required_value(column, SAVED_VIEW_COLUMNS, &format!("{} column", view.id))?;
+    }
+    if !view.presentation.density.is_empty() {
+        validate_required_value(
+            &view.presentation.density,
+            &["compact", "comfortable", "detailed"],
+            &format!("{} presentation density", view.id),
+        )?;
+    }
+    if !view.presentation.group_by.is_empty() {
+        validate_required_value(
+            &view.presentation.group_by,
+            &[
+                "kind",
+                "status",
+                "lifecycleState",
+                "criticality",
+                "standardState",
+                "owner",
+                "capability",
+            ],
+            &format!("{} presentation groupBy", view.id),
+        )?;
+    }
+    validate_element_provenance_for_id(&view.id, &view.provenance)?;
+    Ok(())
+}
+
+fn validate_portfolio_saved_view_query(
+    view: &PortfolioSavedView,
+    portfolio_ids: &BTreeSet<&str>,
+    element_kinds: &BTreeMap<&str, &str>,
+) -> Result<()> {
+    ensure_non_empty_items(&view.query.kinds, &format!("{} query kind", view.id))?;
+    for kind in &view.query.kinds {
+        validate_required_value(kind, PORTFOLIO_KINDS, &format!("{} query kind", view.id))?;
+    }
+    for status in &view.query.statuses {
+        validate_required_value(
+            status,
+            PORTFOLIO_STATUSES,
+            &format!("{} query status", view.id),
+        )?;
+    }
+    for lifecycle_state in &view.query.lifecycle_states {
+        validate_required_value(
+            lifecycle_state,
+            LIFECYCLE_STATES,
+            &format!("{} query lifecycleState", view.id),
+        )?;
+    }
+    for criticality in &view.query.criticalities {
+        validate_required_value(
+            criticality,
+            CRITICALITIES,
+            &format!("{} query criticality", view.id),
+        )?;
+    }
+    for standard_state in &view.query.standard_states {
+        validate_required_value(
+            standard_state,
+            STANDARD_STATES,
+            &format!("{} query standardState", view.id),
+        )?;
+    }
+    ensure_non_empty_items(&view.query.tags, &format!("{} query tag", view.id))?;
+    validate_local_portfolio_refs(
+        &view.query.owner_refs,
+        portfolio_ids,
+        &format!("{} query ownerRef", view.id),
+    )?;
+    validate_local_portfolio_refs(
+        &view.query.capability_refs,
+        portfolio_ids,
+        &format!("{} query capabilityRef", view.id),
+    )?;
+    validate_local_portfolio_refs(
+        &view.query.technology_refs,
+        portfolio_ids,
+        &format!("{} query technologyRef", view.id),
+    )?;
+    validate_local_portfolio_refs(
+        &view.query.risk_refs,
+        portfolio_ids,
+        &format!("{} query riskRef", view.id),
+    )?;
+    for related_element_ref in &view.query.related_element_refs {
+        if !element_kinds.contains_key(related_element_ref.as_str()) {
+            bail!(
+                "{} query relatedElementRef references missing model element {}",
+                view.id,
+                related_element_ref
+            );
+        }
+    }
+    Ok(())
+}
+
+fn validate_local_portfolio_refs(
+    refs: &[String],
+    portfolio_ids: &BTreeSet<&str>,
+    field: &str,
+) -> Result<()> {
+    ensure_non_empty_items(refs, field)?;
+    for reference in refs {
+        if !portfolio_ids.contains(reference.as_str()) {
+            bail!("{field} references missing portfolio object {reference}");
+        }
+    }
+    Ok(())
+}
+
 pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
     let mut warnings = Vec::new();
     require_version("manifest", &package.manifest.schema_version)?;
     require_version("requirements", &package.requirements.schema_version)?;
     require_version("portfolio", &package.portfolio.schema_version)?;
+    require_version(
+        "portfolio saved views",
+        &package.portfolio_saved_views.schema_version,
+    )?;
     require_version("elements", &package.elements.schema_version)?;
     require_version("relationships", &package.relationships.schema_version)?;
     require_version("diagrams", &package.diagrams.schema_version)?;
@@ -1714,6 +2149,11 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
                 );
             }
         }
+    }
+
+    for saved_view in &package.portfolio_saved_views.views {
+        ensure_unique(&mut ids, &saved_view.id)?;
+        validate_portfolio_saved_view(saved_view, &portfolio_ids, &element_kinds)?;
     }
 
     for relationship in &package.relationships.relationships {
@@ -1941,14 +2381,18 @@ fn push_count_lines<'a>(
 }
 
 fn validate_element_provenance(element: &ModelElement) -> Result<()> {
-    for source_ref in &element.provenance.source_refs {
-        ensure_non_empty(source_ref, &format!("{} provenance sourceRef", element.id))?;
+    validate_element_provenance_for_id(&element.id, &element.provenance)
+}
+
+fn validate_element_provenance_for_id(id: &str, provenance: &ElementProvenance) -> Result<()> {
+    for source_ref in &provenance.source_refs {
+        ensure_non_empty(source_ref, &format!("{id} provenance sourceRef"))?;
     }
-    if let Some(created_by) = &element.provenance.created_by {
-        ensure_non_empty(created_by, &format!("{} provenance createdBy", element.id))?;
+    if let Some(created_by) = &provenance.created_by {
+        ensure_non_empty(created_by, &format!("{id} provenance createdBy"))?;
     }
-    if let Some(created_at) = &element.provenance.created_at {
-        ensure_non_empty(created_at, &format!("{} provenance createdAt", element.id))?;
+    if let Some(created_at) = &provenance.created_at {
+        ensure_non_empty(created_at, &format!("{id} provenance createdAt"))?;
     }
     Ok(())
 }
@@ -3291,6 +3735,14 @@ pub fn validate_proposal(proposal: &Proposal) -> Result<()> {
                 require_args(&operation.args, &["objectId"])?;
                 require_any_update_arg(&operation.args, "update_portfolio_object")?;
             }
+            "create_portfolio_saved_view" => {
+                require_args(&operation.args, &["id", "title", "scope"])?
+            }
+            "update_portfolio_saved_view" => {
+                require_args(&operation.args, &["viewId"])?;
+                require_any_update_arg(&operation.args, "update_portfolio_saved_view")?;
+            }
+            "remove_portfolio_saved_view" => require_args(&operation.args, &["viewId"])?,
             "create_model_element" => require_args(&operation.args, &["id", "kind", "name"])?,
             "update_model_element_details" => {
                 require_args(&operation.args, &["elementId"])?;
@@ -3951,6 +4403,10 @@ fn write_package(package: &ModelPackage) -> Result<()> {
         package.root.join("model/portfolio.json"),
         &package.portfolio,
     )?;
+    write_json(
+        package.root.join("views/portfolio-views.json"),
+        &package.portfolio_saved_views,
+    )?;
     write_json(package.root.join("model/elements.json"), &package.elements)?;
     write_json(
         package.root.join("model/relationships.json"),
@@ -3989,6 +4445,9 @@ fn ensure_available_id(package: &ModelPackage, id: &str) -> Result<()> {
     for existing in &package.portfolio.objects {
         ids.insert(existing.id.as_str());
     }
+    for existing in &package.portfolio_saved_views.views {
+        ids.insert(existing.id.as_str());
+    }
     for existing in &package.elements.elements {
         ids.insert(existing.id.as_str());
     }
@@ -4015,6 +4474,10 @@ fn sort_package(package: &mut ModelPackage) {
     package
         .portfolio
         .objects
+        .sort_by(|left, right| left.id.cmp(&right.id));
+    package
+        .portfolio_saved_views
+        .views
         .sort_by(|left, right| left.id.cmp(&right.id));
     package
         .elements
@@ -4066,6 +4529,14 @@ fn ensure_non_empty_items(values: &[String], field: &str) -> Result<()> {
 
 fn validate_optional_value(value: &str, supported: &[&str], field: &str) -> Result<()> {
     if value.is_empty() || supported.contains(&value) {
+        return Ok(());
+    }
+    bail!("{field} has unsupported value {value}");
+}
+
+fn validate_required_value(value: &str, supported: &[&str], field: &str) -> Result<()> {
+    ensure_non_empty(value, field)?;
+    if supported.contains(&value) {
         return Ok(());
     }
     bail!("{field} has unsupported value {value}");
@@ -4127,6 +4598,10 @@ fn default_priority() -> String {
 
 fn default_element_status() -> String {
     "accepted".to_string()
+}
+
+fn default_sort_direction() -> String {
+    "asc".to_string()
 }
 
 fn is_default_element_status(status: &str) -> bool {
@@ -4557,6 +5032,39 @@ mod tests {
             .unwrap();
         assert_eq!(capability.tags, vec!["proposal-review", "portfolio"]);
         assert_eq!(capability.technology_refs, vec!["technology.react-flow"]);
+    }
+
+    #[test]
+    fn accepted_proposal_applies_portfolio_saved_view_operations() {
+        let root = copy_example_to_temp();
+        let proposal_path = root.join("proposals/open/accepted-portfolio-saved-view.json");
+
+        let summary = apply_accepted_proposal_file(&root, &proposal_path).unwrap();
+        assert_eq!(summary.portfolio_saved_view_operations_applied, 3);
+
+        let package = load_package(&root).unwrap();
+        validate_package(&package).unwrap();
+        assert!(
+            package
+                .portfolio_saved_views
+                .views
+                .iter()
+                .all(|view| view.id != "portfolio-view.prototype-technologies")
+        );
+        let saved_view = package
+            .portfolio_saved_views
+            .views
+            .iter()
+            .find(|view| view.id == "portfolio-view.active-critical")
+            .unwrap();
+        assert_eq!(
+            saved_view.title,
+            "Active and planned critical portfolio facts"
+        );
+        assert_eq!(
+            saved_view.columns,
+            vec!["name", "kind", "lifecycleState", "criticality", "ownerRefs"]
+        );
     }
 
     #[test]
