@@ -61,6 +61,14 @@ The initial `query` object is deliberately boring:
 
 Every populated array uses OR semantics within the field. Different fields combine with AND semantics. This keeps saved views explainable in review and cheap to validate. More advanced boolean groups can wait until someone has evidence they are worth the complexity and not just trying to smuggle a query language into a modeling tool.
 
+Portfolio reference fields use the package-wide portfolio reference syntax:
+
+- `owner.product-architecture` is a package-local ref and must resolve locally.
+- `package:another-redshield-package#owner.platform` is a cross-package RedShield ref. It resolves locally only when the package ID matches the current `manifest.projectId`; otherwise it is preserved as an unresolved external reference warning until package imports are loaded.
+- `source:cmdb.primary#platform-team` is an imported/source-system ref and is preserved as an unresolved external reference warning.
+
+Saved views should use qualified refs for imports and cross-package filters. An unqualified missing ref is treated as a local typo.
+
 ## Sorting And Columns
 
 Supported `sort` fields start with:
@@ -108,7 +116,7 @@ Saved portfolio views are created and changed through typed proposal operations,
 - `update_portfolio_saved_view`
 - `remove_portfolio_saved_view`
 
-The validator rejects unknown query fields, unsupported enum values, duplicate IDs, empty titles, no-op updates, and references to missing owners, capabilities, technologies, risks, or model elements when those reference targets are local package objects.
+The validator rejects unknown query fields, unsupported enum values, duplicate IDs, empty titles, no-op updates, malformed qualified portfolio refs, unqualified missing portfolio refs, and references to missing model elements. Qualified `package:` and `source:` portfolio refs that cannot be resolved from the current package are preserved with validation warnings.
 
 ## Boundaries
 
