@@ -3307,6 +3307,13 @@ pub fn render_use_case_svg(package: &ModelPackage, diagram_id: Option<&str>) -> 
     render_dot_to_svg(&render_use_case_dot(package, diagram_id)?)
 }
 
+pub fn render_lifecycle_roadmap_svg(
+    package: &ModelPackage,
+    diagram_id: Option<&str>,
+) -> Result<String> {
+    render_dot_to_svg(&render_lifecycle_roadmap_dot(package, diagram_id)?)
+}
+
 pub fn render_use_case_dot(package: &ModelPackage, diagram_id: Option<&str>) -> Result<String> {
     let diagram = find_use_case_diagram(package, diagram_id)?;
     let elements: BTreeMap<&str, &ModelElement> = package
@@ -3420,6 +3427,116 @@ pub fn render_use_case_dot(package: &ModelPackage, diagram_id: Option<&str>) -> 
     Ok(dot)
 }
 
+pub fn render_lifecycle_roadmap_dot(
+    package: &ModelPackage,
+    diagram_id: Option<&str>,
+) -> Result<String> {
+    let diagram = find_lifecycle_roadmap_diagram(package, diagram_id)?;
+    let portfolio: BTreeMap<&str, &PortfolioObject> = package
+        .portfolio
+        .objects
+        .iter()
+        .map(|object| (object.id.as_str(), object))
+        .collect();
+    let objects: Vec<&PortfolioObject> = diagram
+        .portfolio_refs
+        .iter()
+        .filter_map(|id| portfolio.get(id.as_str()).copied())
+        .collect();
+
+    let mut dot = String::new();
+    writeln!(
+        dot,
+        "digraph {} {{",
+        dot_id(diagram.id.strip_prefix("diagram.").unwrap_or(&diagram.id))
+    )?;
+    writeln!(
+        dot,
+        "  graph [rankdir=LR, bgcolor=\"{}\", pad=\"0.35\", nodesep=\"0.45\", ranksep=\"0.9\", label=\"{}\", labelloc=t, fontsize=20, fontname=\"Inter, Arial, sans-serif\", fontcolor=\"{}\"]",
+        "#f8fafc",
+        escape_dot_label(&diagram.title),
+        "#0f172a"
+    )?;
+    writeln!(
+        dot,
+        "  node [fontname=\"Inter, Arial, sans-serif\", fontsize=11, style=\"rounded,filled\", color=\"{}\", fontcolor=\"{}\"]",
+        "#334155", "#0f172a"
+    )?;
+    writeln!(
+        dot,
+        "  edge [fontname=\"Inter, Arial, sans-serif\", fontsize=10, color=\"{}\", fontcolor=\"{}\", arrowsize=0.75]",
+        "#64748b", "#475569"
+    )?;
+
+    for state in [
+        "idea",
+        "planned",
+        "active",
+        "deprecated",
+        "retiring",
+        "retired",
+        "unspecified",
+    ] {
+        let state_objects: Vec<&PortfolioObject> = objects
+            .iter()
+            .copied()
+            .filter(|object| lifecycle_bucket(object) == state)
+            .collect();
+        if state_objects.is_empty() {
+            continue;
+        }
+        writeln!(
+            dot,
+            "  subgraph cluster_{} {{\n    label=\"{}\"\n    color=\"{}\"\n    fillcolor=\"{}\"\n    style=\"rounded,filled\"\n    fontname=\"Inter, Arial, sans-serif\"\n    fontsize=14\n    fontcolor=\"{}\"",
+            dot_id(state),
+            escape_dot_label(&format_lifecycle_state(state)),
+            "#cbd5e1",
+            "#ffffff",
+            "#334155"
+        )?;
+        for object in state_objects {
+            let shape = if object.kind == "lifecycle_milestone" {
+                "diamond"
+            } else {
+                "box"
+            };
+            writeln!(
+                dot,
+                "    {} [id=\"{}\", label=\"{}\", shape={}, fillcolor=\"{}\", color=\"{}\", tooltip=\"{}\"]",
+                dot_id(&object.id),
+                escape_dot_label(&object.id),
+                escape_dot_label(&portfolio_roadmap_label(object)),
+                shape,
+                lifecycle_fill_color(object),
+                lifecycle_border_color(object),
+                escape_dot_label(&object.id)
+            )?;
+        }
+        writeln!(dot, "  }}")?;
+    }
+
+    let included: BTreeSet<&str> = objects.iter().map(|object| object.id.as_str()).collect();
+    for object in &objects {
+        let Some(lifecycle) = &object.lifecycle else {
+            continue;
+        };
+        for milestone_ref in &lifecycle.milestone_refs {
+            if included.contains(milestone_ref.as_str()) {
+                writeln!(
+                    dot,
+                    "  {} -> {} [id=\"{}\", label=\"milestone\", style=dashed]",
+                    dot_id(&object.id),
+                    dot_id(milestone_ref),
+                    escape_dot_label(&format!("{}.{}", object.id, milestone_ref))
+                )?;
+            }
+        }
+    }
+
+    writeln!(dot, "}}")?;
+    Ok(dot)
+}
+
 pub fn render_dot_to_svg(dot: &str) -> Result<String> {
     let mut child = Command::new("dot")
         .arg("-Tsvg")
@@ -3469,6 +3586,88 @@ fn find_use_case_diagram<'a>(
             .find(|diagram| diagram.view_kind == "use_case"),
     }
     .ok_or_else(|| anyhow!("no matching use-case diagram found"))
+}
+
+fn find_lifecycle_roadmap_diagram<'a>(
+    package: &'a ModelPackage,
+    diagram_id: Option<&str>,
+) -> Result<&'a DiagramView> {
+    match diagram_id {
+        Some(id) => package
+            .diagrams
+            .diagrams
+            .iter()
+            .find(|diagram| diagram.id == id && diagram.view_kind == "lifecycle_roadmap"),
+        None => package
+            .diagrams
+            .diagrams
+            .iter()
+            .find(|diagram| diagram.view_kind == "lifecycle_roadmap"),
+    }
+    .ok_or_else(|| anyhow!("no matching lifecycle roadmap diagram found"))
+}
+
+fn lifecycle_bucket(object: &PortfolioObject) -> &str {
+    if object.lifecycle_state.is_empty() {
+        "unspecified"
+    } else {
+        object.lifecycle_state.as_str()
+    }
+}
+
+fn format_lifecycle_state(state: &str) -> String {
+    if state == "unspecified" {
+        return "Unspecified".to_string();
+    }
+    let mut chars = state.chars();
+    match chars.next() {
+        Some(first) => format!("{}{}", first.to_ascii_uppercase(), chars.as_str()),
+        None => String::new(),
+    }
+}
+
+fn portfolio_roadmap_label(object: &PortfolioObject) -> String {
+    let target = object
+        .lifecycle
+        .as_ref()
+        .and_then(|lifecycle| {
+            if lifecycle.target_date.is_empty() {
+                None
+            } else {
+                Some(lifecycle.target_date.as_str())
+            }
+        })
+        .unwrap_or("no target date");
+    format!(
+        "{}\n{}\n{}",
+        object.name,
+        object.kind.replace('_', " "),
+        target
+    )
+}
+
+fn lifecycle_fill_color(object: &PortfolioObject) -> &'static str {
+    match lifecycle_bucket(object) {
+        "idea" => "#f8fafc",
+        "planned" => "#eff6ff",
+        "active" => "#ecfdf5",
+        "deprecated" => "#fff7ed",
+        "retiring" => "#fef2f2",
+        "retired" => "#f1f5f9",
+        _ => "#ffffff",
+    }
+}
+
+fn lifecycle_border_color(object: &PortfolioObject) -> &'static str {
+    match lifecycle_bucket(object) {
+        "idea" => "#64748b",
+        "planned" => "#2563eb",
+        "active" => "#059669",
+        "deprecated" => "#ea580c",
+        "retiring" => "#dc2626",
+        "retired" => "#475569",
+        _ => "#94a3b8",
+    }
 }
 
 fn read_json<T: for<'de> Deserialize<'de>>(path: impl AsRef<Path>) -> Result<T> {
@@ -3691,7 +3890,10 @@ fn dot_id(input: &str) -> String {
 }
 
 fn escape_dot_label(input: &str) -> String {
-    input.replace('\\', "\\\\").replace('"', "\\\"")
+    input
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
 }
 
 #[cfg(test)]
@@ -3759,6 +3961,16 @@ mod tests {
         let svg = render_use_case_svg(&package, Some("diagram.first-use-case")).unwrap();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Review proposal"));
+        let roadmap_dot =
+            render_lifecycle_roadmap_dot(&package, Some("diagram.portfolio-lifecycle-roadmap"))
+                .unwrap();
+        assert!(roadmap_dot.contains("application.redshield-architect"));
+        assert!(roadmap_dot.contains("milestone.alpha"));
+        let roadmap_svg =
+            render_lifecycle_roadmap_svg(&package, Some("diagram.portfolio-lifecycle-roadmap"))
+                .unwrap();
+        assert!(roadmap_svg.contains("<svg"));
+        assert!(roadmap_svg.contains("Portfolio Lifecycle Roadmap"));
     }
 
     #[test]

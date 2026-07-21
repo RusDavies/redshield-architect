@@ -37,6 +37,12 @@ Render the first use-case diagram:
 cargo run -- render-use-case examples/minimal/redshield target/redshield/first-use-case.svg
 ```
 
+Render the first read-only portfolio lifecycle roadmap:
+
+```sh
+cargo run -- render-lifecycle-roadmap examples/minimal/redshield target/redshield/portfolio-lifecycle-roadmap.svg
+```
+
 The renderer converts semantic model element and relationship IDs into Graphviz DOT, then renders SVG through `dot -Tsvg`. DOT and SVG are generated artifacts; the canonical source remains the JSON model package.
 
 The `web/` spike loads the same example model into an interactive React Flow canvas and uses ELK for auto-layout. It is the first GUI interaction candidate for direct manipulation: move, align, distribute, connect, inspect, and persist view metadata.
@@ -83,6 +89,8 @@ Portfolio changes use typed proposal operations:
 The schema rejects unknown object kinds, unsupported lifecycle/criticality/standard states, stray operation args, and no-op portfolio updates. Accepted proposal application writes `model/portfolio.json` through the same validation path as model elements, relationships, diagrams, trace links, and render profiles.
 
 The CLI `portfolio-summary` command and the workbench sidebar provide read-only portfolio summaries: object totals, kind/lifecycle/criticality counts, standard-state hints, related model-link counts, and a compact object list. They do not edit portfolio data.
+
+The CLI `render-lifecycle-roadmap` command renders the first portfolio view kind as generated SVG. It groups referenced portfolio objects by lifecycle state, renders lifecycle milestones distinctly, and draws milestone links from structured lifecycle metadata when both objects are in the view.
 
 ## Model Elements
 

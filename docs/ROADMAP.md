@@ -20,6 +20,7 @@
 - Define lifecycle fields and milestone semantics for applications, products, services, and technology components.
 - Define package-level portfolio view kinds beyond UML.
 - Add read-only CLI/workbench summaries for portfolio objects.
+- Add generated/read-only rendering for the first portfolio lifecycle roadmap.
 
 ## Milestone 2: Proposal Review Workflow
 

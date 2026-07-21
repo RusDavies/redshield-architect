@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail};
 use redshield_architect::{
-    apply_accepted_proposal_file, load_package, portfolio_summary_lines, render_use_case_svg,
-    validate_package, validate_proposals,
+    apply_accepted_proposal_file, load_package, portfolio_summary_lines,
+    render_lifecycle_roadmap_svg, render_use_case_svg, validate_package, validate_proposals,
 };
 use std::env;
 use std::fs;
@@ -42,6 +42,23 @@ fn main() -> Result<()> {
             let package = load_package(&root)?;
             validate_package(&package)?;
             let svg = render_use_case_svg(&package, None)?;
+            if let Some(parent) = output.parent() {
+                fs::create_dir_all(parent)
+                    .with_context(|| format!("creating {}", parent.display()))?;
+            }
+            fs::write(&output, svg).with_context(|| format!("writing {}", output.display()))?;
+            println!("rendered {}", output.display());
+        }
+        "render-lifecycle-roadmap" => {
+            let root = args
+                .next()
+                .unwrap_or_else(|| "examples/minimal/redshield".to_string());
+            let output = args.next().map(PathBuf::from).unwrap_or_else(|| {
+                PathBuf::from("target/redshield/portfolio-lifecycle-roadmap.svg")
+            });
+            let package = load_package(&root)?;
+            validate_package(&package)?;
+            let svg = render_lifecycle_roadmap_svg(&package, None)?;
             if let Some(parent) = output.parent() {
                 fs::create_dir_all(parent)
                     .with_context(|| format!("creating {}", parent.display()))?;
@@ -109,6 +126,7 @@ fn print_usage() {
     println!("Usage:");
     println!("  redshield-architect validate [redshield-dir]");
     println!("  redshield-architect render-use-case [redshield-dir] [output.svg]");
+    println!("  redshield-architect render-lifecycle-roadmap [redshield-dir] [output.svg]");
     println!("  redshield-architect portfolio-summary [redshield-dir]");
     println!("  redshield-architect apply-proposal [redshield-dir] <proposal.json>");
 }
