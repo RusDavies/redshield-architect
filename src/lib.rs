@@ -2472,6 +2472,77 @@ fn validate_local_portfolio_refs(
     Ok(())
 }
 
+fn validate_portfolio_object_refs(
+    object: &PortfolioObject,
+    portfolio_kinds_by_id: &BTreeMap<&str, &str>,
+    warnings: &mut Vec<String>,
+) -> Result<()> {
+    validate_portfolio_ref_kinds(
+        &object.owner_refs,
+        portfolio_kinds_by_id,
+        &["owner"],
+        &format!("{} ownerRef", object.id),
+        warnings,
+    )?;
+    validate_portfolio_ref_kinds(
+        &object.capability_refs,
+        portfolio_kinds_by_id,
+        &["business_capability"],
+        &format!("{} capabilityRef", object.id),
+        warnings,
+    )?;
+    validate_portfolio_ref_kinds(
+        &object.technology_refs,
+        portfolio_kinds_by_id,
+        &["technology_component", "technology_standard"],
+        &format!("{} technologyRef", object.id),
+        warnings,
+    )?;
+    validate_portfolio_ref_kinds(
+        &object.risk_refs,
+        portfolio_kinds_by_id,
+        &["risk"],
+        &format!("{} riskRef", object.id),
+        warnings,
+    )?;
+    if let Some(lifecycle) = &object.lifecycle {
+        validate_portfolio_ref_kinds(
+            &lifecycle.milestone_refs,
+            portfolio_kinds_by_id,
+            &["lifecycle_milestone"],
+            &format!("{} lifecycle milestoneRef", object.id),
+            warnings,
+        )?;
+    }
+    Ok(())
+}
+
+fn validate_portfolio_ref_kinds(
+    refs: &[String],
+    portfolio_kinds_by_id: &BTreeMap<&str, &str>,
+    allowed_kinds: &[&str],
+    field: &str,
+    warnings: &mut Vec<String>,
+) -> Result<()> {
+    for reference in refs {
+        let Some(kind) = portfolio_kinds_by_id.get(reference.as_str()) else {
+            warnings.push(format!(
+                "{field} references non-local portfolio object {reference}"
+            ));
+            continue;
+        };
+        if !allowed_kinds.contains(kind) {
+            bail!(
+                "{field} references {} with kind {}, expected {}",
+                reference,
+                kind,
+                allowed_kinds.join(" or ")
+            );
+        }
+    }
+    Ok(())
+}
+
 fn validate_roadmap_presentation(presentation: &RoadmapPresentation) -> Result<()> {
     ensure_non_empty(&presentation.title, &format!("{} title", presentation.id))?;
     if presentation.applies_to_view_kinds.is_empty() {
@@ -2620,6 +2691,15 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
         .iter()
         .map(|object| object.id.as_str())
         .collect();
+    let portfolio_kinds_by_id: BTreeMap<&str, &str> = package
+        .portfolio
+        .objects
+        .iter()
+        .map(|object| (object.id.as_str(), object.kind.as_str()))
+        .collect();
+    for object in &package.portfolio.objects {
+        validate_portfolio_object_refs(object, &portfolio_kinds_by_id, &mut warnings)?;
+    }
 
     let mut element_kinds = BTreeMap::new();
     for element in &package.elements.elements {
@@ -2656,7 +2736,7 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
         }
         validate_element_provenance(element)?;
         validate_external_references(element)?;
-        validate_architecture_details(element)?;
+        validate_architecture_details(element, &portfolio_kinds_by_id, &mut warnings)?;
         validate_classifier_details(element)?;
         validate_specialized_element_details(element)?;
         element_kinds.insert(element.id.as_str(), element.kind.as_str());
@@ -3125,7 +3205,11 @@ fn validate_external_references(element: &ModelElement) -> Result<()> {
     Ok(())
 }
 
-fn validate_architecture_details(element: &ModelElement) -> Result<()> {
+fn validate_architecture_details(
+    element: &ModelElement,
+    portfolio_kinds_by_id: &BTreeMap<&str, &str>,
+    warnings: &mut Vec<String>,
+) -> Result<()> {
     let architecture = &element.architecture;
 
     validate_optional_enum(
@@ -3152,6 +3236,13 @@ fn validate_architecture_details(element: &ModelElement) -> Result<()> {
             &owner.ref_id,
             &format!("{} architecture owner ref", element.id),
         )?;
+        validate_portfolio_ref_kinds(
+            std::slice::from_ref(&owner.ref_id),
+            portfolio_kinds_by_id,
+            &["owner"],
+            &format!("{} architecture owner ref", element.id),
+            warnings,
+        )?;
         if !owner.name.is_empty() {
             ensure_non_empty(
                 &owner.name,
@@ -3177,6 +3268,13 @@ fn validate_architecture_details(element: &ModelElement) -> Result<()> {
             &lifecycle.milestone_refs,
             &format!("{} architecture lifecycle milestoneRef", element.id),
         )?;
+        validate_portfolio_ref_kinds(
+            &lifecycle.milestone_refs,
+            portfolio_kinds_by_id,
+            &["lifecycle_milestone"],
+            &format!("{} architecture lifecycle milestoneRef", element.id),
+            warnings,
+        )?;
         if !lifecycle.phase.is_empty() {
             ensure_non_empty(
                 &lifecycle.phase,
@@ -3197,6 +3295,13 @@ fn validate_architecture_details(element: &ModelElement) -> Result<()> {
         ensure_non_empty(
             &technology.ref_id,
             &format!("{} architecture technology ref", element.id),
+        )?;
+        validate_portfolio_ref_kinds(
+            std::slice::from_ref(&technology.ref_id),
+            portfolio_kinds_by_id,
+            &["technology_component", "technology_standard"],
+            &format!("{} architecture technology ref", element.id),
+            warnings,
         )?;
         validate_optional_enum(
             &technology.role,
@@ -3231,6 +3336,13 @@ fn validate_architecture_details(element: &ModelElement) -> Result<()> {
             &risk.ref_id,
             &format!("{} architecture risk ref", element.id),
         )?;
+        validate_portfolio_ref_kinds(
+            std::slice::from_ref(&risk.ref_id),
+            portfolio_kinds_by_id,
+            &["risk"],
+            &format!("{} architecture risk ref", element.id),
+            warnings,
+        )?;
         validate_optional_enum(
             &risk.severity,
             &["low", "medium", "high", "critical"],
@@ -3255,6 +3367,13 @@ fn validate_architecture_details(element: &ModelElement) -> Result<()> {
         ensure_non_empty(
             &capability.ref_id,
             &format!("{} architecture capability ref", element.id),
+        )?;
+        validate_portfolio_ref_kinds(
+            std::slice::from_ref(&capability.ref_id),
+            portfolio_kinds_by_id,
+            &["business_capability"],
+            &format!("{} architecture capability ref", element.id),
+            warnings,
         )?;
         validate_optional_enum(
             &capability.fit,
@@ -3286,6 +3405,13 @@ fn validate_architecture_details(element: &ModelElement) -> Result<()> {
         ensure_non_empty(
             &service.ref_id,
             &format!("{} architecture service ref", element.id),
+        )?;
+        validate_portfolio_ref_kinds(
+            std::slice::from_ref(&service.ref_id),
+            portfolio_kinds_by_id,
+            &["portfolio_service"],
+            &format!("{} architecture service ref", element.id),
+            warnings,
         )?;
         validate_optional_enum(
             &service.relationship,
@@ -6353,6 +6479,45 @@ mod tests {
                 .iter()
                 .all(|line| !line.starts_with("- capability.model-review "))
         );
+    }
+
+    #[test]
+    fn validation_rejects_portfolio_ref_with_wrong_local_kind() {
+        let root = copy_example_to_temp();
+        let mut package = load_package(&root).unwrap();
+        let application = package
+            .portfolio
+            .objects
+            .iter_mut()
+            .find(|object| object.id == "application.redshield-architect")
+            .unwrap();
+        application.owner_refs = vec!["capability.model-review".to_string()];
+
+        let error = validate_package(&package).unwrap_err().to_string();
+        assert!(
+            error.contains(
+                "ownerRef references capability.model-review with kind business_capability"
+            )
+        );
+    }
+
+    #[test]
+    fn validation_warns_for_non_local_portfolio_refs() {
+        let root = copy_example_to_temp();
+        let mut package = load_package(&root).unwrap();
+        let application = package
+            .portfolio
+            .objects
+            .iter_mut()
+            .find(|object| object.id == "application.redshield-architect")
+            .unwrap();
+        application.owner_refs = vec!["external-owner.platform".to_string()];
+
+        let warnings = validate_package(&package).unwrap();
+        assert!(warnings.iter().any(|warning| {
+            warning
+                == "application.redshield-architect ownerRef references non-local portfolio object external-owner.platform"
+        }));
     }
 
     #[test]

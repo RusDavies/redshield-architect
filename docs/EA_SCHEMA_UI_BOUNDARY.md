@@ -83,10 +83,12 @@ The first validation boundary should remain conservative:
 - object IDs are globally unique across the package
 - portfolio object kind/status/lifecycle/criticality/standard-state values are bounded
 - `relatedElementRefs` must point to existing model elements
+- local `ownerRefs`, `capabilityRefs`, `technologyRefs`, `riskRefs`, and lifecycle milestone refs must point to portfolio objects of the expected kind
+- non-local portfolio refs currently produce validation warnings until import and cross-package identity semantics become first-class
 - proposal operations reject no-op portfolio updates
 - proposal application writes portfolio changes through package validation
 
-Reference lists such as `ownerRefs`, `capabilityRefs`, `technologyRefs`, and `riskRefs` should stay non-empty when present but should not require same-package targets yet. Imports, cross-package references, and external estate systems may need legitimate references that are not locally materialized on day one.
+The same local-kind validation applies to model-element `architecture` mappings for owners, technologies, risks, capabilities, services, and lifecycle milestones. Imports, cross-package references, and external estate systems may still need legitimate references that are not locally materialized, so missing local targets remain warnings rather than hard failures for now.
 
 ## Deferred Work
 
