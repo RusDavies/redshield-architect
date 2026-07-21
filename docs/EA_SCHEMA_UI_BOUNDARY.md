@@ -26,6 +26,8 @@ These are deliberately metamodel-neutral. RedShield can map to ArchiMate, UML pr
 
 The ArchiMate posture is documented in [ArchiMate Alignment Decision](ARCHIMATE_ALIGNMENT.md): RedShield remains native internally and treats ArchiMate as a later mapping/export target.
 
+Lifecycle field semantics are documented in [Portfolio Lifecycle Semantics](PORTFOLIO_LIFECYCLE.md): lifecycle data is native RedShield package state for applications, products represented as applications, services, and technologies.
+
 ## MVP UI Boundary
 
 The MVP UI should not try to provide full CRUD, landscape dashboards, survey workflows, import wizards, or enterprise reporting for every portfolio object. The first visible UI should stay close to the core RedShield workflow:

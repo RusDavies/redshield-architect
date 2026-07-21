@@ -878,6 +878,14 @@ fn schema_validation_accepts_portfolio_operations() {
                     "name": "Decision evidence",
                     "status": "accepted",
                     "lifecycleState": "active",
+                    "lifecycle": {
+                        "state": "active",
+                        "phase": "supported",
+                        "currentFrom": "2026-07-20",
+                        "targetState": "active",
+                        "targetDate": "2026-09-30",
+                        "milestoneRefs": ["milestone.alpha"]
+                    },
                     "criticality": "high",
                     "relatedElementRefs": ["component.workbench"],
                     "sourceRefs": ["docs/PRODUCT_BRIEF.md"]
@@ -899,6 +907,40 @@ fn schema_validation_accepts_portfolio_operations() {
     assert!(
         validator.validate(&valid).is_ok(),
         "proposal schema should accept typed portfolio operations"
+    );
+}
+
+#[test]
+fn schema_validation_rejects_invalid_portfolio_lifecycle_date() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let invalid = json!({
+        "proposalId": "proposal.invalid-portfolio-date",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T21:18:00Z",
+        "intent": "Attempt an invalid lifecycle date.",
+        "operations": [
+            {
+                "opId": "op.bad-lifecycle",
+                "op": "create_portfolio_object",
+                "args": {
+                    "id": "technology.bad-date",
+                    "kind": "technology_component",
+                    "name": "Bad date",
+                    "lifecycle": {
+                        "state": "planned",
+                        "targetDate": "soon-ish"
+                    }
+                },
+                "rationale": "Lifecycle dates should remain deterministic package data."
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "proposal schema should reject invalid portfolio lifecycle dates"
     );
 }
 

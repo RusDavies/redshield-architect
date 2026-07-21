@@ -348,6 +348,7 @@
         "description": { "type": "string" },
         "status": { "type": "string", "enum": ["draft", "proposed", "accepted", "deprecated", "retired"] },
         "lifecycleState": { "type": "string", "enum": ["idea", "planned", "active", "deprecated", "retiring", "retired"] },
+        "lifecycle": { "$ref": "#/$defs/portfolioLifecycle" },
         "criticality": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
         "standardState": { "type": "string", "enum": ["approved", "tolerated", "discouraged", "banned", "emerging"] },
         "tags": { "type": "array", "items": { "type": "string", "minLength": 1 } },
@@ -374,6 +375,7 @@
         "description": { "type": "string" },
         "status": { "type": "string", "enum": ["draft", "proposed", "accepted", "deprecated", "retired"] },
         "lifecycleState": { "type": "string", "enum": ["idea", "planned", "active", "deprecated", "retiring", "retired"] },
+        "lifecycle": { "$ref": "#/$defs/portfolioLifecycle" },
         "criticality": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
         "standardState": { "type": "string", "enum": ["approved", "tolerated", "discouraged", "banned", "emerging"] },
         "tags": { "type": "array", "items": { "type": "string", "minLength": 1 } },
@@ -710,6 +712,34 @@
         "governance_decision",
         "data_source"
       ]
+    },
+    "portfolioLifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["idea", "planned", "active", "deprecated", "retiring", "retired"]
+        },
+        "phase": { "type": "string", "minLength": 1 },
+        "currentFrom": { "$ref": "#/$defs/date" },
+        "targetState": {
+          "type": "string",
+          "enum": ["planned", "active", "deprecated", "retiring", "retired"]
+        },
+        "targetDate": { "$ref": "#/$defs/date" },
+        "endOfSupportDate": { "$ref": "#/$defs/date" },
+        "retirementDate": { "$ref": "#/$defs/date" },
+        "milestoneRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
     },
     "externalReference": {
       "type": "object",
