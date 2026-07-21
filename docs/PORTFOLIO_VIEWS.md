@@ -25,6 +25,12 @@ Portfolio views use the same `DiagramView` envelope as UML views:
 
 The historical layout field name `modelRef` is still used for nodes. In portfolio views, a layout node may refer to either a model element or a portfolio object, as long as the object is listed in `modelRefs` or `portfolioRefs`.
 
+## Summary Filters
+
+Portfolio summary filters are temporary local controls for narrowing the current read-only summary. The CLI search argument and workbench search/kind/lifecycle controls do not create saved package state and are not shareable links.
+
+Do not turn these first filters into saved views yet. A saved/shareable filter should become a named portfolio view or query contract only after real usage shows which fields, audience, and stability guarantees are worth preserving. Otherwise RedShield gets stealth dashboard configuration before the model contract deserves it, which is how simple tools grow tentacles and invoice you for them.
+
 ## Capability Map
 
 `capability_map` shows business capabilities and the applications, services, technologies, risks, owners, or model elements that support them.

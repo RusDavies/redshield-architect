@@ -23,6 +23,7 @@
 - Add generated/read-only rendering for the first portfolio lifecycle roadmap.
 - Add search and filters to read-only portfolio summaries.
 - Add richer generated lifecycle-roadmap layout semantics for timeline buckets, swimlanes, and target-state transitions.
+- Decide that first portfolio summary filters remain temporary/local until a named saved-view or query contract is justified by real use.
 
 ## Milestone 2: Proposal Review Workflow
 
