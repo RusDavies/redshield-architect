@@ -28,6 +28,7 @@ import portfolioViewsFile from '../../examples/minimal/redshield/views/portfolio
 import roadmapPresentationsFile from '../../examples/minimal/redshield/views/roadmap-presentations.json';
 import renderProfileFile from '../../examples/minimal/redshield/views/render-profile.json';
 import traceFile from '../../examples/minimal/redshield/trace/links.json';
+import { workbenchPersistence, type WorkbenchProposalDraft } from './workbenchPersistence';
 
 type ElementRecord = (typeof elementsFile.elements)[number];
 type PortfolioObjectRecord = {
@@ -381,6 +382,10 @@ const connectorLayoutByRef = new Map(
     connectorLayout,
   ]),
 );
+
+function errorLabel(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 function initialNodes(profile: RenderProfile): Node<RedshieldNodeData>[] {
   return activeModelRefs
@@ -1209,7 +1214,7 @@ export default function App() {
     [edges, nodes],
   );
   const proposalDraft = useMemo(
-    () => ({
+    (): WorkbenchProposalDraft => ({
       proposalId: 'proposal.workbench-draft',
       schemaVersion: '0.1.0',
       state: proposalState,
@@ -1219,41 +1224,44 @@ export default function App() {
     }),
     [operationLog, proposalState],
   );
-  const saveProposalDraft = useCallback(() => {
-    window.localStorage.setItem(proposalStorageKey, JSON.stringify(proposalDraft, null, 2));
-    setProposalStatus(`Saved ${proposalDraft.operations.length} operations locally.`);
-  }, [proposalDraft]);
-  const loadProposalDraft = useCallback(() => {
-    const saved = window.localStorage.getItem(proposalStorageKey);
-    if (!saved) {
-      setProposalStatus('No local proposal draft to load.');
-      return;
+  const saveProposalDraft = useCallback(async () => {
+    try {
+      await workbenchPersistence.saveProposalDraft(proposalStorageKey, proposalDraft);
+      setProposalStatus(`Saved ${proposalDraft.operations.length} operations locally.`);
+    } catch (error) {
+      setProposalStatus(`Could not save proposal draft: ${errorLabel(error)}.`);
     }
-    const parsed = JSON.parse(saved) as {
-      state?: string;
-      operations?: ProposalOperation[];
-    };
-    const operations = Array.isArray(parsed.operations) ? parsed.operations : [];
-    setOperationLog(operations);
-    setProposalState(parsed.state === 'accepted' ? 'accepted' : 'draft');
-    const maxSequence = operations.reduce((max, operation) => {
-      const sequence = Number(operation.opId.replace('op.view.', ''));
-      return Number.isFinite(sequence) ? Math.max(max, sequence) : max;
-    }, 0);
-    operationSequence.current = Math.max(operationSequence.current, maxSequence + 1);
-    setProposalStatus(`Loaded ${operations.length} operations from local storage.`);
+  }, [proposalDraft]);
+  const loadProposalDraft = useCallback(async () => {
+    try {
+      const loaded = await workbenchPersistence.loadProposalDraft(proposalStorageKey);
+      if (loaded.status === 'missing') {
+        setProposalStatus('No local proposal draft to load.');
+        return;
+      }
+      const parsed = loaded.draft;
+      const operations = Array.isArray(parsed.operations)
+        ? (parsed.operations as ProposalOperation[])
+        : [];
+      setOperationLog(operations);
+      setProposalState(parsed.state === 'accepted' ? 'accepted' : 'draft');
+      const maxSequence = operations.reduce((max, operation) => {
+        const sequence = Number(operation.opId.replace('op.view.', ''));
+        return Number.isFinite(sequence) ? Math.max(max, sequence) : max;
+      }, 0);
+      operationSequence.current = Math.max(operationSequence.current, maxSequence + 1);
+      setProposalStatus(`Loaded ${operations.length} operations from local storage.`);
+    } catch (error) {
+      setProposalStatus(`Could not load proposal draft: ${errorLabel(error)}.`);
+    }
   }, []);
-  const downloadProposalDraft = useCallback(() => {
-    const blob = new Blob([`${JSON.stringify(proposalDraft, null, 2)}\n`], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${proposalDraft.proposalId}.${proposalDraft.state}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    setProposalStatus(`Downloaded ${proposalDraft.state} proposal JSON.`);
+  const downloadProposalDraft = useCallback(async () => {
+    try {
+      await workbenchPersistence.exportProposalDraft(proposalDraft);
+      setProposalStatus(`Downloaded ${proposalDraft.state} proposal JSON.`);
+    } catch (error) {
+      setProposalStatus(`Could not download proposal draft: ${errorLabel(error)}.`);
+    }
   }, [proposalDraft]);
   const clearProposalDraft = useCallback(() => {
     setOperationLog([]);

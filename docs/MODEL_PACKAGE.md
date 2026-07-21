@@ -56,7 +56,7 @@ The `web/` spike loads the same example model into an interactive React Flow can
 
 The workbench emits proposal-shaped operation drafts for direct manipulation actions. Dragging nodes emits `move_diagram_node`, align/distribute controls emit their matching layout operations, ELK emits `apply_diagram_auto_layout`, creating a connector emits both a draft `create_relationship` and `connect_diagram_relationship`, and the semantic inspector emits `update_model_element_details` for reviewed element detail edits.
 
-The current spike can save/load the draft transaction in browser local storage, mark it accepted, and download proposal JSON that the CLI can apply. Direct filesystem writes from the workbench remain a later Tauri/backend adapter concern.
+The current spike saves, loads, and exports draft transactions through a small workbench persistence service. The first implementation is browser-local storage plus JSON download, but React code calls the adapter boundary instead of `localStorage` directly so a later Tauri filesystem or browser/server implementation can provide the same proposal workflow. Direct filesystem writes from the workbench remain a later Tauri/backend adapter concern.
 
 ## Portfolio Objects
 
@@ -191,7 +191,7 @@ Render-rule edits now emit typed proposal operations:
 - `upsert_render_rule`
 - `remove_render_rule`
 
-Accepted render-profile operations are applied by the same `apply-proposal` command as model/view operations. They update `views/render-profile.json`, revalidate the model package, and store the applied proposal copy under `redshield/proposals/applied/`. This gives the future Tauri/backend adapter a durable operation path instead of letting the browser mutate package files directly.
+Accepted render-profile operations are applied by the same `apply-proposal` command as model/view operations. They update `views/render-profile.json`, revalidate the model package, and store the applied proposal copy under `redshield/proposals/applied/`. This gives the workbench persistence adapter a durable operation path instead of letting the browser mutate package files directly.
 
 Export behavior for built-in, image-backed, SVG, and custom HTML renderers is defined in [Render Export Behavior](RENDER_EXPORT_BEHAVIOR.md).
 
