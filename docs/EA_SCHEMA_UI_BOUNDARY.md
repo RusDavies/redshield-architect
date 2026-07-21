@@ -84,7 +84,7 @@ The first validation boundary should remain conservative:
 - portfolio object kind/status/lifecycle/criticality/standard-state values are bounded
 - `relatedElementRefs` must point to existing model elements
 - local `ownerRefs`, `capabilityRefs`, `technologyRefs`, `riskRefs`, and lifecycle milestone refs must point to portfolio objects of the expected kind
-- `package:<projectId>#<portfolioObjectId>` refs resolve locally when `<projectId>` matches the current manifest and otherwise warn as unresolved external portfolio refs
+- `package:<projectId>#<portfolioObjectId>` refs resolve locally when `<projectId>` matches the current manifest, resolve against `imports/imports.json` when that package is declared, and otherwise warn as unresolved external portfolio refs
 - `source:<sourceId>#<externalObjectId>` refs warn as unresolved external portfolio refs for imported/source-system identity
 - unqualified missing portfolio refs fail validation as local package mistakes
 - malformed qualified refs fail validation

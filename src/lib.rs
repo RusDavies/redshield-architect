@@ -132,6 +132,34 @@ pub struct PortfolioFile {
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct ImportFile {
+    pub schema_version: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub packages: Vec<PackageImport>,
+}
+
+impl Default for ImportFile {
+    fn default() -> Self {
+        Self {
+            schema_version: "0.1.0".to_string(),
+            packages: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageImport {
+    pub project_id: String,
+    pub path: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notes: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct PortfolioObject {
     pub id: String,
     pub kind: String,
@@ -1063,6 +1091,7 @@ pub struct TraceLink {
 pub struct ModelPackage {
     pub root: PathBuf,
     pub manifest: Manifest,
+    pub imports: ImportFile,
     pub requirements: RequirementFile,
     pub portfolio: PortfolioFile,
     pub portfolio_saved_views: PortfolioSavedViewFile,
@@ -1517,6 +1546,7 @@ pub fn load_package(root: impl AsRef<Path>) -> Result<ModelPackage> {
     let root = root.as_ref().to_path_buf();
     Ok(ModelPackage {
         manifest: read_json(root.join("manifest.json"))?,
+        imports: read_optional_json(root.join("imports/imports.json"))?,
         requirements: read_json(root.join("requirements/requirements.json"))?,
         portfolio: read_json(root.join("model/portfolio.json"))?,
         portfolio_saved_views: read_json(root.join("views/portfolio-views.json"))?,
@@ -2336,6 +2366,7 @@ fn validate_portfolio_saved_view(
     view: &PortfolioSavedView,
     current_project_id: &str,
     portfolio_kinds_by_id: &BTreeMap<&str, &str>,
+    imported_portfolio_kinds_by_project: &BTreeMap<String, BTreeMap<String, String>>,
     element_kinds: &BTreeMap<&str, &str>,
     warnings: &mut Vec<String>,
 ) -> Result<()> {
@@ -2352,6 +2383,7 @@ fn validate_portfolio_saved_view(
         view,
         current_project_id,
         portfolio_kinds_by_id,
+        imported_portfolio_kinds_by_project,
         element_kinds,
         warnings,
     )?;
@@ -2400,6 +2432,7 @@ fn validate_portfolio_saved_view_query(
     view: &PortfolioSavedView,
     current_project_id: &str,
     portfolio_kinds_by_id: &BTreeMap<&str, &str>,
+    imported_portfolio_kinds_by_project: &BTreeMap<String, BTreeMap<String, String>>,
     element_kinds: &BTreeMap<&str, &str>,
     warnings: &mut Vec<String>,
 ) -> Result<()> {
@@ -2440,6 +2473,7 @@ fn validate_portfolio_saved_view_query(
         &view.query.owner_refs,
         current_project_id,
         portfolio_kinds_by_id,
+        imported_portfolio_kinds_by_project,
         &["owner"],
         &format!("{} query ownerRef", view.id),
         warnings,
@@ -2448,6 +2482,7 @@ fn validate_portfolio_saved_view_query(
         &view.query.capability_refs,
         current_project_id,
         portfolio_kinds_by_id,
+        imported_portfolio_kinds_by_project,
         &["business_capability"],
         &format!("{} query capabilityRef", view.id),
         warnings,
@@ -2456,6 +2491,7 @@ fn validate_portfolio_saved_view_query(
         &view.query.technology_refs,
         current_project_id,
         portfolio_kinds_by_id,
+        imported_portfolio_kinds_by_project,
         &["technology_component", "technology_standard"],
         &format!("{} query technologyRef", view.id),
         warnings,
@@ -2464,6 +2500,7 @@ fn validate_portfolio_saved_view_query(
         &view.query.risk_refs,
         current_project_id,
         portfolio_kinds_by_id,
+        imported_portfolio_kinds_by_project,
         &["risk"],
         &format!("{} query riskRef", view.id),
         warnings,
@@ -2484,12 +2521,14 @@ fn validate_portfolio_object_refs(
     object: &PortfolioObject,
     current_project_id: &str,
     portfolio_kinds_by_id: &BTreeMap<&str, &str>,
+    imported_portfolio_kinds_by_project: &BTreeMap<String, BTreeMap<String, String>>,
     warnings: &mut Vec<String>,
 ) -> Result<()> {
     validate_portfolio_ref_kinds(
         &object.owner_refs,
         current_project_id,
         portfolio_kinds_by_id,
+        imported_portfolio_kinds_by_project,
         &["owner"],
         &format!("{} ownerRef", object.id),
         warnings,
@@ -2498,6 +2537,7 @@ fn validate_portfolio_object_refs(
         &object.capability_refs,
         current_project_id,
         portfolio_kinds_by_id,
+        imported_portfolio_kinds_by_project,
         &["business_capability"],
         &format!("{} capabilityRef", object.id),
         warnings,
@@ -2506,6 +2546,7 @@ fn validate_portfolio_object_refs(
         &object.technology_refs,
         current_project_id,
         portfolio_kinds_by_id,
+        imported_portfolio_kinds_by_project,
         &["technology_component", "technology_standard"],
         &format!("{} technologyRef", object.id),
         warnings,
@@ -2514,6 +2555,7 @@ fn validate_portfolio_object_refs(
         &object.risk_refs,
         current_project_id,
         portfolio_kinds_by_id,
+        imported_portfolio_kinds_by_project,
         &["risk"],
         &format!("{} riskRef", object.id),
         warnings,
@@ -2523,6 +2565,7 @@ fn validate_portfolio_object_refs(
             &lifecycle.milestone_refs,
             current_project_id,
             portfolio_kinds_by_id,
+            imported_portfolio_kinds_by_project,
             &["lifecycle_milestone"],
             &format!("{} lifecycle milestoneRef", object.id),
             warnings,
@@ -2535,22 +2578,46 @@ fn validate_portfolio_ref_kinds(
     refs: &[String],
     current_project_id: &str,
     portfolio_kinds_by_id: &BTreeMap<&str, &str>,
+    imported_portfolio_kinds_by_project: &BTreeMap<String, BTreeMap<String, String>>,
     allowed_kinds: &[&str],
     field: &str,
     warnings: &mut Vec<String>,
 ) -> Result<()> {
     ensure_non_empty_items(refs, field)?;
     for reference in refs {
-        let Some(local_ref) = local_portfolio_ref(reference, current_project_id, field)? else {
-            warnings.push(format!(
-                "{field} references unresolved external portfolio object {reference}"
-            ));
-            continue;
+        let kind = match portfolio_ref_resolution(reference, current_project_id, field)? {
+            PortfolioRefResolution::Local(local_ref) => portfolio_kinds_by_id
+                .get(local_ref)
+                .copied()
+                .ok_or_else(|| {
+                    anyhow!("{field} references missing portfolio object {reference}")
+                })?,
+            PortfolioRefResolution::Imported {
+                project_id,
+                object_id,
+            } => {
+                let Some(imported_kinds) = imported_portfolio_kinds_by_project.get(project_id)
+                else {
+                    warnings.push(format!(
+                        "{field} references unresolved external portfolio object {reference}"
+                    ));
+                    continue;
+                };
+                imported_kinds
+                    .get(object_id)
+                    .map(String::as_str)
+                    .ok_or_else(|| {
+                        anyhow!("{field} references missing imported portfolio object {reference}")
+                    })?
+            }
+            PortfolioRefResolution::External => {
+                warnings.push(format!(
+                    "{field} references unresolved external portfolio object {reference}"
+                ));
+                continue;
+            }
         };
-        let Some(kind) = portfolio_kinds_by_id.get(local_ref) else {
-            bail!("{field} references missing portfolio object {reference}");
-        };
-        if !allowed_kinds.contains(kind) {
+        if !allowed_kinds.contains(&kind) {
             bail!(
                 "{field} references {} with kind {}, expected {}",
                 reference,
@@ -2562,11 +2629,20 @@ fn validate_portfolio_ref_kinds(
     Ok(())
 }
 
-fn local_portfolio_ref<'a>(
+enum PortfolioRefResolution<'a> {
+    Local(&'a str),
+    Imported {
+        project_id: &'a str,
+        object_id: &'a str,
+    },
+    External,
+}
+
+fn portfolio_ref_resolution<'a>(
     reference: &'a str,
     current_project_id: &str,
     field: &str,
-) -> Result<Option<&'a str>> {
+) -> Result<PortfolioRefResolution<'a>> {
     if let Some(rest) = reference.strip_prefix("package:") {
         let Some((project_id, object_id)) = rest.split_once('#') else {
             bail!("{field} has malformed package-qualified portfolio ref {reference}");
@@ -2574,7 +2650,13 @@ fn local_portfolio_ref<'a>(
         if project_id.is_empty() || object_id.is_empty() {
             bail!("{field} has malformed package-qualified portfolio ref {reference}");
         }
-        return Ok((project_id == current_project_id).then_some(object_id));
+        if project_id == current_project_id {
+            return Ok(PortfolioRefResolution::Local(object_id));
+        }
+        return Ok(PortfolioRefResolution::Imported {
+            project_id,
+            object_id,
+        });
     }
     if let Some(rest) = reference.strip_prefix("source:") {
         let Some((source_id, object_id)) = rest.split_once('#') else {
@@ -2583,9 +2665,65 @@ fn local_portfolio_ref<'a>(
         if source_id.is_empty() || object_id.is_empty() {
             bail!("{field} has malformed source-qualified portfolio ref {reference}");
         }
-        return Ok(None);
+        return Ok(PortfolioRefResolution::External);
     }
-    Ok(Some(reference))
+    Ok(PortfolioRefResolution::Local(reference))
+}
+
+fn load_imported_portfolio_kinds(
+    package: &ModelPackage,
+) -> Result<BTreeMap<String, BTreeMap<String, String>>> {
+    let mut imported = BTreeMap::new();
+    for package_import in &package.imports.packages {
+        ensure_non_empty(&package_import.project_id, "package import projectId")?;
+        ensure_non_empty(&package_import.path, "package import path")?;
+        if package_import.project_id == package.manifest.project_id {
+            bail!(
+                "package import {} must not reference the current package",
+                package_import.project_id
+            );
+        }
+        if imported.contains_key(&package_import.project_id) {
+            bail!("duplicate package import {}", package_import.project_id);
+        }
+
+        let import_root = package.root.join(&package_import.path);
+        let import_manifest: Manifest = read_json(import_root.join("manifest.json"))
+            .with_context(|| format!("loading package import {}", package_import.project_id))?;
+        require_version(
+            &format!("package import {} manifest", package_import.project_id),
+            &import_manifest.schema_version,
+        )?;
+        if import_manifest.project_id != package_import.project_id {
+            bail!(
+                "package import {} points at package {}",
+                package_import.project_id,
+                import_manifest.project_id
+            );
+        }
+
+        let import_portfolio: PortfolioFile = read_json(import_root.join("model/portfolio.json"))
+            .with_context(|| {
+            format!(
+                "loading portfolio for package import {}",
+                package_import.project_id
+            )
+        })?;
+        require_version(
+            &format!("package import {} portfolio", package_import.project_id),
+            &import_portfolio.schema_version,
+        )?;
+
+        let mut object_ids = BTreeSet::new();
+        let mut portfolio_kinds = BTreeMap::new();
+        for object in &import_portfolio.objects {
+            ensure_unique(&mut object_ids, &object.id)?;
+            validate_portfolio_object(object)?;
+            portfolio_kinds.insert(object.id.clone(), object.kind.clone());
+        }
+        imported.insert(package_import.project_id.clone(), portfolio_kinds);
+    }
+    Ok(imported)
 }
 
 fn validate_roadmap_presentation(presentation: &RoadmapPresentation) -> Result<()> {
@@ -2700,6 +2838,7 @@ fn roadmap_presentation_applies_to(presentation: &RoadmapPresentation, view_kind
 pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
     let mut warnings = Vec::new();
     require_version("manifest", &package.manifest.schema_version)?;
+    require_version("imports", &package.imports.schema_version)?;
     require_version("requirements", &package.requirements.schema_version)?;
     require_version("portfolio", &package.portfolio.schema_version)?;
     require_version(
@@ -2742,11 +2881,13 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
         .iter()
         .map(|object| (object.id.as_str(), object.kind.as_str()))
         .collect();
+    let imported_portfolio_kinds_by_project = load_imported_portfolio_kinds(package)?;
     for object in &package.portfolio.objects {
         validate_portfolio_object_refs(
             object,
             &package.manifest.project_id,
             &portfolio_kinds_by_id,
+            &imported_portfolio_kinds_by_project,
             &mut warnings,
         )?;
     }
@@ -2790,6 +2931,7 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
             element,
             &package.manifest.project_id,
             &portfolio_kinds_by_id,
+            &imported_portfolio_kinds_by_project,
             &mut warnings,
         )?;
         validate_classifier_details(element)?;
@@ -2815,6 +2957,7 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
             saved_view,
             &package.manifest.project_id,
             &portfolio_kinds_by_id,
+            &imported_portfolio_kinds_by_project,
             &element_kinds,
             &mut warnings,
         )?;
@@ -3270,6 +3413,7 @@ fn validate_architecture_details(
     element: &ModelElement,
     current_project_id: &str,
     portfolio_kinds_by_id: &BTreeMap<&str, &str>,
+    imported_portfolio_kinds_by_project: &BTreeMap<String, BTreeMap<String, String>>,
     warnings: &mut Vec<String>,
 ) -> Result<()> {
     let architecture = &element.architecture;
@@ -3302,6 +3446,7 @@ fn validate_architecture_details(
             std::slice::from_ref(&owner.ref_id),
             current_project_id,
             portfolio_kinds_by_id,
+            imported_portfolio_kinds_by_project,
             &["owner"],
             &format!("{} architecture owner ref", element.id),
             warnings,
@@ -3335,6 +3480,7 @@ fn validate_architecture_details(
             &lifecycle.milestone_refs,
             current_project_id,
             portfolio_kinds_by_id,
+            imported_portfolio_kinds_by_project,
             &["lifecycle_milestone"],
             &format!("{} architecture lifecycle milestoneRef", element.id),
             warnings,
@@ -3364,6 +3510,7 @@ fn validate_architecture_details(
             std::slice::from_ref(&technology.ref_id),
             current_project_id,
             portfolio_kinds_by_id,
+            imported_portfolio_kinds_by_project,
             &["technology_component", "technology_standard"],
             &format!("{} architecture technology ref", element.id),
             warnings,
@@ -3405,6 +3552,7 @@ fn validate_architecture_details(
             std::slice::from_ref(&risk.ref_id),
             current_project_id,
             portfolio_kinds_by_id,
+            imported_portfolio_kinds_by_project,
             &["risk"],
             &format!("{} architecture risk ref", element.id),
             warnings,
@@ -3438,6 +3586,7 @@ fn validate_architecture_details(
             std::slice::from_ref(&capability.ref_id),
             current_project_id,
             portfolio_kinds_by_id,
+            imported_portfolio_kinds_by_project,
             &["business_capability"],
             &format!("{} architecture capability ref", element.id),
             warnings,
@@ -3477,6 +3626,7 @@ fn validate_architecture_details(
             std::slice::from_ref(&service.ref_id),
             current_project_id,
             portfolio_kinds_by_id,
+            imported_portfolio_kinds_by_project,
             &["portfolio_service"],
             &format!("{} architecture service ref", element.id),
             warnings,
@@ -5697,8 +5847,23 @@ fn read_json<T: for<'de> Deserialize<'de>>(path: impl AsRef<Path>) -> Result<T> 
     serde_json::from_str(&contents).with_context(|| format!("parsing {}", path.display()))
 }
 
+fn read_optional_json<T>(path: impl AsRef<Path>) -> Result<T>
+where
+    T: for<'de> Deserialize<'de> + Default,
+{
+    let path = path.as_ref();
+    if !path.exists() {
+        return Ok(T::default());
+    }
+    read_json(path)
+}
+
 fn write_package(package: &ModelPackage) -> Result<()> {
     write_json(package.root.join("manifest.json"), &package.manifest)?;
+    if !package.imports.packages.is_empty() {
+        fs::create_dir_all(package.root.join("imports"))?;
+        write_json(package.root.join("imports/imports.json"), &package.imports)?;
+    }
     write_json(
         package.root.join("requirements/requirements.json"),
         &package.requirements,
@@ -6596,6 +6761,100 @@ mod tests {
             warning
                 == "application.redshield-architect ownerRef references unresolved external portfolio object source:cmdb.primary#platform-team"
         }));
+    }
+
+    #[test]
+    fn validation_resolves_declared_package_import_portfolio_refs() {
+        let root = copy_example_to_temp();
+        let import_dir_name = format!(
+            "{}-shared-estate",
+            root.file_name().unwrap().to_string_lossy()
+        );
+        let import_root = root
+            .parent()
+            .unwrap()
+            .join(&import_dir_name)
+            .join("redshield");
+        copy_dir(&root, &import_root).unwrap();
+        let mut import_manifest: Manifest = read_json(import_root.join("manifest.json")).unwrap();
+        import_manifest.project_id = "example.shared-estate".to_string();
+        import_manifest.name = "Shared Estate".to_string();
+        write_json(import_root.join("manifest.json"), &import_manifest).unwrap();
+        fs::write(
+            root.join("imports/imports.json"),
+            r#"{
+  "schemaVersion": "0.1.0",
+  "packages": [
+    {
+      "projectId": "example.shared-estate",
+      "path": "../IMPORT_DIR/redshield",
+      "name": "Shared estate"
+    }
+  ]
+}
+"#
+            .replace("IMPORT_DIR", &import_dir_name),
+        )
+        .unwrap();
+
+        let mut package = load_package(&root).unwrap();
+        let application = package
+            .portfolio
+            .objects
+            .iter_mut()
+            .find(|object| object.id == "application.redshield-architect")
+            .unwrap();
+        application.owner_refs =
+            vec!["package:example.shared-estate#owner.product-architecture".to_string()];
+
+        let warnings = validate_package(&package).unwrap();
+        assert!(warnings.is_empty(), "{warnings:?}");
+    }
+
+    #[test]
+    fn validation_rejects_declared_package_import_missing_portfolio_object() {
+        let root = copy_example_to_temp();
+        let import_dir_name = format!(
+            "{}-shared-estate",
+            root.file_name().unwrap().to_string_lossy()
+        );
+        let import_root = root
+            .parent()
+            .unwrap()
+            .join(&import_dir_name)
+            .join("redshield");
+        copy_dir(&root, &import_root).unwrap();
+        let mut import_manifest: Manifest = read_json(import_root.join("manifest.json")).unwrap();
+        import_manifest.project_id = "example.shared-estate".to_string();
+        import_manifest.name = "Shared Estate".to_string();
+        write_json(import_root.join("manifest.json"), &import_manifest).unwrap();
+        fs::write(
+            root.join("imports/imports.json"),
+            r#"{
+  "schemaVersion": "0.1.0",
+  "packages": [
+    {
+      "projectId": "example.shared-estate",
+      "path": "../IMPORT_DIR/redshield"
+    }
+  ]
+}
+"#
+            .replace("IMPORT_DIR", &import_dir_name),
+        )
+        .unwrap();
+
+        let mut package = load_package(&root).unwrap();
+        let application = package
+            .portfolio
+            .objects
+            .iter_mut()
+            .find(|object| object.id == "application.redshield-architect")
+            .unwrap();
+        application.owner_refs = vec!["package:example.shared-estate#owner.missing".to_string()];
+
+        let error = validate_package(&package).unwrap_err().to_string();
+        assert!(error.contains("references missing imported portfolio object"));
     }
 
     #[test]

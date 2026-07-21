@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://redshield.dev/schemas/imports.schema.json",
+  "title": "RedShield Package Imports",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "packages"],
+  "properties": {
+    "schemaVersion": { "const": "0.1.0" },
+    "packages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/packageImport" },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "packageImport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "path"],
+      "properties": {
+        "projectId": { "type": "string", "minLength": 1 },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "not": { "pattern": "^/" }
+        },
+        "name": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}
