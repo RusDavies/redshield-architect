@@ -18,6 +18,7 @@
 - Save deterministic text-backed files.
 - Preserve native portfolio facts in the package without requiring full portfolio UI.
 - Define lifecycle fields and milestone semantics for applications, products, services, and technology components.
+- Define package-level portfolio view kinds beyond UML.
 
 ## Milestone 2: Proposal Review Workflow
 

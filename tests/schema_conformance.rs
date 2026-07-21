@@ -713,6 +713,41 @@ fn schema_validation_rejects_invalid_diagram_layout_shape() {
 }
 
 #[test]
+fn schema_validation_accepts_portfolio_view_kinds() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let valid = json!({
+        "proposalId": "proposal.portfolio-view",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T21:25:00Z",
+        "intent": "Create a portfolio lifecycle roadmap view.",
+        "operations": [
+            {
+                "opId": "op.create-lifecycle-roadmap",
+                "op": "create_diagram_view",
+                "args": {
+                    "id": "diagram.lifecycle-roadmap",
+                    "title": "Lifecycle Roadmap",
+                    "viewKind": "lifecycle_roadmap",
+                    "portfolioRefs": [
+                        "application.redshield-architect",
+                        "technology.tauri",
+                        "milestone.alpha"
+                    ]
+                },
+                "rationale": "Portfolio views should be named package views before they have full UI rendering."
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&valid).is_ok(),
+        "proposal schema should accept portfolio diagram view kinds"
+    );
+}
+
+#[test]
 fn schema_validation_rejects_empty_render_profile_selector() {
     let schema = read_json("schemas/render-profile.schema.json");
     let validator =

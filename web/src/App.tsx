@@ -286,6 +286,7 @@ type SemanticElementUpdateArgs = {
 
 const elk = new ELK();
 const diagram = diagramsFile.diagrams[0];
+const activeModelRefs = diagram.modelRefs ?? [];
 const defaultRenderProfile = renderProfileFile.profiles[0] as RenderProfile;
 const proposalStorageKey = `redshield.workbench.${diagram.id}.proposalDraft`;
 const elementById = new Map(elementsFile.elements.map((element) => [element.id, element]));
@@ -300,7 +301,7 @@ const connectorLayoutByRef = new Map(
 );
 
 function initialNodes(profile: RenderProfile): Node<RedshieldNodeData>[] {
-  return diagram.modelRefs
+  return activeModelRefs
     .map((modelId, index): Node<RedshieldNodeData> | undefined => {
       const element = elementById.get(modelId);
       if (!element) return undefined;
@@ -321,8 +322,8 @@ function initialEdges(): Edge<RedshieldEdgeData>[] {
   return relationshipsFile.relationships
     .filter(
       (relationship) =>
-        diagram.modelRefs.includes(relationship.sourceId) &&
-        diagram.modelRefs.includes(relationship.targetId),
+        activeModelRefs.includes(relationship.sourceId) &&
+        activeModelRefs.includes(relationship.targetId),
     )
     .map((relationship) => ({
       id: relationship.id,

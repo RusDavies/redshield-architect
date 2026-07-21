@@ -67,6 +67,8 @@ This is the product wedge: business capabilities, services, technologies, risks,
 
 The schema/UI split for these concepts is defined in [Enterprise Architecture Schema/UI Boundary](EA_SCHEMA_UI_BOUNDARY.md).
 
+Portfolio views are named package views over those facts, documented in [Portfolio View Semantics](PORTFOLIO_VIEWS.md). The first view kinds are `capability_map`, `application_landscape`, `lifecycle_roadmap`, `risk_heatmap`, and `dependency_map`. They may reference portfolio objects through `portfolioRefs` and model elements through `modelRefs`.
+
 Portfolio changes use typed proposal operations:
 
 - `create_portfolio_object`
@@ -140,7 +142,7 @@ Accepted render-profile operations are applied by the same `apply-proposal` comm
 
 Export behavior for built-in, image-backed, SVG, and custom HTML renderers is defined in [Render Export Behavior](RENDER_EXPORT_BEHAVIOR.md).
 
-Diagram views may now include canonical view metadata under `layout`. This metadata records canvas coordinates separately from semantic model truth:
+Diagram views may now include canonical view metadata under `layout`. This metadata records canvas coordinates separately from semantic model truth. UML views use `modelRefs`; portfolio views may also use `portfolioRefs` to include portfolio objects:
 
 - `coordinateSystem`: currently `canvas`
 - `layoutEngine`: optional generator such as `elk.layered`

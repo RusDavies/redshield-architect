@@ -510,7 +510,10 @@ pub struct DiagramView {
     pub id: String,
     pub title: String,
     pub view_kind: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub model_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub portfolio_refs: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout: Option<DiagramLayout>,
 }
@@ -957,7 +960,10 @@ struct CreateDiagramViewArgs {
     id: String,
     title: String,
     view_kind: String,
+    #[serde(default)]
     model_refs: Vec<String>,
+    #[serde(default)]
+    portfolio_refs: Vec<String>,
     #[serde(default)]
     layout: Option<DiagramLayout>,
 }
@@ -1222,6 +1228,7 @@ pub fn apply_proposal_operations(
                     title: args.title,
                     view_kind: args.view_kind,
                     model_refs: args.model_refs,
+                    portfolio_refs: args.portfolio_refs,
                     layout: args.layout,
                 });
                 summary.diagrams_created += 1;
@@ -1649,6 +1656,12 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
         ensure_unique(&mut ids, &object.id)?;
         validate_portfolio_object(object)?;
     }
+    let portfolio_ids: BTreeSet<&str> = package
+        .portfolio
+        .objects
+        .iter()
+        .map(|object| object.id.as_str())
+        .collect();
 
     let mut element_kinds = BTreeMap::new();
     for element in &package.elements.elements {
@@ -1739,7 +1752,15 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
 
     for diagram in &package.diagrams.diagrams {
         ensure_unique(&mut ids, &diagram.id)?;
-        if diagram.view_kind != "use_case" {
+        if !matches!(
+            diagram.view_kind.as_str(),
+            "use_case"
+                | "capability_map"
+                | "application_landscape"
+                | "lifecycle_roadmap"
+                | "risk_heatmap"
+                | "dependency_map"
+        ) {
             bail!(
                 "{} has unsupported view kind {}",
                 diagram.id,
@@ -1755,8 +1776,23 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
                 );
             }
         }
+        for portfolio_ref in &diagram.portfolio_refs {
+            if !portfolio_ids.contains(portfolio_ref.as_str()) {
+                bail!(
+                    "{} references missing portfolio object {}",
+                    diagram.id,
+                    portfolio_ref
+                );
+            }
+        }
         if let Some(layout) = &diagram.layout {
-            validate_diagram_layout(diagram, layout, &element_kinds, &relationships_by_id)?;
+            validate_diagram_layout(
+                diagram,
+                layout,
+                &element_kinds,
+                &portfolio_ids,
+                &relationships_by_id,
+            )?;
         }
     }
 
@@ -2335,6 +2371,7 @@ fn validate_diagram_layout(
     diagram: &DiagramView,
     layout: &DiagramLayout,
     element_kinds: &BTreeMap<&str, &str>,
+    portfolio_ids: &BTreeSet<&str>,
     relationships_by_id: &BTreeMap<&str, &Relationship>,
 ) -> Result<()> {
     if layout.coordinate_system != "canvas" {
@@ -2355,20 +2392,27 @@ fn validate_diagram_layout(
         );
     }
 
-    let diagram_refs: BTreeSet<&str> = diagram.model_refs.iter().map(String::as_str).collect();
+    let diagram_refs: BTreeSet<&str> = diagram
+        .model_refs
+        .iter()
+        .chain(diagram.portfolio_refs.iter())
+        .map(String::as_str)
+        .collect();
     let mut node_refs = BTreeSet::new();
     for node in &layout.nodes {
         ensure_unique(&mut node_refs, &node.model_ref)?;
-        if !element_kinds.contains_key(node.model_ref.as_str()) {
+        if !element_kinds.contains_key(node.model_ref.as_str())
+            && !portfolio_ids.contains(node.model_ref.as_str())
+        {
             bail!(
-                "{} layout references missing model element {}",
+                "{} layout references missing model or portfolio object {}",
                 diagram.id,
                 node.model_ref
             );
         }
         if !diagram_refs.contains(node.model_ref.as_str()) {
             bail!(
-                "{} layout node {} is not in modelRefs",
+                "{} layout node {} is not in modelRefs or portfolioRefs",
                 diagram.id,
                 node.model_ref
             );
@@ -3127,9 +3171,7 @@ pub fn validate_proposal(proposal: &Proposal) -> Result<()> {
                 &operation.args,
                 &["id", "relationshipKind", "sourceId", "targetId"],
             )?,
-            "create_diagram_view" => {
-                require_args(&operation.args, &["id", "title", "viewKind", "modelRefs"])?
-            }
+            "create_diagram_view" => require_args(&operation.args, &["id", "title", "viewKind"])?,
             "create_trace_link" => require_args(
                 &operation.args,
                 &["id", "sourceId", "targetId", "traceKind"],
@@ -3939,6 +3981,62 @@ mod tests {
             .unwrap();
         assert_eq!(capability.tags, vec!["proposal-review", "portfolio"]);
         assert_eq!(capability.technology_refs, vec!["technology.react-flow"]);
+    }
+
+    #[test]
+    fn accepted_proposal_applies_portfolio_view_operation() {
+        let root = copy_example_to_temp();
+        let proposal_path = root.join("proposals/open/accepted-portfolio-view.json");
+        fs::write(
+            &proposal_path,
+            r#"{
+  "proposalId": "proposal.portfolio-view",
+  "schemaVersion": "0.1.0",
+  "state": "accepted",
+  "createdAt": "2026-07-20T21:25:00Z",
+  "intent": "Create a lifecycle roadmap view over portfolio facts.",
+  "operations": [
+    {
+      "opId": "op.create-lifecycle-roadmap",
+      "op": "create_diagram_view",
+      "args": {
+        "id": "diagram.lifecycle-roadmap",
+        "title": "Lifecycle Roadmap",
+        "viewKind": "lifecycle_roadmap",
+        "portfolioRefs": [
+          "application.redshield-architect",
+          "technology.tauri",
+          "milestone.alpha"
+        ]
+      },
+      "rationale": "Portfolio views should be package views before they have full UI rendering."
+    }
+  ]
+}
+"#,
+        )
+        .unwrap();
+
+        let summary = apply_accepted_proposal_file(&root, &proposal_path).unwrap();
+        assert_eq!(summary.diagrams_created, 1);
+
+        let package = load_package(&root).unwrap();
+        validate_package(&package).unwrap();
+        let diagram = package
+            .diagrams
+            .diagrams
+            .iter()
+            .find(|diagram| diagram.id == "diagram.lifecycle-roadmap")
+            .unwrap();
+        assert_eq!(diagram.view_kind, "lifecycle_roadmap");
+        assert_eq!(
+            diagram.portfolio_refs,
+            vec![
+                "application.redshield-architect",
+                "technology.tauri",
+                "milestone.alpha"
+            ]
+        );
     }
 
     #[test]
