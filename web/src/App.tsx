@@ -465,6 +465,41 @@ function summarizePortfolioObjects(objects: PortfolioObjectRecord[]) {
   };
 }
 
+function filterPortfolioObjects(
+  objects: PortfolioObjectRecord[],
+  search: string,
+  kind: string,
+  lifecycle: string,
+) {
+  const normalizedSearch = search.trim().toLowerCase();
+  return objects.filter((object) => {
+    if (kind !== 'all' && object.kind !== kind) return false;
+    if (lifecycle !== 'all' && (object.lifecycleState ?? 'unspecified') !== lifecycle) return false;
+    if (!normalizedSearch) return true;
+    return [
+      object.id,
+      object.kind,
+      object.name,
+      object.description,
+      object.status,
+      object.lifecycleState,
+      object.criticality,
+      object.standardState,
+      ...(object.tags ?? []),
+      ...(object.sourceRefs ?? []),
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(normalizedSearch));
+  });
+}
+
+function uniquePortfolioValues(
+  objects: PortfolioObjectRecord[],
+  project: (object: PortfolioObjectRecord) => string | undefined,
+) {
+  return Array.from(new Set(objects.map((object) => project(object) || 'unspecified'))).sort();
+}
+
 function formatObjectKind(kind: string) {
   return kind.replaceAll('_', ' ');
 }
@@ -687,6 +722,9 @@ export default function App() {
   const [proposalState, setProposalState] = useState<ProposalState>('draft');
   const [proposalStatus, setProposalStatus] = useState('No saved proposal draft.');
   const [renderProfileStatus, setRenderProfileStatus] = useState('Default render profile loaded.');
+  const [portfolioSearch, setPortfolioSearch] = useState('');
+  const [portfolioKindFilter, setPortfolioKindFilter] = useState('all');
+  const [portfolioLifecycleFilter, setPortfolioLifecycleFilter] = useState('all');
 
   const selectedNodeIds = useMemo(
     () => new Set(selection.nodes.map((node) => node.id)),
@@ -700,9 +738,19 @@ export default function App() {
     }),
     [renderProfile],
   );
+  const filteredPortfolioObjects = useMemo(
+    () =>
+      filterPortfolioObjects(
+        portfolioFile.objects,
+        portfolioSearch,
+        portfolioKindFilter,
+        portfolioLifecycleFilter,
+      ),
+    [portfolioSearch, portfolioKindFilter, portfolioLifecycleFilter],
+  );
   const portfolioSummary = useMemo(
-    () => summarizePortfolioObjects(portfolioFile.objects),
-    [],
+    () => summarizePortfolioObjects(filteredPortfolioObjects),
+    [filteredPortfolioObjects],
   );
 
   useEffect(() => {
@@ -1230,7 +1278,22 @@ export default function App() {
         </section>
         <section>
           <h2>Portfolio</h2>
-          <PortfolioSummary summary={portfolioSummary} objects={portfolioFile.objects} />
+          <PortfolioSummary
+            summary={portfolioSummary}
+            objects={filteredPortfolioObjects}
+            totalObjects={portfolioFile.objects.length}
+            search={portfolioSearch}
+            kindFilter={portfolioKindFilter}
+            lifecycleFilter={portfolioLifecycleFilter}
+            kindOptions={uniquePortfolioValues(portfolioFile.objects, (object) => object.kind)}
+            lifecycleOptions={uniquePortfolioValues(
+              portfolioFile.objects,
+              (object) => object.lifecycleState,
+            )}
+            onSearch={setPortfolioSearch}
+            onKindFilter={setPortfolioKindFilter}
+            onLifecycleFilter={setPortfolioLifecycleFilter}
+          />
         </section>
         <section>
           <h2>Trace</h2>
@@ -1551,16 +1614,70 @@ function SemanticElementEditor({
 function PortfolioSummary({
   summary,
   objects,
+  totalObjects,
+  search,
+  kindFilter,
+  lifecycleFilter,
+  kindOptions,
+  lifecycleOptions,
+  onSearch,
+  onKindFilter,
+  onLifecycleFilter,
 }: {
   summary: ReturnType<typeof summarizePortfolioObjects>;
   objects: PortfolioObjectRecord[];
+  totalObjects: number;
+  search: string;
+  kindFilter: string;
+  lifecycleFilter: string;
+  kindOptions: string[];
+  lifecycleOptions: string[];
+  onSearch: (value: string) => void;
+  onKindFilter: (value: string) => void;
+  onLifecycleFilter: (value: string) => void;
 }) {
   return (
     <div className="portfolio-summary">
+      <div className="portfolio-summary__filters">
+        <label>
+          <span>Search</span>
+          <input
+            onChange={(event) => onSearch(event.target.value)}
+            placeholder="Name, ID, tag"
+            type="search"
+            value={search}
+          />
+        </label>
+        <label>
+          <span>Kind</span>
+          <select onChange={(event) => onKindFilter(event.target.value)} value={kindFilter}>
+            <option value="all">All kinds</option>
+            {kindOptions.map((kind) => (
+              <option key={kind} value={kind}>
+                {formatObjectKind(kind)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Lifecycle</span>
+          <select
+            onChange={(event) => onLifecycleFilter(event.target.value)}
+            value={lifecycleFilter}
+          >
+            <option value="all">All states</option>
+            {lifecycleOptions.map((state) => (
+              <option key={state} value={state}>
+                {formatObjectKind(state)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <div className="portfolio-summary__metrics">
         <div>
           <strong>{summary.total}</strong>
-          <span>objects</span>
+          <span>{summary.total === totalObjects ? 'objects' : `of ${totalObjects}`}</span>
         </div>
         <div>
           <strong>{summary.relatedModelLinks}</strong>
@@ -1582,14 +1699,18 @@ function PortfolioSummary({
         )}
       </div>
       <div className="portfolio-summary__objects">
-        {objects.map((object) => (
-          <div key={object.id}>
-            <strong>{object.name}</strong>
-            <span>
-              {formatObjectKind(object.kind)} / {object.lifecycleState ?? 'unspecified'}
-            </span>
-          </div>
-        ))}
+        {objects.length === 0 ? (
+          <span>No matching portfolio objects</span>
+        ) : (
+          objects.map((object) => (
+            <div key={object.id}>
+              <strong>{object.name}</strong>
+              <span>
+                {formatObjectKind(object.kind)} / {object.lifecycleState ?? 'unspecified'}
+              </span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

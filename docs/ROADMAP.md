@@ -21,6 +21,7 @@
 - Define package-level portfolio view kinds beyond UML.
 - Add read-only CLI/workbench summaries for portfolio objects.
 - Add generated/read-only rendering for the first portfolio lifecycle roadmap.
+- Add search and filters to read-only portfolio summaries.
 
 ## Milestone 2: Proposal Review Workflow
 
