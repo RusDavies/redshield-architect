@@ -32,6 +32,8 @@ Inspect portfolio facts without opening the workbench:
 ```sh
 cargo run -- portfolio-summary examples/minimal/redshield
 cargo run -- portfolio-summary examples/minimal/redshield tauri
+cargo run -- portfolio-summary examples/minimal/redshield --view portfolio-view.active-critical
+cargo run -- portfolio-summary examples/minimal/redshield --view portfolio-view.active-critical Architect
 ```
 
 Render the first use-case diagram:
@@ -92,7 +94,7 @@ Portfolio changes use typed proposal operations:
 
 The schema rejects unknown object kinds, unsupported lifecycle/criticality/standard states, stray operation args, and no-op portfolio updates. Accepted proposal application writes `model/portfolio.json` through the same validation path as model elements, relationships, diagrams, trace links, and render profiles.
 
-The CLI `portfolio-summary` command and the workbench sidebar provide read-only portfolio summaries: object totals, kind/lifecycle/criticality counts, standard-state hints, related model-link counts, and a compact object list. The CLI accepts an optional search string. The workbench sidebar supports text search plus kind and lifecycle filters, and can apply saved portfolio views from `views/portfolio-views.json`.
+The CLI `portfolio-summary` command and the workbench sidebar provide read-only portfolio summaries: object totals, kind/lifecycle/criticality counts, standard-state hints, related model-link counts, and a compact object list. The CLI accepts an optional search string and `--view <saved-view-id>` for committed saved portfolio views. Extra search text narrows the saved-view result. The workbench sidebar supports text search plus kind and lifecycle filters, and can apply saved portfolio views from `views/portfolio-views.json`.
 
 The saved-query contract is documented in [Portfolio Saved Views And Queries](PORTFOLIO_SAVED_VIEWS.md). It uses `views/portfolio-views.json`, not `views/diagrams.json`, and is changed only through typed proposal operations.
 
