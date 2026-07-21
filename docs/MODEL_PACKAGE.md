@@ -25,6 +25,12 @@ Validate the example model:
 cargo run -- validate examples/minimal/redshield
 ```
 
+Inspect portfolio facts without opening the workbench:
+
+```sh
+cargo run -- portfolio-summary examples/minimal/redshield
+```
+
 Render the first use-case diagram:
 
 ```sh
@@ -75,6 +81,8 @@ Portfolio changes use typed proposal operations:
 - `update_portfolio_object`
 
 The schema rejects unknown object kinds, unsupported lifecycle/criticality/standard states, stray operation args, and no-op portfolio updates. Accepted proposal application writes `model/portfolio.json` through the same validation path as model elements, relationships, diagrams, trace links, and render profiles.
+
+The CLI `portfolio-summary` command and the workbench sidebar provide read-only portfolio summaries: object totals, kind/lifecycle/criticality counts, standard-state hints, related model-link counts, and a compact object list. They do not edit portfolio data.
 
 ## Model Elements
 

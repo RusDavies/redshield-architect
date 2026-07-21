@@ -1811,6 +1811,98 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
     Ok(warnings)
 }
 
+pub fn portfolio_summary_lines(package: &ModelPackage) -> Vec<String> {
+    let objects = &package.portfolio.objects;
+    let mut lines = vec![
+        format!("portfolio objects: {}", objects.len()),
+        format!(
+            "related model links: {}",
+            objects
+                .iter()
+                .map(|object| object.related_element_refs.len())
+                .sum::<usize>()
+        ),
+    ];
+
+    push_count_lines(
+        &mut lines,
+        "kind",
+        objects.iter().map(|object| object.kind.as_str()),
+    );
+    push_count_lines(
+        &mut lines,
+        "lifecycle",
+        objects.iter().map(|object| {
+            if object.lifecycle_state.is_empty() {
+                "unspecified"
+            } else {
+                object.lifecycle_state.as_str()
+            }
+        }),
+    );
+    push_count_lines(
+        &mut lines,
+        "criticality",
+        objects.iter().map(|object| {
+            if object.criticality.is_empty() {
+                "unspecified"
+            } else {
+                object.criticality.as_str()
+            }
+        }),
+    );
+    push_count_lines(
+        &mut lines,
+        "standard",
+        objects.iter().filter_map(|object| {
+            if object.standard_state.is_empty() {
+                None
+            } else {
+                Some(object.standard_state.as_str())
+            }
+        }),
+    );
+
+    lines.push("objects:".to_string());
+    for object in objects {
+        let lifecycle = if object.lifecycle_state.is_empty() {
+            "unspecified"
+        } else {
+            object.lifecycle_state.as_str()
+        };
+        let criticality = if object.criticality.is_empty() {
+            "unspecified"
+        } else {
+            object.criticality.as_str()
+        };
+        lines.push(format!(
+            "- {} [{}] status={} lifecycle={} criticality={}",
+            object.id, object.kind, object.status, lifecycle, criticality
+        ));
+    }
+
+    lines
+}
+
+fn push_count_lines<'a>(
+    lines: &mut Vec<String>,
+    label: &str,
+    values: impl Iterator<Item = &'a str>,
+) {
+    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
+    for value in values {
+        *counts.entry(value).or_default() += 1;
+    }
+    if counts.is_empty() {
+        lines.push(format!("{label}: none"));
+        return;
+    }
+    lines.push(format!("{label}:"));
+    for (value, count) in counts {
+        lines.push(format!("- {value}: {count}"));
+    }
+}
+
 fn validate_element_provenance(element: &ModelElement) -> Result<()> {
     for source_ref in &element.provenance.source_refs {
         ensure_non_empty(source_ref, &format!("{} provenance sourceRef", element.id))?;
@@ -4037,6 +4129,20 @@ mod tests {
                 "milestone.alpha"
             ]
         );
+    }
+
+    #[test]
+    fn portfolio_summary_reports_object_counts() {
+        let root = copy_example_to_temp();
+        let package = load_package(&root).unwrap();
+        let lines = portfolio_summary_lines(&package);
+
+        assert!(lines.contains(&"portfolio objects: 8".to_string()));
+        assert!(lines.contains(&"- technology_component: 1".to_string()));
+        assert!(lines.contains(&"- planned: 3".to_string()));
+        assert!(lines.iter().any(|line| {
+            line == "- application.redshield-architect [portfolio_application] status=accepted lifecycle=planned criticality=high"
+        }));
     }
 
     #[test]
