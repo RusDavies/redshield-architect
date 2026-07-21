@@ -83,7 +83,7 @@ Useful questions:
 - Which target dates and milestones are driving change?
 - Which technologies need migration before support or retirement dates?
 
-MVP posture: schema and validation only, plus later read-only summaries. Full timeline editing is later work.
+MVP posture: generated/read-only SVG rendering is supported for the first lifecycle roadmap view. Full timeline editing is later work.
 
 ## Risk Heatmap
 
@@ -138,3 +138,16 @@ Current validation is deliberately small:
 - relationship connector layout still points to canonical model relationships
 
 The schema does not yet encode grouping, swimlanes, heatmap buckets, timeline scales, dependency edge semantics, or portfolio relationship kinds. Those should be added only when the renderer or import/export adapter needs them.
+
+## First Renderer
+
+The first generated portfolio renderer is `render-lifecycle-roadmap`.
+
+It renders `lifecycle_roadmap` views to SVG through Graphviz, using the same generated-artifact boundary as the use-case renderer. The renderer:
+
+- groups included portfolio objects by `lifecycleState`
+- renders `lifecycle_milestone` objects as milestone nodes
+- includes target dates from structured lifecycle metadata when present
+- draws dashed milestone links from `lifecycle.milestoneRefs` when both endpoint objects are included in the view
+
+The renderer does not edit portfolio objects, infer roadmap dates, create missing milestones, or persist layout metadata. That restraint is not glamour, but it is how the package stays deterministic.
