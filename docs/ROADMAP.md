@@ -6,6 +6,7 @@
 - Choose the initial application stack.
 - Define the canonical model package shape.
 - Define proposal/review mechanics for AI-suggested model changes.
+- Define the first enterprise-architecture schema/UI boundary.
 - Define privacy and provider-selection defaults.
 
 ## Milestone 1: Thin Prototype
@@ -15,6 +16,7 @@
 - Render a use-case diagram from accepted model data.
 - Show traceability between a requirement and model elements.
 - Save deterministic text-backed files.
+- Preserve native portfolio facts in the package without requiring full portfolio UI.
 
 ## Milestone 2: Proposal Review Workflow
 

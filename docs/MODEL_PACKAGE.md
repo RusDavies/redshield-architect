@@ -63,6 +63,8 @@ Each portfolio object has a stable `id`, `kind`, `name`, optional description, s
 
 This is the product wedge: business capabilities, services, technologies, risks, and ownership can be reviewed as deterministic package data while still linking directly to solution-architecture model elements. It is not a broad EA repository yet, and the MVP UI does not need to edit every object kind on day one.
 
+The schema/UI split for these concepts is defined in [Enterprise Architecture Schema/UI Boundary](EA_SCHEMA_UI_BOUNDARY.md).
+
 Portfolio changes use typed proposal operations:
 
 - `create_portfolio_object`
