@@ -118,6 +118,30 @@ section {
   gap: 10px;
 }
 
+.portfolio-summary__filters {
+  display: grid;
+  gap: 6px;
+}
+
+.portfolio-summary__filters label {
+  color: #475569;
+  display: grid;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 4px;
+}
+
+.portfolio-summary__filters input,
+.portfolio-summary__filters select {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #0f172a;
+  font: inherit;
+  min-height: 30px;
+  min-width: 0;
+  padding: 4px 6px;
+}
+
 .portfolio-summary__metrics {
   display: grid;
   gap: 8px;

@@ -1811,10 +1811,27 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
     Ok(warnings)
 }
 
-pub fn portfolio_summary_lines(package: &ModelPackage) -> Vec<String> {
-    let objects = &package.portfolio.objects;
+pub fn portfolio_summary_lines(package: &ModelPackage, query: Option<&str>) -> Vec<String> {
+    let query = query.map(str::trim).filter(|value| !value.is_empty());
+    let objects: Vec<&PortfolioObject> = package
+        .portfolio
+        .objects
+        .iter()
+        .filter(|object| match query {
+            Some(query) => portfolio_object_matches_query(object, query),
+            None => true,
+        })
+        .collect();
     let mut lines = vec![
-        format!("portfolio objects: {}", objects.len()),
+        match query {
+            Some(query) => format!(
+                "portfolio objects: {} of {} matching \"{}\"",
+                objects.len(),
+                package.portfolio.objects.len(),
+                query
+            ),
+            None => format!("portfolio objects: {}", objects.len()),
+        },
         format!(
             "related model links: {}",
             objects
@@ -1882,6 +1899,26 @@ pub fn portfolio_summary_lines(package: &ModelPackage) -> Vec<String> {
     }
 
     lines
+}
+
+fn portfolio_object_matches_query(object: &PortfolioObject, query: &str) -> bool {
+    let query = query.to_ascii_lowercase();
+    let fields = [
+        object.id.as_str(),
+        object.kind.as_str(),
+        object.name.as_str(),
+        object.description.as_str(),
+        object.status.as_str(),
+        object.lifecycle_state.as_str(),
+        object.criticality.as_str(),
+        object.standard_state.as_str(),
+    ];
+    fields
+        .iter()
+        .copied()
+        .chain(object.tags.iter().map(String::as_str))
+        .chain(object.source_refs.iter().map(String::as_str))
+        .any(|value| value.to_ascii_lowercase().contains(&query))
 }
 
 fn push_count_lines<'a>(
@@ -4347,7 +4384,7 @@ mod tests {
     fn portfolio_summary_reports_object_counts() {
         let root = copy_example_to_temp();
         let package = load_package(&root).unwrap();
-        let lines = portfolio_summary_lines(&package);
+        let lines = portfolio_summary_lines(&package, None);
 
         assert!(lines.contains(&"portfolio objects: 8".to_string()));
         assert!(lines.contains(&"- technology_component: 1".to_string()));
@@ -4355,6 +4392,13 @@ mod tests {
         assert!(lines.iter().any(|line| {
             line == "- application.redshield-architect [portfolio_application] status=accepted lifecycle=planned criticality=high"
         }));
+        let filtered = portfolio_summary_lines(&package, Some("tauri"));
+        assert!(filtered.contains(&"portfolio objects: 1 of 8 matching \"tauri\"".to_string()));
+        assert!(
+            filtered
+                .iter()
+                .any(|line| line.contains("technology.tauri"))
+        );
     }
 
     #[test]

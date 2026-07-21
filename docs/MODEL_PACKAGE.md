@@ -29,6 +29,7 @@ Inspect portfolio facts without opening the workbench:
 
 ```sh
 cargo run -- portfolio-summary examples/minimal/redshield
+cargo run -- portfolio-summary examples/minimal/redshield tauri
 ```
 
 Render the first use-case diagram:
@@ -88,7 +89,7 @@ Portfolio changes use typed proposal operations:
 
 The schema rejects unknown object kinds, unsupported lifecycle/criticality/standard states, stray operation args, and no-op portfolio updates. Accepted proposal application writes `model/portfolio.json` through the same validation path as model elements, relationships, diagrams, trace links, and render profiles.
 
-The CLI `portfolio-summary` command and the workbench sidebar provide read-only portfolio summaries: object totals, kind/lifecycle/criticality counts, standard-state hints, related model-link counts, and a compact object list. They do not edit portfolio data.
+The CLI `portfolio-summary` command and the workbench sidebar provide read-only portfolio summaries: object totals, kind/lifecycle/criticality counts, standard-state hints, related model-link counts, and a compact object list. The CLI accepts an optional search string. The workbench sidebar supports text search plus kind and lifecycle filters. They do not edit portfolio data.
 
 The CLI `render-lifecycle-roadmap` command renders the first portfolio view kind as generated SVG. It groups referenced portfolio objects by lifecycle state, renders lifecycle milestones distinctly, and draws milestone links from structured lifecycle metadata when both objects are in the view.
 

@@ -70,9 +70,15 @@ fn main() -> Result<()> {
             let root = args
                 .next()
                 .unwrap_or_else(|| "examples/minimal/redshield".to_string());
+            let query_parts: Vec<String> = args.collect();
+            let query = if query_parts.is_empty() {
+                None
+            } else {
+                Some(query_parts.join(" "))
+            };
             let package = load_package(&root)?;
             validate_package(&package)?;
-            for line in portfolio_summary_lines(&package) {
+            for line in portfolio_summary_lines(&package, query.as_deref()) {
                 println!("{line}");
             }
         }
@@ -127,6 +133,6 @@ fn print_usage() {
     println!("  redshield-architect validate [redshield-dir]");
     println!("  redshield-architect render-use-case [redshield-dir] [output.svg]");
     println!("  redshield-architect render-lifecycle-roadmap [redshield-dir] [output.svg]");
-    println!("  redshield-architect portfolio-summary [redshield-dir]");
+    println!("  redshield-architect portfolio-summary [redshield-dir] [search]");
     println!("  redshield-architect apply-proposal [redshield-dir] <proposal.json>");
 }
