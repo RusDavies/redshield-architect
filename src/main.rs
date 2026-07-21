@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail};
 use redshield_architect::{
-    apply_accepted_proposal_file, load_package, render_use_case_svg, validate_package,
-    validate_proposals,
+    apply_accepted_proposal_file, load_package, portfolio_summary_lines, render_use_case_svg,
+    validate_package, validate_proposals,
 };
 use std::env;
 use std::fs;
@@ -48,6 +48,16 @@ fn main() -> Result<()> {
             }
             fs::write(&output, svg).with_context(|| format!("writing {}", output.display()))?;
             println!("rendered {}", output.display());
+        }
+        "portfolio-summary" => {
+            let root = args
+                .next()
+                .unwrap_or_else(|| "examples/minimal/redshield".to_string());
+            let package = load_package(&root)?;
+            validate_package(&package)?;
+            for line in portfolio_summary_lines(&package) {
+                println!("{line}");
+            }
         }
         "apply-proposal" => {
             let root = args
@@ -99,5 +109,6 @@ fn print_usage() {
     println!("Usage:");
     println!("  redshield-architect validate [redshield-dir]");
     println!("  redshield-architect render-use-case [redshield-dir] [output.svg]");
+    println!("  redshield-architect portfolio-summary [redshield-dir]");
     println!("  redshield-architect apply-proposal [redshield-dir] <proposal.json>");
 }

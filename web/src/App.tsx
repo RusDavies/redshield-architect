@@ -21,12 +21,14 @@ import ELK from 'elkjs/lib/elk.bundled.js';
 
 import manifest from '../../examples/minimal/redshield/manifest.json';
 import elementsFile from '../../examples/minimal/redshield/model/elements.json';
+import portfolioFile from '../../examples/minimal/redshield/model/portfolio.json';
 import relationshipsFile from '../../examples/minimal/redshield/model/relationships.json';
 import diagramsFile from '../../examples/minimal/redshield/views/diagrams.json';
 import renderProfileFile from '../../examples/minimal/redshield/views/render-profile.json';
 import traceFile from '../../examples/minimal/redshield/trace/links.json';
 
 type ElementRecord = (typeof elementsFile.elements)[number];
+type PortfolioObjectRecord = (typeof portfolioFile.objects)[number];
 type RelationshipRecord = (typeof relationshipsFile.relationships)[number];
 type DiagramLayout = NonNullable<(typeof diagramsFile.diagrams)[number]['layout']>;
 type DiagramNodeLayout = DiagramLayout['nodes'][number];
@@ -440,6 +442,33 @@ function toRouteHint(value?: string): RedshieldEdgeData['routeHint'] {
   return 'smoothstep';
 }
 
+function summarizePortfolioObjects(objects: PortfolioObjectRecord[]) {
+  const countBy = (project: (object: PortfolioObjectRecord) => string | undefined) => {
+    const counts = new Map<string, number>();
+    objects.forEach((object) => {
+      const value = project(object) || 'unspecified';
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    });
+    return Array.from(counts.entries()).sort(([left], [right]) => left.localeCompare(right));
+  };
+
+  return {
+    total: objects.length,
+    relatedModelLinks: objects.reduce(
+      (total, object) => total + (object.relatedElementRefs?.length ?? 0),
+      0,
+    ),
+    byKind: countBy((object) => object.kind),
+    byLifecycle: countBy((object) => object.lifecycleState),
+    byCriticality: countBy((object) => object.criticality),
+    standards: objects.filter((object) => object.standardState),
+  };
+}
+
+function formatObjectKind(kind: string) {
+  return kind.replaceAll('_', ' ');
+}
+
 function RedshieldNode({ data, selected }: NodeProps<Node<RedshieldNodeData>>) {
   const style = {
     '--node-fill': data.render.style?.fillColor,
@@ -670,6 +699,10 @@ export default function App() {
       profiles: [renderProfile],
     }),
     [renderProfile],
+  );
+  const portfolioSummary = useMemo(
+    () => summarizePortfolioObjects(portfolioFile.objects),
+    [],
   );
 
   useEffect(() => {
@@ -1196,6 +1229,10 @@ export default function App() {
           </div>
         </section>
         <section>
+          <h2>Portfolio</h2>
+          <PortfolioSummary summary={portfolioSummary} objects={portfolioFile.objects} />
+        </section>
+        <section>
           <h2>Trace</h2>
           <div className="trace-list">
             {traceFile.links.map((link) => (
@@ -1507,6 +1544,68 @@ function SemanticElementEditor({
       <button disabled={name.trim().length === 0} onClick={apply} type="button">
         Queue semantic update
       </button>
+    </div>
+  );
+}
+
+function PortfolioSummary({
+  summary,
+  objects,
+}: {
+  summary: ReturnType<typeof summarizePortfolioObjects>;
+  objects: PortfolioObjectRecord[];
+}) {
+  return (
+    <div className="portfolio-summary">
+      <div className="portfolio-summary__metrics">
+        <div>
+          <strong>{summary.total}</strong>
+          <span>objects</span>
+        </div>
+        <div>
+          <strong>{summary.relatedModelLinks}</strong>
+          <span>model links</span>
+        </div>
+      </div>
+      <SummaryGroup title="Kind" entries={summary.byKind} />
+      <SummaryGroup title="Lifecycle" entries={summary.byLifecycle} />
+      <SummaryGroup title="Criticality" entries={summary.byCriticality} />
+      <div className="portfolio-summary__standards">
+        {summary.standards.length === 0 ? (
+          <span>No standards</span>
+        ) : (
+          summary.standards.map((object) => (
+            <span key={object.id}>
+              {object.name}: {object.standardState}
+            </span>
+          ))
+        )}
+      </div>
+      <div className="portfolio-summary__objects">
+        {objects.map((object) => (
+          <div key={object.id}>
+            <strong>{object.name}</strong>
+            <span>
+              {formatObjectKind(object.kind)} / {object.lifecycleState ?? 'unspecified'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SummaryGroup({ title, entries }: { title: string; entries: [string, number][] }) {
+  return (
+    <div className="summary-group">
+      <strong>{title}</strong>
+      <div>
+        {entries.map(([label, count]) => (
+          <span key={label}>
+            {formatObjectKind(label)} {count}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
