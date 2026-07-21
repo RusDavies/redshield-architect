@@ -46,6 +46,50 @@ pub struct ElementFile {
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct PortfolioFile {
+    pub schema_version: String,
+    pub objects: Vec<PortfolioObject>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PortfolioObject {
+    pub id: String,
+    pub kind: String,
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(
+        default = "default_element_status",
+        skip_serializing_if = "is_default_element_status"
+    )]
+    pub status: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub lifecycle_state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub criticality: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub standard_state: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub owner_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub capability_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub technology_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub risk_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_element_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub external_references: Vec<ExternalReference>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct ModelElement {
     pub id: String,
     pub kind: String,
@@ -662,6 +706,7 @@ pub struct ModelPackage {
     pub root: PathBuf,
     pub manifest: Manifest,
     pub requirements: RequirementFile,
+    pub portfolio: PortfolioFile,
     pub elements: ElementFile,
     pub relationships: RelationshipFile,
     pub diagrams: DiagramFile,
@@ -696,6 +741,8 @@ pub struct ProposalOperation {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ApplySummary {
     pub requirements_created: usize,
+    pub portfolio_objects_created: usize,
+    pub portfolio_objects_updated: usize,
     pub elements_created: usize,
     pub relationships_created: usize,
     pub diagrams_created: usize,
@@ -720,6 +767,74 @@ struct CreateRequirementArgs {
     acceptance_criteria: Vec<String>,
     #[serde(default)]
     tags: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreatePortfolioObjectArgs {
+    id: String,
+    kind: String,
+    name: String,
+    #[serde(default)]
+    description: String,
+    #[serde(default = "default_element_status")]
+    status: String,
+    #[serde(default)]
+    lifecycle_state: String,
+    #[serde(default)]
+    criticality: String,
+    #[serde(default)]
+    standard_state: String,
+    #[serde(default)]
+    tags: Vec<String>,
+    #[serde(default)]
+    owner_refs: Vec<String>,
+    #[serde(default)]
+    capability_refs: Vec<String>,
+    #[serde(default)]
+    technology_refs: Vec<String>,
+    #[serde(default)]
+    risk_refs: Vec<String>,
+    #[serde(default)]
+    related_element_refs: Vec<String>,
+    #[serde(default)]
+    source_refs: Vec<String>,
+    #[serde(default)]
+    external_references: Vec<ExternalReference>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdatePortfolioObjectArgs {
+    object_id: String,
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    status: Option<String>,
+    #[serde(default)]
+    lifecycle_state: Option<String>,
+    #[serde(default)]
+    criticality: Option<String>,
+    #[serde(default)]
+    standard_state: Option<String>,
+    #[serde(default)]
+    tags: Option<Vec<String>>,
+    #[serde(default)]
+    owner_refs: Option<Vec<String>>,
+    #[serde(default)]
+    capability_refs: Option<Vec<String>>,
+    #[serde(default)]
+    technology_refs: Option<Vec<String>>,
+    #[serde(default)]
+    risk_refs: Option<Vec<String>>,
+    #[serde(default)]
+    related_element_refs: Option<Vec<String>>,
+    #[serde(default)]
+    source_refs: Option<Vec<String>>,
+    #[serde(default)]
+    external_references: Option<Vec<ExternalReference>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -920,6 +1035,7 @@ pub fn load_package(root: impl AsRef<Path>) -> Result<ModelPackage> {
     Ok(ModelPackage {
         manifest: read_json(root.join("manifest.json"))?,
         requirements: read_json(root.join("requirements/requirements.json"))?,
+        portfolio: read_json(root.join("model/portfolio.json"))?,
         elements: read_json(root.join("model/elements.json"))?,
         relationships: read_json(root.join("model/relationships.json"))?,
         diagrams: read_json(root.join("views/diagrams.json"))?,
@@ -971,6 +1087,8 @@ pub fn apply_proposal_operations(
 ) -> Result<ApplySummary> {
     let mut summary = ApplySummary {
         requirements_created: 0,
+        portfolio_objects_created: 0,
+        portfolio_objects_updated: 0,
         elements_created: 0,
         relationships_created: 0,
         diagrams_created: 0,
@@ -996,6 +1114,34 @@ pub fn apply_proposal_operations(
                     tags: args.tags,
                 });
                 summary.requirements_created += 1;
+            }
+            "create_portfolio_object" => {
+                let args: CreatePortfolioObjectArgs = parse_args(operation)?;
+                ensure_available_id(package, &args.id)?;
+                package.portfolio.objects.push(PortfolioObject {
+                    id: args.id,
+                    kind: args.kind,
+                    name: args.name,
+                    description: args.description,
+                    status: args.status,
+                    lifecycle_state: args.lifecycle_state,
+                    criticality: args.criticality,
+                    standard_state: args.standard_state,
+                    tags: args.tags,
+                    owner_refs: args.owner_refs,
+                    capability_refs: args.capability_refs,
+                    technology_refs: args.technology_refs,
+                    risk_refs: args.risk_refs,
+                    related_element_refs: args.related_element_refs,
+                    source_refs: args.source_refs,
+                    external_references: args.external_references,
+                });
+                summary.portfolio_objects_created += 1;
+            }
+            "update_portfolio_object" => {
+                let args: UpdatePortfolioObjectArgs = parse_args(operation)?;
+                update_portfolio_object(package, args)?;
+                summary.portfolio_objects_updated += 1;
             }
             "create_model_element" => {
                 let args: CreateModelElementArgs = parse_args(operation)?;
@@ -1120,6 +1266,90 @@ pub fn apply_proposal_operations(
     Ok(summary)
 }
 
+fn update_portfolio_object(
+    package: &mut ModelPackage,
+    args: UpdatePortfolioObjectArgs,
+) -> Result<()> {
+    if args.object_id.trim().is_empty() {
+        bail!("update_portfolio_object objectId must not be empty");
+    }
+    if !has_portfolio_object_update(&args) {
+        bail!(
+            "update_portfolio_object for {} must change at least one field",
+            args.object_id
+        );
+    }
+
+    let object = package
+        .portfolio
+        .objects
+        .iter_mut()
+        .find(|object| object.id == args.object_id)
+        .ok_or_else(|| anyhow!("missing portfolio object {}", args.object_id))?;
+
+    if let Some(name) = args.name {
+        object.name = name;
+    }
+    if let Some(description) = args.description {
+        object.description = description;
+    }
+    if let Some(status) = args.status {
+        object.status = status;
+    }
+    if let Some(lifecycle_state) = args.lifecycle_state {
+        object.lifecycle_state = lifecycle_state;
+    }
+    if let Some(criticality) = args.criticality {
+        object.criticality = criticality;
+    }
+    if let Some(standard_state) = args.standard_state {
+        object.standard_state = standard_state;
+    }
+    if let Some(tags) = args.tags {
+        object.tags = tags;
+    }
+    if let Some(owner_refs) = args.owner_refs {
+        object.owner_refs = owner_refs;
+    }
+    if let Some(capability_refs) = args.capability_refs {
+        object.capability_refs = capability_refs;
+    }
+    if let Some(technology_refs) = args.technology_refs {
+        object.technology_refs = technology_refs;
+    }
+    if let Some(risk_refs) = args.risk_refs {
+        object.risk_refs = risk_refs;
+    }
+    if let Some(related_element_refs) = args.related_element_refs {
+        object.related_element_refs = related_element_refs;
+    }
+    if let Some(source_refs) = args.source_refs {
+        object.source_refs = source_refs;
+    }
+    if let Some(external_references) = args.external_references {
+        object.external_references = external_references;
+    }
+
+    Ok(())
+}
+
+fn has_portfolio_object_update(args: &UpdatePortfolioObjectArgs) -> bool {
+    args.name.is_some()
+        || args.description.is_some()
+        || args.status.is_some()
+        || args.lifecycle_state.is_some()
+        || args.criticality.is_some()
+        || args.standard_state.is_some()
+        || args.tags.is_some()
+        || args.owner_refs.is_some()
+        || args.capability_refs.is_some()
+        || args.technology_refs.is_some()
+        || args.risk_refs.is_some()
+        || args.related_element_refs.is_some()
+        || args.source_refs.is_some()
+        || args.external_references.is_some()
+}
+
 fn update_model_element_details(
     package: &mut ModelPackage,
     args: UpdateModelElementDetailsArgs,
@@ -1221,10 +1451,100 @@ fn has_model_element_detail_update(args: &UpdateModelElementDetailsArgs) -> bool
         || !args.clear_details.is_empty()
 }
 
+fn validate_portfolio_object(object: &PortfolioObject) -> Result<()> {
+    ensure_non_empty(&object.name, &format!("{} name", object.id))?;
+    if !matches!(
+        object.kind.as_str(),
+        "business_capability"
+            | "portfolio_application"
+            | "portfolio_service"
+            | "technology_component"
+            | "technology_standard"
+            | "organization_unit"
+            | "owner"
+            | "lifecycle_milestone"
+            | "roadmap_item"
+            | "risk"
+            | "control"
+            | "governance_decision"
+            | "data_source"
+    ) {
+        bail!(
+            "{} has unsupported portfolio object kind {}",
+            object.id,
+            object.kind
+        );
+    }
+    if !matches!(
+        object.status.as_str(),
+        "draft" | "proposed" | "accepted" | "deprecated" | "retired"
+    ) {
+        bail!(
+            "{} has unsupported portfolio object status {}",
+            object.id,
+            object.status
+        );
+    }
+    validate_optional_value(
+        &object.lifecycle_state,
+        &[
+            "idea",
+            "planned",
+            "active",
+            "deprecated",
+            "retiring",
+            "retired",
+        ],
+        &format!("{} lifecycleState", object.id),
+    )?;
+    validate_optional_value(
+        &object.criticality,
+        &["low", "medium", "high", "critical"],
+        &format!("{} criticality", object.id),
+    )?;
+    validate_optional_value(
+        &object.standard_state,
+        &["approved", "tolerated", "discouraged", "banned", "emerging"],
+        &format!("{} standardState", object.id),
+    )?;
+    ensure_non_empty_items(&object.tags, &format!("{} tag", object.id))?;
+    ensure_non_empty_items(&object.owner_refs, &format!("{} ownerRef", object.id))?;
+    ensure_non_empty_items(
+        &object.capability_refs,
+        &format!("{} capabilityRef", object.id),
+    )?;
+    ensure_non_empty_items(
+        &object.technology_refs,
+        &format!("{} technologyRef", object.id),
+    )?;
+    ensure_non_empty_items(&object.risk_refs, &format!("{} riskRef", object.id))?;
+    ensure_non_empty_items(
+        &object.related_element_refs,
+        &format!("{} relatedElementRef", object.id),
+    )?;
+    ensure_non_empty_items(&object.source_refs, &format!("{} sourceRef", object.id))?;
+    for reference in &object.external_references {
+        ensure_non_empty(
+            &reference.id,
+            &format!("{} external reference id", object.id),
+        )?;
+        ensure_non_empty(
+            &reference.label,
+            &format!("{} external reference label", object.id),
+        )?;
+        ensure_non_empty(
+            &reference.uri,
+            &format!("{} external reference uri", object.id),
+        )?;
+    }
+    Ok(())
+}
+
 pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
     let mut warnings = Vec::new();
     require_version("manifest", &package.manifest.schema_version)?;
     require_version("requirements", &package.requirements.schema_version)?;
+    require_version("portfolio", &package.portfolio.schema_version)?;
     require_version("elements", &package.elements.schema_version)?;
     require_version("relationships", &package.relationships.schema_version)?;
     require_version("diagrams", &package.diagrams.schema_version)?;
@@ -1239,6 +1559,11 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
         if req.acceptance_criteria.is_empty() {
             warnings.push(format!("{} has no acceptance criteria", req.id));
         }
+    }
+
+    for object in &package.portfolio.objects {
+        ensure_unique(&mut ids, &object.id)?;
+        validate_portfolio_object(object)?;
     }
 
     let mut element_kinds = BTreeMap::new();
@@ -1280,6 +1605,18 @@ pub fn validate_package(package: &ModelPackage) -> Result<Vec<String>> {
         validate_classifier_details(element)?;
         validate_specialized_element_details(element)?;
         element_kinds.insert(element.id.as_str(), element.kind.as_str());
+    }
+
+    for object in &package.portfolio.objects {
+        for element_ref in &object.related_element_refs {
+            if !element_kinds.contains_key(element_ref.as_str()) {
+                bail!(
+                    "{} references missing model element {}",
+                    object.id,
+                    element_ref
+                );
+            }
+        }
     }
 
     for relationship in &package.relationships.relationships {
@@ -2692,6 +3029,11 @@ pub fn validate_proposal(proposal: &Proposal) -> Result<()> {
         }
         match operation.op.as_str() {
             "create_requirement" => require_args(&operation.args, &["id", "title", "statement"])?,
+            "create_portfolio_object" => require_args(&operation.args, &["id", "kind", "name"])?,
+            "update_portfolio_object" => {
+                require_args(&operation.args, &["objectId"])?;
+                require_any_update_arg(&operation.args, "update_portfolio_object")?;
+            }
             "create_model_element" => require_args(&operation.args, &["id", "kind", "name"])?,
             "update_model_element_details" => {
                 require_args(&operation.args, &["elementId"])?;
@@ -2924,6 +3266,10 @@ fn write_package(package: &ModelPackage) -> Result<()> {
         package.root.join("requirements/requirements.json"),
         &package.requirements,
     )?;
+    write_json(
+        package.root.join("model/portfolio.json"),
+        &package.portfolio,
+    )?;
     write_json(package.root.join("model/elements.json"), &package.elements)?;
     write_json(
         package.root.join("model/relationships.json"),
@@ -2959,6 +3305,9 @@ fn ensure_available_id(package: &ModelPackage, id: &str) -> Result<()> {
     for existing in &package.requirements.requirements {
         ids.insert(existing.id.as_str());
     }
+    for existing in &package.portfolio.objects {
+        ids.insert(existing.id.as_str());
+    }
     for existing in &package.elements.elements {
         ids.insert(existing.id.as_str());
     }
@@ -2981,6 +3330,10 @@ fn sort_package(package: &mut ModelPackage) {
     package
         .requirements
         .requirements
+        .sort_by(|left, right| left.id.cmp(&right.id));
+    package
+        .portfolio
+        .objects
         .sort_by(|left, right| left.id.cmp(&right.id));
     package
         .elements
@@ -3021,6 +3374,20 @@ fn ensure_non_empty(value: &str, field: &str) -> Result<()> {
         bail!("{field} must not be empty");
     }
     Ok(())
+}
+
+fn ensure_non_empty_items(values: &[String], field: &str) -> Result<()> {
+    for value in values {
+        ensure_non_empty(value, field)?;
+    }
+    Ok(())
+}
+
+fn validate_optional_value(value: &str, supported: &[&str], field: &str) -> Result<()> {
+    if value.is_empty() || supported.contains(&value) {
+        return Ok(());
+    }
+    bail!("{field} has unsupported value {value}");
 }
 
 fn require_version(label: &str, version: &str) -> Result<()> {
@@ -3387,6 +3754,78 @@ mod tests {
         );
         let applied = fs::read_to_string(summary.applied_proposal_path).unwrap();
         assert!(applied.contains(r#""state": "applied""#));
+    }
+
+    #[test]
+    fn accepted_proposal_applies_portfolio_operations() {
+        let root = copy_example_to_temp();
+        let proposal_path = root.join("proposals/open/accepted-portfolio-ops.json");
+        fs::write(
+            &proposal_path,
+            r#"{
+  "proposalId": "proposal.portfolio-ops",
+  "schemaVersion": "0.1.0",
+  "state": "accepted",
+  "createdAt": "2026-07-20T20:50:00Z",
+  "intent": "Add a native portfolio object through typed operations.",
+  "operations": [
+    {
+      "opId": "op.create-portfolio-service",
+      "op": "create_portfolio_object",
+      "args": {
+        "id": "service.proposal-application",
+        "kind": "portfolio_service",
+        "name": "Proposal application",
+        "description": "Applies accepted proposal operations to canonical package files.",
+        "status": "accepted",
+        "lifecycleState": "active",
+        "criticality": "high",
+        "capabilityRefs": ["capability.model-review"],
+        "technologyRefs": ["technology.tauri"],
+        "riskRefs": ["risk.silent-model-mutation"],
+        "relatedElementRefs": ["component.workbench"],
+        "sourceRefs": ["docs/MODEL_PACKAGE.md"]
+      },
+      "rationale": "Portfolio services should be represented as native RedShield facts, not only text metadata."
+    },
+    {
+      "opId": "op.update-model-review-capability",
+      "op": "update_portfolio_object",
+      "args": {
+        "objectId": "capability.model-review",
+        "tags": ["proposal-review", "portfolio"],
+        "technologyRefs": ["technology.react-flow"]
+      },
+      "rationale": "Existing portfolio objects need typed updates with validation."
+    }
+  ]
+}
+"#,
+        )
+        .unwrap();
+
+        let summary = apply_accepted_proposal_file(&root, &proposal_path).unwrap();
+        assert_eq!(summary.portfolio_objects_created, 1);
+        assert_eq!(summary.portfolio_objects_updated, 1);
+
+        let package = load_package(&root).unwrap();
+        validate_package(&package).unwrap();
+        let service = package
+            .portfolio
+            .objects
+            .iter()
+            .find(|object| object.id == "service.proposal-application")
+            .unwrap();
+        assert_eq!(service.kind, "portfolio_service");
+        assert_eq!(service.related_element_refs, vec!["component.workbench"]);
+        let capability = package
+            .portfolio
+            .objects
+            .iter()
+            .find(|object| object.id == "capability.model-review")
+            .unwrap();
+        assert_eq!(capability.tags, vec!["proposal-review", "portfolio"]);
+        assert_eq!(capability.technology_refs, vec!["technology.react-flow"]);
     }
 
     #[test]

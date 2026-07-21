@@ -59,6 +59,14 @@ fn main() -> Result<()> {
             let summary = apply_accepted_proposal_file(&root, proposal_path)?;
             println!("applied proposal:");
             println!("- requirements created: {}", summary.requirements_created);
+            println!(
+                "- portfolio objects created: {}",
+                summary.portfolio_objects_created
+            );
+            println!(
+                "- portfolio objects updated: {}",
+                summary.portfolio_objects_updated
+            );
             println!("- elements created: {}", summary.elements_created);
             println!("- relationships created: {}", summary.relationships_created);
             println!("- diagrams created: {}", summary.diagrams_created);

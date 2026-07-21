@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "0.1.0",
+  "objects": [
+    {
+      "id": "capability.model-review",
+      "kind": "business_capability",
+      "name": "Model review",
+      "description": "Review proposed architecture model changes before they become canonical project state.",
+      "status": "accepted",
+      "lifecycleState": "active",
+      "criticality": "high",
+      "ownerRefs": ["owner.product-architecture"],
+      "relatedElementRefs": ["usecase.review-proposal", "component.workbench"],
+      "sourceRefs": ["docs/PRODUCT_BRIEF.md"],
+      "tags": ["proposal-review"]
+    },
+    {
+      "id": "owner.product-architecture",
+      "kind": "owner",
+      "name": "Product Architecture",
+      "description": "Accountable ownership role for RedShield model semantics and review boundaries.",
+      "status": "accepted",
+      "sourceRefs": ["docs/PRODUCT_BRIEF.md"],
+      "tags": ["governance"]
+    },
+    {
+      "id": "risk.silent-model-mutation",
+      "kind": "risk",
+      "name": "Silent model mutation",
+      "description": "Canonical architecture facts could change without typed operations, validation, or human review.",
+      "status": "accepted",
+      "criticality": "high",
+      "relatedElementRefs": ["component.workbench"],
+      "sourceRefs": ["docs/PRODUCT_BRIEF.md", "docs/REQUIREMENTS.md"],
+      "tags": ["ai", "review"]
+    },
+    {
+      "id": "technology.react-flow",
+      "kind": "technology_component",
+      "name": "React Flow",
+      "description": "Interactive graph canvas used by the workbench spike.",
+      "status": "accepted",
+      "lifecycleState": "active",
+      "standardState": "approved",
+      "sourceRefs": ["web/package.json"],
+      "tags": ["frontend", "diagram"]
+    },
+    {
+      "id": "technology.tauri",
+      "kind": "technology_standard",
+      "name": "Tauri",
+      "description": "Candidate Linux-first desktop shell for local RedShield package editing.",
+      "status": "proposed",
+      "lifecycleState": "planned",
+      "standardState": "approved",
+      "sourceRefs": ["docs/PRODUCT_BRIEF.md"],
+      "tags": ["desktop", "linux"]
+    }
+  ]
+}

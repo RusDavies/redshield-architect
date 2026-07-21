@@ -6,6 +6,7 @@ The first RedShield model package is a directory of deterministic JSON files und
 redshield/
   manifest.json
   requirements/requirements.json
+  model/portfolio.json
   model/elements.json
   model/relationships.json
   views/diagrams.json
@@ -37,6 +38,37 @@ The `web/` spike loads the same example model into an interactive React Flow can
 The workbench emits proposal-shaped operation drafts for direct manipulation actions. Dragging nodes emits `move_diagram_node`, align/distribute controls emit their matching layout operations, ELK emits `apply_diagram_auto_layout`, creating a connector emits both a draft `create_relationship` and `connect_diagram_relationship`, and the semantic inspector emits `update_model_element_details` for reviewed element detail edits.
 
 The current spike can save/load the draft transaction in browser local storage, mark it accepted, and download proposal JSON that the CLI can apply. Direct filesystem writes from the workbench remain a later Tauri/backend adapter concern.
+
+## Portfolio Objects
+
+`model/portfolio.json` is the first RedShield-native enterprise architecture slice. It keeps portfolio facts close to requirements, UML elements, trace links, diagrams, and proposal review instead of copying a portfolio-tool data model.
+
+The initial object kinds are deliberately bounded:
+
+- `business_capability`
+- `portfolio_application`
+- `portfolio_service`
+- `technology_component`
+- `technology_standard`
+- `organization_unit`
+- `owner`
+- `lifecycle_milestone`
+- `roadmap_item`
+- `risk`
+- `control`
+- `governance_decision`
+- `data_source`
+
+Each portfolio object has a stable `id`, `kind`, `name`, optional description, status, lifecycle state, criticality, standard state, tags, source references, external references, and typed reference lists for owners, capabilities, technologies, risks, and related model elements. `relatedElementRefs` are validated against `model/elements.json`, so portfolio facts can point at the same UML-backed components and use cases already used by diagrams and traceability.
+
+This is the product wedge: business capabilities, services, technologies, risks, and ownership can be reviewed as deterministic package data while still linking directly to solution-architecture model elements. It is not a broad EA repository yet, and the MVP UI does not need to edit every object kind on day one.
+
+Portfolio changes use typed proposal operations:
+
+- `create_portfolio_object`
+- `update_portfolio_object`
+
+The schema rejects unknown object kinds, unsupported lifecycle/criticality/standard states, stray operation args, and no-op portfolio updates. Accepted proposal application writes `model/portfolio.json` through the same validation path as model elements, relationships, diagrams, trace links, and render profiles.
 
 ## Model Elements
 
@@ -119,6 +151,8 @@ The Rust validator checks that layout nodes reference elements in the diagram, c
 
 Accepted proposal transactions can now apply typed semantic element, view/layout, and render-profile operations:
 
+- `create_portfolio_object`
+- `update_portfolio_object`
 - `update_model_element_details`
 - `move_diagram_node`
 - `resize_diagram_node`
