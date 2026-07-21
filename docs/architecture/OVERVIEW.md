@@ -38,7 +38,7 @@ Surface-specific code should sit at the edges:
 - shared operation and validation contracts across both
 - clear identity, tenancy, audit, and storage boundaries before SaaS features are implemented
 
-The workbench persistence boundary already has a browser-local fallback and a Tauri/local command adapter for proposal drafts. The UI selects the Tauri adapter when a host invoke bridge is available and otherwise stays browser-local for the standalone web spike.
+The workbench persistence boundary already has a browser-local fallback and a Tauri/local command adapter for proposal drafts. The Tauri shell exposes matching Rust commands for save/load/export against a local package directory. The UI selects the Tauri adapter when a host invoke bridge is available and otherwise stays browser-local for the standalone web spike.
 
 ## Model Package
 

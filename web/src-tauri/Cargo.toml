@@ -1,0 +1,19 @@
+[package]
+name = "redshield-architect-workbench"
+version = "0.1.0"
+description = "Tauri shell for the RedShield Architect workbench"
+authors = ["RedShield Architect contributors"]
+license = "MIT"
+repository = "https://github.com/RusDavies/redshield-architect"
+edition = "2024"
+rust-version = "1.85"
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+anyhow = "1"
+redshield-architect = { path = "../.." }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2.11.5", features = [] }

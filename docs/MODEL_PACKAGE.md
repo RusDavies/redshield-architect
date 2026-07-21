@@ -64,7 +64,7 @@ The Tauri/local proposal persistence adapter expects these host commands:
 - `redshield_load_proposal_draft`, with `{ key }`, returning a proposal draft or `null`
 - `redshield_export_proposal_draft`, with `{ draft }`
 
-The adapter can use `window.__RED_SHIELD_WORKBENCH__.tauriInvoke` for test or host injection, or `window.__TAURI__.core.invoke` when the Tauri shell provides it.
+The adapter can use `window.__RED_SHIELD_WORKBENCH__.tauriInvoke` for test or host injection, or `window.__TAURI__.core.invoke` when the Tauri shell provides it. The initial Tauri shell stores local drafts under `proposals/open/` in the active package root. Set `REDSHIELD_PACKAGE_ROOT` to point the shell at a package directory; otherwise the development shell defaults to `examples/minimal/redshield`.
 
 ## Portfolio Objects
 
