@@ -1,12 +1,12 @@
 # RedShield Architect
 
-RedShield Architect is an early-stage, Linux-first workbench for requirements, architecture modeling, UML views, traceability, and AI-assisted design review.
+RedShield Architect is an early-stage, Linux-strong and web-ready workbench for requirements, architecture modeling, UML views, traceability, and AI-assisted design review.
 
 The core idea is simple: requirements and model elements should be semantic, versioned objects, while diagrams are views over that model. AI tools should propose reviewable model changes rather than silently editing diagrams, documents, or project files.
 
 ## Direction
 
-RedShield Architect is not intended to be a broad enterprise ALM clone. The first useful slice is a local-first architecture workbench that can:
+RedShield Architect is not intended to be a broad enterprise ALM clone. The first useful slice is a local-first architecture workbench that keeps a deliberate path to browser-hosted, self-hosted, and SaaS surfaces. It can:
 
 - capture requirements and architecture notes
 - model practical UML concepts such as use cases, classes, components, activities, and sequences
@@ -15,6 +15,7 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 - render diagrams from model data
 - let AI providers propose typed, reviewable model operations
 - preserve provenance, validation results, and human approval decisions
+- reuse the same TypeScript workbench and model-operation boundary across Linux desktop and future web deployments
 
 ## Early Non-Goals
 

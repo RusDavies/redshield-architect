@@ -25,6 +25,7 @@
 | NFR-4 | Provider-neutral AI integration. | AI proposal mechanics do not depend on a single model provider or agent runtime. | Must |
 | NFR-5 | Privacy-conscious defaults. | Source material is not sent to external AI providers without explicit project/provider configuration. | Must |
 | NFR-6 | Extensible import/export. | XMI, PlantUML, Mermaid, Structurizr DSL, SVG, and PDF can be added as import/export targets without becoming the internal source of truth. | Should |
+| NFR-7 | Web/SaaS-ready architecture. | The workbench UI, persistence boundary, and model-operation API avoid desktop-only assumptions so browser-hosted, self-hosted, and hosted SaaS surfaces can reuse the same product experience. | Must |
 
 ## Security And Privacy Requirements
 

@@ -2,7 +2,7 @@
 
 ## Shape
 
-RedShield Architect is expected to start as a local-first desktop workbench with a typed model core and a web-based UI shell.
+RedShield Architect is expected to start as a local-first Linux desktop workbench with a typed model core and a web-based UI shell. The same workbench architecture should also support a staged path to browser-hosted, self-hosted, and hosted SaaS deployment.
 
 The intended stack is:
 
@@ -10,6 +10,7 @@ The intended stack is:
 - Rust core for model storage, validation, proposal application, imports, exports, and CLI reuse
 - TypeScript UI for the interactive workbench and diagram views
 - deterministic JSON model package as the canonical project format
+- explicit persistence adapters so local filesystem, browser/server APIs, and future SaaS storage do not leak into model operations
 
 ## Core Boundary
 
@@ -25,6 +26,17 @@ Examples:
 - `apply_proposal_operation`
 
 The same operation path should run validation and produce consistent diffs regardless of whether the change came from a human UI action, CLI command, importer, or AI proposal.
+
+## Deployment Surfaces
+
+Linux local use is the first packaging and validation path, because RedShield should work well for technical users who keep project artifacts in Git. Web is also a first-class product direction: the TypeScript workbench should remain portable to browser-hosted review/collaboration flows, self-hosted team deployments, and a possible hosted SaaS product.
+
+Surface-specific code should sit at the edges:
+
+- Tauri/local filesystem adapter for the Linux workbench
+- browser/server API adapter for hosted or self-hosted workbench use
+- shared operation and validation contracts across both
+- clear identity, tenancy, audit, and storage boundaries before SaaS features are implemented
 
 ## Model Package
 
