@@ -24,6 +24,8 @@ These concepts belong in the first schema because they are common architecture f
 
 These are deliberately metamodel-neutral. RedShield can map to ArchiMate, UML profiles, Structurizr, or customer vocabulary later without making those standards the internal source of truth.
 
+The ArchiMate posture is documented in [ArchiMate Alignment Decision](ARCHIMATE_ALIGNMENT.md): RedShield remains native internally and treats ArchiMate as a later mapping/export target.
+
 ## MVP UI Boundary
 
 The MVP UI should not try to provide full CRUD, landscape dashboards, survey workflows, import wizards, or enterprise reporting for every portfolio object. The first visible UI should stay close to the core RedShield workflow:

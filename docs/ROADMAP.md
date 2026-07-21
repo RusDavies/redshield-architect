@@ -36,6 +36,7 @@
 ## Milestone 4: Compatibility And Packaging
 
 - Evaluate XMI, PlantUML, Mermaid, Structurizr DSL, SVG, and PDF export priorities.
+- Define ArchiMate import/export mapping after the native package contract is stable.
 - Package for common Linux desktop environments.
 - Add project templates and examples.
 - Document provider integration boundaries.
