@@ -5,6 +5,7 @@ The first RedShield model package is a directory of deterministic JSON files und
 ```text
 redshield/
   manifest.json
+  imports/imports.json          # optional RedShield package imports
   requirements/requirements.json
   model/portfolio.json
   model/elements.json
@@ -17,7 +18,7 @@ redshield/
   proposals/open/*.json
 ```
 
-The JSON Schemas in `schemas/` describe the prototype file shapes. `cargo test` validates the example package against those published schemas and meta-validates the schema documents themselves. The Rust core validates the cross-file semantic slice that JSON Schema cannot see alone: schema version, duplicate IDs, supported element and relationship kinds, broken references, use-case diagram references, trace links, and proposal operation envelopes.
+The JSON Schemas in `schemas/` describe the prototype file shapes. `cargo test` validates the example package against those published schemas and meta-validates the schema documents themselves. The Rust core validates the cross-file semantic slice that JSON Schema cannot see alone: schema version, duplicate IDs, supported element and relationship kinds, package import targets, broken references, use-case diagram references, trace links, and proposal operation envelopes.
 
 ## Thin CLI
 
@@ -81,10 +82,29 @@ Each portfolio object has a stable `id`, `kind`, `name`, optional description, s
 
 Cross-package and imported portfolio refs use explicit qualifiers:
 
-- `package:<projectId>#<portfolioObjectId>` references a portfolio object in another RedShield package. If `<projectId>` matches the current `manifest.projectId`, the validator resolves and kind-checks `<portfolioObjectId>` locally. Other packages are reported as unresolved external references until import manifests and package dependency loading exist.
+- `package:<projectId>#<portfolioObjectId>` references a portfolio object in another RedShield package. If `<projectId>` matches the current `manifest.projectId`, the validator resolves and kind-checks `<portfolioObjectId>` locally. If `<projectId>` is declared in `imports/imports.json`, the validator loads that imported package's `manifest.json` and `model/portfolio.json`, then resolves and kind-checks `<portfolioObjectId>` against the imported portfolio. Undeclared packages are reported as unresolved external references.
 - `source:<sourceId>#<externalObjectId>` references an imported or external estate/source-system object. These refs are accepted as unresolved external references so import adapters can preserve identity before materializing local portfolio objects.
 
 Unqualified missing portfolio refs are treated as package-local typos and fail validation. Malformed qualified refs fail validation. This keeps local package mistakes loud while leaving a deliberate lane for imports and cross-package identity.
+
+## Package Imports
+
+Optional package imports live in `imports/imports.json`:
+
+```json
+{
+  "schemaVersion": "0.1.0",
+  "packages": [
+    {
+      "projectId": "example.shared-estate",
+      "path": "../shared-estate/redshield",
+      "name": "Shared estate model"
+    }
+  ]
+}
+```
+
+`path` is relative to the current `redshield/` package directory and points at another RedShield package directory. Validation loads only the imported package `manifest.json` and `model/portfolio.json`; it does not execute project code, fetch remotes, or recursively apply imported package dependencies. The imported manifest `projectId` must match the declared `projectId`. Duplicate imports, self-imports, invalid package versions, missing import files, missing imported portfolio objects, and wrong imported portfolio kinds fail validation.
 
 Structured lifecycle details are documented in [Portfolio Lifecycle Semantics](PORTFOLIO_LIFECYCLE.md). They support current state, local phase, target state/date, support/retirement dates, and milestone references for portfolio applications, products represented as applications, portfolio services, technology components, and technology standards.
 

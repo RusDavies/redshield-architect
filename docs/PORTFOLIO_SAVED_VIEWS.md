@@ -64,7 +64,7 @@ Every populated array uses OR semantics within the field. Different fields combi
 Portfolio reference fields use the package-wide portfolio reference syntax:
 
 - `owner.product-architecture` is a package-local ref and must resolve locally.
-- `package:another-redshield-package#owner.platform` is a cross-package RedShield ref. It resolves locally only when the package ID matches the current `manifest.projectId`; otherwise it is preserved as an unresolved external reference warning until package imports are loaded.
+- `package:another-redshield-package#owner.platform` is a cross-package RedShield ref. It resolves locally when the package ID matches the current `manifest.projectId`, resolves against `imports/imports.json` when that package is declared, and otherwise remains an unresolved external reference warning.
 - `source:cmdb.primary#platform-team` is an imported/source-system ref and is preserved as an unresolved external reference warning.
 
 Saved views should use qualified refs for imports and cross-package filters. An unqualified missing ref is treated as a local typo.

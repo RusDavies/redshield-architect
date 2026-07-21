@@ -8,6 +8,10 @@ const SCHEMA_CASES: &[(&str, &str)] = &[
         "examples/minimal/redshield/manifest.json",
     ),
     (
+        "schemas/imports.schema.json",
+        "examples/minimal/redshield/imports/imports.json",
+    ),
+    (
         "schemas/requirements.schema.json",
         "examples/minimal/redshield/requirements/requirements.json",
     ),
@@ -84,6 +88,26 @@ fn schema_validation_rejects_invalid_requirement_shape() {
     assert!(
         validator.validate(&invalid).is_err(),
         "requirements schema should reject missing statement"
+    );
+}
+
+#[test]
+fn schema_validation_rejects_absolute_package_import_path() {
+    let schema = read_json("schemas/imports.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("imports schema should compile");
+    let invalid = json!({
+        "schemaVersion": "0.1.0",
+        "packages": [
+            {
+                "projectId": "external.enterprise-architecture",
+                "path": "/tmp/external/redshield"
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "imports schema should reject absolute import paths"
     );
 }
 
