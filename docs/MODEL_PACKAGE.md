@@ -34,7 +34,7 @@ The renderer converts semantic model element and relationship IDs into Graphviz 
 
 The `web/` spike loads the same example model into an interactive React Flow canvas and uses ELK for auto-layout. It is the first GUI interaction candidate for direct manipulation: move, align, distribute, connect, inspect, and persist view metadata.
 
-The workbench emits proposal-shaped operation drafts for direct manipulation actions. Dragging nodes emits `move_diagram_node`, align/distribute controls emit their matching layout operations, ELK emits `apply_diagram_auto_layout`, and creating a connector emits both a draft `create_relationship` and `connect_diagram_relationship`.
+The workbench emits proposal-shaped operation drafts for direct manipulation actions. Dragging nodes emits `move_diagram_node`, align/distribute controls emit their matching layout operations, ELK emits `apply_diagram_auto_layout`, creating a connector emits both a draft `create_relationship` and `connect_diagram_relationship`, and the semantic inspector emits `update_model_element_details` for reviewed element detail edits.
 
 The current spike can save/load the draft transaction in browser local storage, mark it accepted, and download proposal JSON that the CLI can apply. Direct filesystem writes from the workbench remain a later Tauri/backend adapter concern.
 
@@ -93,7 +93,7 @@ Image-backed renderers use explicit assets with source and license provenance. T
 
 The current workbench spike resolves the first profile, applies rule precedence, and renders built-in actor, class, component, and image-backed element nodes. Referenced or missing image assets render as a visible asset-status placeholder until a real package asset is available.
 
-The workbench sidebar also includes a draft render-rule editor. It can assign renderer/style rules by element ID, element kind, stereotype, or tag; toggle existing rules; reset to the packaged default profile; and download the current in-memory render profile JSON.
+The workbench sidebar also includes a draft render-rule editor. It can assign renderer/style rules by element ID, element kind, stereotype, or tag; toggle existing rules; reset to the packaged default profile; and download the current in-memory render profile JSON. Semantic element edits remain in the inspector and emit semantic proposal operations rather than render-profile operations.
 
 Render-rule edits now emit typed proposal operations:
 

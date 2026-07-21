@@ -470,6 +470,75 @@ section {
   overflow-wrap: anywhere;
 }
 
+.semantic-editor {
+  border-top: 1px solid #e2e8f0;
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.semantic-editor h3 {
+  color: #334155;
+  font-size: 13px;
+  letter-spacing: 0;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.semantic-editor label {
+  color: #475569;
+  display: grid;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.semantic-editor input,
+.semantic-editor select,
+.semantic-editor textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #0f172a;
+  font: inherit;
+  min-height: 30px;
+  min-width: 0;
+  padding: 5px 7px;
+}
+
+.semantic-editor textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.semantic-editor__grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.semantic-editor__checks {
+  display: grid;
+  gap: 7px;
+}
+
+.semantic-editor__checks label {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+  line-height: 1.2;
+}
+
+.semantic-editor__checks input {
+  min-height: auto;
+}
+
+.semantic-editor > button {
+  border-radius: 6px;
+  min-height: 32px;
+  padding: 6px 9px;
+}
+
 .inspector pre {
   background: #0f172a;
   border-radius: 6px;

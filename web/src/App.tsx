@@ -272,6 +272,17 @@ type ProposalOperation = {
 };
 type ProposalOperationDraft = Omit<ProposalOperation, 'opId'>;
 type ProposalState = 'draft' | 'accepted';
+type SemanticElementUpdateArgs = {
+  elementId: string;
+  name?: string;
+  description?: string;
+  documentation?: string;
+  status?: string;
+  stereotypes?: string[];
+  tags?: string[];
+  architecture?: ArchitectureDetails;
+  clearDetails?: string[];
+};
 
 const elk = new ELK();
 const diagram = diagramsFile.diagrams[0];
@@ -586,6 +597,9 @@ const rendererOptions: RendererId[] = [
 ];
 
 const colorSwatches = ['#ffffff', '#ccfbf1', '#e0f2fe', '#fef3c7', '#fee2e2', '#ede9fe'];
+const elementStatusOptions = ['draft', 'proposed', 'accepted', 'deprecated', 'retired'];
+const criticalityOptions = ['', 'low', 'medium', 'high', 'critical'];
+const lifecycleStateOptions = ['', 'idea', 'planned', 'active', 'deprecated', 'retiring', 'retired'];
 
 function selectorValueOptions(mode: SelectorMode) {
   if (mode === 'elementId') {
@@ -1075,6 +1089,83 @@ export default function App() {
     },
     [recordOperation, renderProfile],
   );
+  const applySemanticElementUpdate = useCallback(
+    (args: SemanticElementUpdateArgs) => {
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => {
+          if (node.id !== args.elementId) return node;
+          const clearDetails = new Set(args.clearDetails ?? []);
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              label: args.name ?? node.data.label,
+              description: args.description ?? node.data.description,
+              documentation: args.documentation ?? node.data.documentation,
+              status: args.status ?? node.data.status,
+              stereotypes: args.stereotypes ?? node.data.stereotypes,
+              tags: args.tags ?? node.data.tags,
+              architecture: clearDetails.has('architecture')
+                ? undefined
+                : args.architecture ?? node.data.architecture,
+              classifier: clearDetails.has('classifier') ? undefined : node.data.classifier,
+              actorDetails: clearDetails.has('actorDetails') ? undefined : node.data.actorDetails,
+              useCaseDetails: clearDetails.has('useCaseDetails')
+                ? undefined
+                : node.data.useCaseDetails,
+              activityDetails: clearDetails.has('activityDetails')
+                ? undefined
+                : node.data.activityDetails,
+              sequenceParticipantDetails: clearDetails.has('sequenceParticipantDetails')
+                ? undefined
+                : node.data.sequenceParticipantDetails,
+            },
+          };
+        }),
+      );
+      setSelection((currentSelection) => ({
+        ...currentSelection,
+        nodes: currentSelection.nodes.map((node) => {
+          if (node.id !== args.elementId) return node;
+          const clearDetails = new Set(args.clearDetails ?? []);
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              label: args.name ?? node.data.label,
+              description: args.description ?? node.data.description,
+              documentation: args.documentation ?? node.data.documentation,
+              status: args.status ?? node.data.status,
+              stereotypes: args.stereotypes ?? node.data.stereotypes,
+              tags: args.tags ?? node.data.tags,
+              architecture: clearDetails.has('architecture')
+                ? undefined
+                : args.architecture ?? node.data.architecture,
+              classifier: clearDetails.has('classifier') ? undefined : node.data.classifier,
+              actorDetails: clearDetails.has('actorDetails') ? undefined : node.data.actorDetails,
+              useCaseDetails: clearDetails.has('useCaseDetails')
+                ? undefined
+                : node.data.useCaseDetails,
+              activityDetails: clearDetails.has('activityDetails')
+                ? undefined
+                : node.data.activityDetails,
+              sequenceParticipantDetails: clearDetails.has('sequenceParticipantDetails')
+                ? undefined
+                : node.data.sequenceParticipantDetails,
+            },
+          };
+        }),
+      }));
+      recordOperation({
+        op: 'update_model_element_details',
+        args,
+        rationale: 'Workbench semantic inspector updated model element details.',
+        sourceRefs: ['workbench.semantic-inspector'],
+      });
+      setProposalStatus(`Queued semantic update for ${args.elementId}.`);
+    },
+    [recordOperation],
+  );
 
   return (
     <main className="workbench-shell">
@@ -1198,7 +1289,10 @@ export default function App() {
         <section>
           <h2>Inspector</h2>
           {selection.nodes[0] ? (
-            <InspectorNode node={selection.nodes[0]} />
+            <>
+              <InspectorNode node={selection.nodes[0]} />
+              <SemanticElementEditor node={selection.nodes[0]} onApply={applySemanticElementUpdate} />
+            </>
           ) : selection.edges[0] ? (
             <InspectorEdge edge={selection.edges[0]} />
           ) : (
@@ -1235,6 +1329,184 @@ export default function App() {
         </section>
       </aside>
     </main>
+  );
+}
+
+function SemanticElementEditor({
+  node,
+  onApply,
+}: {
+  node: Node<RedshieldNodeData>;
+  onApply: (args: SemanticElementUpdateArgs) => void;
+}) {
+  const [name, setName] = useState(node.data.label);
+  const [status, setStatus] = useState(node.data.status);
+  const [description, setDescription] = useState(node.data.description);
+  const [documentation, setDocumentation] = useState(node.data.documentation);
+  const [tags, setTags] = useState(node.data.tags.join(', '));
+  const [stereotypes, setStereotypes] = useState(node.data.stereotypes.join(', '));
+  const [criticality, setCriticality] = useState(node.data.architecture?.criticality ?? '');
+  const [lifecycleState, setLifecycleState] = useState(
+    node.data.architecture?.lifecycle?.state ?? '',
+  );
+  const [lifecyclePhase, setLifecyclePhase] = useState(
+    node.data.architecture?.lifecycle?.phase ?? '',
+  );
+  const [clearArchitecture, setClearArchitecture] = useState(false);
+  const [clearClassifier, setClearClassifier] = useState(false);
+  const [clearKindDetails, setClearKindDetails] = useState(false);
+
+  useEffect(() => {
+    setName(node.data.label);
+    setStatus(node.data.status);
+    setDescription(node.data.description);
+    setDocumentation(node.data.documentation);
+    setTags(node.data.tags.join(', '));
+    setStereotypes(node.data.stereotypes.join(', '));
+    setCriticality(node.data.architecture?.criticality ?? '');
+    setLifecycleState(node.data.architecture?.lifecycle?.state ?? '');
+    setLifecyclePhase(node.data.architecture?.lifecycle?.phase ?? '');
+    setClearArchitecture(false);
+    setClearClassifier(false);
+    setClearKindDetails(false);
+  }, [node]);
+
+  const clearableKindDetail = detailFieldForKind(node.data.kind);
+
+  const apply = () => {
+    const nextTags = splitList(tags);
+    const nextStereotypes = splitList(stereotypes);
+    const clearDetails = [
+      clearArchitecture ? 'architecture' : undefined,
+      clearClassifier ? 'classifier' : undefined,
+      clearKindDetails ? clearableKindDetail : undefined,
+    ].filter((value): value is string => Boolean(value));
+    const architecture =
+      clearArchitecture || (!criticality && !lifecycleState && !lifecyclePhase)
+        ? undefined
+        : {
+            ...(node.data.architecture ?? {}),
+            criticality: criticality || undefined,
+            lifecycle:
+              lifecycleState || lifecyclePhase
+                ? {
+                    ...(node.data.architecture?.lifecycle ?? {}),
+                    state: lifecycleState || undefined,
+                    phase: lifecyclePhase || undefined,
+                  }
+                : node.data.architecture?.lifecycle,
+          };
+
+    onApply({
+      elementId: node.data.modelId,
+      name: name.trim(),
+      status,
+      description,
+      documentation,
+      tags: nextTags,
+      stereotypes: nextStereotypes,
+      architecture,
+      clearDetails,
+    });
+  };
+
+  return (
+    <div className="semantic-editor">
+      <h3>Semantic Edit</h3>
+      <label>
+        Name
+        <input onChange={(event) => setName(event.target.value)} value={name} />
+      </label>
+      <label>
+        Status
+        <select onChange={(event) => setStatus(event.target.value)} value={status}>
+          {elementStatusOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Tags
+        <input onChange={(event) => setTags(event.target.value)} value={tags} />
+      </label>
+      <label>
+        Stereotypes
+        <input onChange={(event) => setStereotypes(event.target.value)} value={stereotypes} />
+      </label>
+      <label>
+        Description
+        <textarea onChange={(event) => setDescription(event.target.value)} value={description} />
+      </label>
+      <label>
+        Documentation
+        <textarea
+          onChange={(event) => setDocumentation(event.target.value)}
+          value={documentation}
+        />
+      </label>
+      <div className="semantic-editor__grid">
+        <label>
+          Criticality
+          <select onChange={(event) => setCriticality(event.target.value)} value={criticality}>
+            {criticalityOptions.map((option) => (
+              <option key={option || 'none'} value={option}>
+                {option || 'none'}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Lifecycle
+          <select
+            onChange={(event) => setLifecycleState(event.target.value)}
+            value={lifecycleState}
+          >
+            {lifecycleStateOptions.map((option) => (
+              <option key={option || 'none'} value={option}>
+                {option || 'none'}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label>
+        Lifecycle phase
+        <input onChange={(event) => setLifecyclePhase(event.target.value)} value={lifecyclePhase} />
+      </label>
+      <div className="semantic-editor__checks">
+        <label>
+          <input
+            checked={clearArchitecture}
+            onChange={(event) => setClearArchitecture(event.target.checked)}
+            type="checkbox"
+          />
+          Clear architecture
+        </label>
+        <label>
+          <input
+            checked={clearClassifier}
+            disabled={!node.data.classifier}
+            onChange={(event) => setClearClassifier(event.target.checked)}
+            type="checkbox"
+          />
+          Clear classifier
+        </label>
+        <label>
+          <input
+            checked={clearKindDetails}
+            disabled={!clearableKindDetail}
+            onChange={(event) => setClearKindDetails(event.target.checked)}
+            type="checkbox"
+          />
+          Clear kind details
+        </label>
+      </div>
+      <button disabled={name.trim().length === 0} onClick={apply} type="button">
+        Queue semantic update
+      </button>
+    </div>
   );
 }
 
@@ -1626,6 +1898,21 @@ function hasArchitectureDetails(architecture: ArchitectureDetails): boolean {
       architecture.capabilities?.length ||
       architecture.services?.length,
   );
+}
+
+function detailFieldForKind(kind: string): string | undefined {
+  if (kind === 'actor') return 'actorDetails';
+  if (kind === 'use_case') return 'useCaseDetails';
+  if (kind === 'activity') return 'activityDetails';
+  if (kind === 'sequence_participant') return 'sequenceParticipantDetails';
+  return undefined;
+}
+
+function splitList(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function formatAttribute(attribute: ClassifierAttribute): string {
