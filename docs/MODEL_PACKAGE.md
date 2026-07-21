@@ -10,6 +10,7 @@ redshield/
   model/elements.json
   model/relationships.json
   views/diagrams.json
+  views/portfolio-views.json       # future saved portfolio query contract
   views/render-profile.json
   trace/links.json
   proposals/open/*.json
@@ -90,6 +91,8 @@ Portfolio changes use typed proposal operations:
 The schema rejects unknown object kinds, unsupported lifecycle/criticality/standard states, stray operation args, and no-op portfolio updates. Accepted proposal application writes `model/portfolio.json` through the same validation path as model elements, relationships, diagrams, trace links, and render profiles.
 
 The CLI `portfolio-summary` command and the workbench sidebar provide read-only portfolio summaries: object totals, kind/lifecycle/criticality counts, standard-state hints, related model-link counts, and a compact object list. The CLI accepts an optional search string. The workbench sidebar supports text search plus kind and lifecycle filters. These filters are temporary local narrowing controls: they do not edit portfolio data, create package state, or define shareable views.
+
+The future saved-query contract is documented in [Portfolio Saved Views And Queries](PORTFOLIO_SAVED_VIEWS.md). It should use `views/portfolio-views.json`, not `views/diagrams.json`, and should be changed only through typed proposal operations once implemented.
 
 The CLI `render-lifecycle-roadmap` command renders the first portfolio view kind as generated SVG. It colors referenced portfolio objects by lifecycle state, derives a visible timeline scale from lifecycle dates, uses portfolio-kind swimlanes, renders target-state callouts, renders lifecycle milestones distinctly, and draws milestone links from structured lifecycle metadata when both objects are in the view.
 

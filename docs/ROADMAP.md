@@ -25,6 +25,7 @@
 - Add richer generated lifecycle-roadmap layout semantics for timeline buckets, swimlanes, and target-state transitions.
 - Decide that first portfolio summary filters remain temporary/local until a named saved-view or query contract is justified by real use.
 - Decide that generated lifecycle-roadmap semantics remain renderer-owned defaults until a named roadmap presentation contract is justified by real use.
+- Define the future named portfolio saved-view/query contract without persisting current local filters yet.
 
 ## Milestone 2: Proposal Review Workflow
 
