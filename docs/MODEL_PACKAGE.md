@@ -11,7 +11,7 @@ redshield/
   model/relationships.json
   views/diagrams.json
   views/portfolio-views.json       # saved portfolio query contract
-  views/roadmap-presentations.json  # future roadmap presentation contract
+  views/roadmap-presentations.json  # roadmap presentation contract
   views/render-profile.json
   trace/links.json
   proposals/open/*.json
@@ -40,10 +40,11 @@ Render the first use-case diagram:
 cargo run -- render-use-case examples/minimal/redshield target/redshield/first-use-case.svg
 ```
 
-Render the first read-only portfolio lifecycle roadmap:
+Render the first portfolio lifecycle roadmap:
 
 ```sh
 cargo run -- render-lifecycle-roadmap examples/minimal/redshield target/redshield/portfolio-lifecycle-roadmap.svg
+cargo run -- render-lifecycle-roadmap examples/minimal/redshield target/redshield/portfolio-lifecycle-roadmap.svg roadmap-presentation.default-lifecycle
 ```
 
 The renderer converts semantic model element and relationship IDs into Graphviz DOT, then renders SVG through `dot -Tsvg`. DOT and SVG are generated artifacts; the canonical source remains the JSON model package.
@@ -95,11 +96,9 @@ The CLI `portfolio-summary` command and the workbench sidebar provide read-only 
 
 The saved-query contract is documented in [Portfolio Saved Views And Queries](PORTFOLIO_SAVED_VIEWS.md). It uses `views/portfolio-views.json`, not `views/diagrams.json`, and is changed only through typed proposal operations.
 
-The CLI `render-lifecycle-roadmap` command renders the first portfolio view kind as generated SVG. It colors referenced portfolio objects by lifecycle state, derives a visible timeline scale from lifecycle dates, uses portfolio-kind swimlanes, renders target-state callouts, renders lifecycle milestones distinctly, and draws milestone links from structured lifecycle metadata when both objects are in the view.
+The CLI `render-lifecycle-roadmap` command renders the first portfolio view kind as generated SVG. It can use the diagram's assigned `roadmapPresentationRef` or a CLI presentation ID override. The renderer colors referenced portfolio objects, derives a visible timeline scale from lifecycle dates, uses configured swimlanes, renders target-state callouts, renders lifecycle milestones distinctly, and draws milestone links from structured lifecycle metadata when both objects are in the view.
 
-Those roadmap layout semantics remain generated renderer behavior for now. They are not saved/customizable package metadata yet; a durable roadmap presentation contract should be added only after real use proves which timeline, swimlane, target-state, milestone, and layout controls need to be preserved and shared.
-
-The future roadmap presentation contract is documented in [Portfolio Roadmap Presentation](PORTFOLIO_ROADMAP_PRESENTATION.md). It should use `views/roadmap-presentations.json`, not `views/diagrams.json`, and should be changed only through typed proposal operations once implemented.
+Roadmap presentation metadata is documented in [Portfolio Roadmap Presentation](PORTFOLIO_ROADMAP_PRESENTATION.md). It uses `views/roadmap-presentations.json`, not `views/diagrams.json`, and is changed only through typed proposal operations.
 
 ## Model Elements
 

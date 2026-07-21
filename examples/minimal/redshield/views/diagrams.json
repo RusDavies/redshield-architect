@@ -115,6 +115,7 @@
       "id": "diagram.portfolio-lifecycle-roadmap",
       "title": "Portfolio Lifecycle Roadmap",
       "viewKind": "lifecycle_roadmap",
+      "roadmapPresentationRef": "roadmap-presentation.default-lifecycle",
       "portfolioRefs": [
         "application.redshield-architect",
         "technology.react-flow",

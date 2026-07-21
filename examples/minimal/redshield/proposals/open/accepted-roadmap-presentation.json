@@ -1,0 +1,97 @@
+{
+  "proposalId": "proposal.roadmap-presentation",
+  "schemaVersion": "0.1.0",
+  "state": "accepted",
+  "createdAt": "2026-07-21T00:20:00Z",
+  "intent": "Create, assign, update, and remove lifecycle-roadmap presentation metadata through typed operations.",
+  "operations": [
+    {
+      "opId": "op.create-roadmap-presentation",
+      "op": "create_roadmap_presentation",
+      "args": {
+        "id": "roadmap-presentation.prototype-critical",
+        "title": "Critical roadmap",
+        "description": "Prototype roadmap preset grouped by lifecycle state and colored by criticality.",
+        "appliesToViewKinds": ["lifecycle_roadmap"],
+        "timeline": {
+          "bucketSource": "targetDate",
+          "bucketGranularity": "quarter",
+          "rangeStart": "2026-07-01",
+          "rangeEnd": "2026-12-31",
+          "includeUndatedBucket": true,
+          "dateLabelFormat": "quarter"
+        },
+        "swimlanes": {
+          "groupBy": "lifecycleState",
+          "includeEmptyLanes": false,
+          "fallbackLaneTitle": "Unspecified lifecycle"
+        },
+        "targetStates": {
+          "showCallouts": true,
+          "showTargetDates": false,
+          "showNoChangeTargets": false,
+          "states": ["active", "deprecated", "retiring", "retired"]
+        },
+        "milestones": {
+          "showMilestoneNodes": true,
+          "showMilestoneLinks": true,
+          "linkStyle": "dotted",
+          "includeUnreferencedMilestones": true
+        },
+        "styling": {
+          "density": "compact",
+          "colorBy": "criticality",
+          "showLegend": true,
+          "showTimelineScale": true
+        },
+        "provenance": {
+          "sourceRefs": ["docs/PORTFOLIO_ROADMAP_PRESENTATION.md"],
+          "createdBy": "RedShield prototype seed",
+          "createdAt": "2026-07-21T00:20:00Z"
+        }
+      },
+      "rationale": "Roadmap presentation presets should be reviewable package metadata."
+    },
+    {
+      "opId": "op.assign-roadmap-presentation",
+      "op": "assign_roadmap_presentation",
+      "args": {
+        "diagramId": "diagram.portfolio-lifecycle-roadmap",
+        "presentationId": "roadmap-presentation.prototype-critical"
+      },
+      "rationale": "Lifecycle roadmap diagrams need an explicit presentation assignment."
+    },
+    {
+      "opId": "op.update-roadmap-presentation",
+      "op": "update_roadmap_presentation",
+      "args": {
+        "presentationId": "roadmap-presentation.prototype-critical",
+        "title": "Critical lifecycle roadmap",
+        "milestones": {
+          "showMilestoneNodes": true,
+          "showMilestoneLinks": true,
+          "linkStyle": "solid",
+          "includeUnreferencedMilestones": true
+        }
+      },
+      "rationale": "Roadmap presentation presets need typed updates."
+    },
+    {
+      "opId": "op.restore-default-roadmap-presentation",
+      "op": "assign_roadmap_presentation",
+      "args": {
+        "diagramId": "diagram.portfolio-lifecycle-roadmap",
+        "presentationId": "roadmap-presentation.default-lifecycle"
+      },
+      "rationale": "Removal should not leave a diagram pointing at a missing presentation."
+    },
+    {
+      "opId": "op.remove-roadmap-presentation",
+      "op": "remove_roadmap_presentation",
+      "args": {
+        "presentationId": "roadmap-presentation.prototype-critical"
+      },
+      "rationale": "Roadmap presentation presets need typed removal."
+    }
+  ]
+}

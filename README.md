@@ -38,12 +38,12 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 - `docs/research/COMPARABLE_TOOLS.md` - high-level market and tooling context
 - `docs/MODEL_PACKAGE.md` - current text-backed model package shape and CLI usage
 - `docs/PORTFOLIO_SAVED_VIEWS.md` - saved portfolio query contract
-- `docs/PORTFOLIO_ROADMAP_PRESENTATION.md` - future lifecycle-roadmap presentation contract
+- `docs/PORTFOLIO_ROADMAP_PRESENTATION.md` - lifecycle-roadmap presentation contract
 - `docs/RENDER_EXPORT_BEHAVIOR.md` - export contract for built-in, image-backed, SVG, and custom HTML renderers
 
 ## Status
 
-This repository now contains the first thin prototype core: a Rust CLI that loads a text-backed `redshield/` model package, validates canonical objects, validates diagram and saved portfolio view metadata, applies accepted proposal transactions including typed view/layout and saved portfolio view operations, and renders one semantic use-case diagram to SVG. The example package also defines an initial render profile schema for matching model elements to built-in or image-backed renderers. The `web/` spike reads the same example package, uses persisted view metadata as the starting point for direct manipulation, resolves render profile rules for actor/class/component/image-backed nodes, provides read-only saved portfolio summaries, and can save, accept, and download proposal-shaped operation drafts from canvas actions.
+This repository now contains the first thin prototype core: a Rust CLI that loads a text-backed `redshield/` model package, validates canonical objects, validates diagram, saved portfolio view, and roadmap presentation metadata, applies accepted proposal transactions including typed view/layout, saved portfolio view, and roadmap presentation operations, and renders one semantic use-case diagram to SVG. The example package also defines an initial render profile schema for matching model elements to built-in or image-backed renderers. The `web/` spike reads the same example package, uses persisted view metadata as the starting point for direct manipulation, resolves render profile rules for actor/class/component/image-backed nodes, provides read-only saved portfolio and roadmap presentation summaries, and can save, accept, and download proposal-shaped operation drafts from canvas actions.
 
 ## License
 

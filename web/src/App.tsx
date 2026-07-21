@@ -25,6 +25,7 @@ import portfolioFile from '../../examples/minimal/redshield/model/portfolio.json
 import relationshipsFile from '../../examples/minimal/redshield/model/relationships.json';
 import diagramsFile from '../../examples/minimal/redshield/views/diagrams.json';
 import portfolioViewsFile from '../../examples/minimal/redshield/views/portfolio-views.json';
+import roadmapPresentationsFile from '../../examples/minimal/redshield/views/roadmap-presentations.json';
 import renderProfileFile from '../../examples/minimal/redshield/views/render-profile.json';
 import traceFile from '../../examples/minimal/redshield/trace/links.json';
 
@@ -66,6 +67,44 @@ type PortfolioSavedViewRecord = {
   description?: string;
   resultKinds: string[];
   query?: PortfolioSavedViewQuery;
+};
+type RoadmapPresentationRecord = {
+  id: string;
+  title: string;
+  description?: string;
+  appliesToViewKinds: string[];
+  timeline?: {
+    bucketSource?: string;
+    bucketGranularity?: string;
+    rangeStart?: string;
+    rangeEnd?: string;
+    includeUndatedBucket?: boolean;
+    dateLabelFormat?: string;
+  };
+  swimlanes?: {
+    groupBy?: string;
+    order?: string[];
+    includeEmptyLanes?: boolean;
+    fallbackLaneTitle?: string;
+  };
+  targetStates?: {
+    showCallouts?: boolean;
+    showTargetDates?: boolean;
+    showNoChangeTargets?: boolean;
+    states?: string[];
+  };
+  milestones?: {
+    showMilestoneNodes?: boolean;
+    showMilestoneLinks?: boolean;
+    linkStyle?: string;
+    includeUnreferencedMilestones?: boolean;
+  };
+  styling?: {
+    density?: string;
+    colorBy?: string;
+    showLegend?: boolean;
+    showTimelineScale?: boolean;
+  };
 };
 type RelationshipRecord = (typeof relationshipsFile.relationships)[number];
 type DiagramLayout = NonNullable<(typeof diagramsFile.diagrams)[number]['layout']>;
@@ -328,6 +367,9 @@ const elk = new ELK();
 const diagram = diagramsFile.diagrams[0];
 const activeModelRefs = diagram.modelRefs ?? [];
 const defaultRenderProfile = renderProfileFile.profiles[0] as RenderProfile;
+const defaultRoadmapDiagram = diagramsFile.diagrams.find(
+  (diagram) => diagram.viewKind === 'lifecycle_roadmap',
+);
 const proposalStorageKey = `redshield.workbench.${diagram.id}.proposalDraft`;
 const elementById = new Map(elementsFile.elements.map((element) => [element.id, element]));
 const nodeLayoutByRef = new Map(
@@ -812,6 +854,9 @@ export default function App() {
   const [portfolioKindFilter, setPortfolioKindFilter] = useState('all');
   const [portfolioLifecycleFilter, setPortfolioLifecycleFilter] = useState('all');
   const [activePortfolioViewId, setActivePortfolioViewId] = useState('none');
+  const [activeRoadmapPresentationId, setActiveRoadmapPresentationId] = useState(
+    () => defaultRoadmapDiagram?.roadmapPresentationRef ?? roadmapPresentationsFile.presentations[0]?.id ?? 'none',
+  );
 
   const selectedNodeIds = useMemo(
     () => new Set(selection.nodes.map((node) => node.id)),
@@ -843,6 +888,13 @@ export default function App() {
   const portfolioSummary = useMemo(
     () => summarizePortfolioObjects(filteredPortfolioObjects),
     [filteredPortfolioObjects],
+  );
+  const activeRoadmapPresentation = useMemo(
+    () =>
+      roadmapPresentationsFile.presentations.find(
+        (presentation) => presentation.id === activeRoadmapPresentationId,
+      ),
+    [activeRoadmapPresentationId],
   );
 
   useEffect(() => {
@@ -1391,6 +1443,15 @@ export default function App() {
           />
         </section>
         <section>
+          <h2>Roadmap</h2>
+          <RoadmapPresentationSummary
+            presentations={roadmapPresentationsFile.presentations}
+            activePresentation={activeRoadmapPresentation}
+            activePresentationId={activeRoadmapPresentationId}
+            onPresentation={setActiveRoadmapPresentationId}
+          />
+        </section>
+        <section>
           <h2>Trace</h2>
           <div className="trace-list">
             {traceFile.links.map((link) => (
@@ -1702,6 +1763,81 @@ function SemanticElementEditor({
       <button disabled={name.trim().length === 0} onClick={apply} type="button">
         Queue semantic update
       </button>
+    </div>
+  );
+}
+
+function RoadmapPresentationSummary({
+  presentations,
+  activePresentation,
+  activePresentationId,
+  onPresentation,
+}: {
+  presentations: RoadmapPresentationRecord[];
+  activePresentation?: RoadmapPresentationRecord;
+  activePresentationId: string;
+  onPresentation: (value: string) => void;
+}) {
+  const timeline = activePresentation?.timeline;
+  const swimlanes = activePresentation?.swimlanes;
+  const targetStates = activePresentation?.targetStates;
+  const milestones = activePresentation?.milestones;
+  const styling = activePresentation?.styling;
+
+  return (
+    <div className="roadmap-presentation">
+      <div className="roadmap-presentation__selector">
+        <strong>Presentation</strong>
+        <select
+          onChange={(event) => onPresentation(event.target.value)}
+          value={activePresentationId}
+        >
+          {presentations.map((presentation) => (
+            <option key={presentation.id} value={presentation.id}>
+              {presentation.title}
+            </option>
+          ))}
+        </select>
+      </div>
+      {activePresentation ? (
+        <div className="roadmap-presentation__details">
+          <span>{activePresentation.description}</span>
+          <dl>
+            <div>
+              <dt>Timeline</dt>
+              <dd>
+                {formatObjectKind(timeline?.bucketSource ?? 'auto')} /{' '}
+                {formatObjectKind(timeline?.bucketGranularity ?? 'quarter')}
+              </dd>
+            </div>
+            <div>
+              <dt>Swimlanes</dt>
+              <dd>{formatObjectKind(swimlanes?.groupBy ?? 'portfolioKind')}</dd>
+            </div>
+            <div>
+              <dt>Targets</dt>
+              <dd>
+                {targetStates?.showCallouts === false ? 'Hidden' : 'Shown'}
+                {targetStates?.showTargetDates === false ? ', no dates' : ', with dates'}
+              </dd>
+            </div>
+            <div>
+              <dt>Milestones</dt>
+              <dd>
+                {milestones?.showMilestoneLinks === false
+                  ? 'No links'
+                  : milestones?.linkStyle ?? 'dashed'}
+              </dd>
+            </div>
+            <div>
+              <dt>Color</dt>
+              <dd>{formatObjectKind(styling?.colorBy ?? 'lifecycleState')}</dd>
+            </div>
+          </dl>
+        </div>
+      ) : (
+        <span className="roadmap-presentation__empty">No roadmap presentation selected.</span>
+      )}
     </div>
   );
 }

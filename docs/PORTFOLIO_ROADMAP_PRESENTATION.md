@@ -1,12 +1,12 @@
 # Portfolio Roadmap Presentation
 
-This document defines the first named lifecycle-roadmap presentation/layout contract for a future package version. It is a design target, not implemented prototype schema yet. The current `render-lifecycle-roadmap` command keeps deriving timeline buckets, swimlanes, target-state callouts, and milestone links from portfolio facts and renderer defaults.
+This document defines the first named lifecycle-roadmap presentation/layout contract. The prototype validates roadmap presentations, applies typed proposal operations for them, and lets the lifecycle-roadmap renderer use an assigned or CLI-selected presentation.
 
-The contract exists for the point where users need a saved roadmap presentation that is stable enough to review, share, import, export, and reproduce. Until then, renderer defaults are preferable to saved knobs. Saved knobs are how a simple roadmap becomes a cockpit made of checkboxes, and nobody deserves that before breakfast.
+The contract exists for saved roadmap presentations that are stable enough to review, share, import, export, and reproduce. Renderer defaults remain the fallback when no presentation is assigned.
 
 ## Storage Shape
 
-When implemented, roadmap presentation presets should live in a dedicated package file:
+Roadmap presentation presets live in a dedicated package file:
 
 ```text
 redshield/
@@ -27,7 +27,7 @@ Do not store roadmap presentation presets in `views/diagrams.json`. Diagram view
 
 ## Presentation Object
 
-A roadmap presentation should contain:
+A roadmap presentation contains:
 
 - `id`: stable package-local ID such as `roadmap-presentation.default-lifecycle`.
 - `title`: human-readable name.
@@ -40,11 +40,11 @@ A roadmap presentation should contain:
 - `styling`: bounded visual hints that do not replace render profiles.
 - `provenance`: optional source references and creator/review notes.
 
-The first implementation should support one active presentation per rendered lifecycle-roadmap view. Multiple presentation overlays can wait until the product has actual evidence that architects need them, not merely because "array of presets" sounds wonderfully enterprise.
+The first implementation supports one active presentation per rendered lifecycle-roadmap view. Multiple presentation overlays can wait until the product has actual evidence that architects need them, not merely because "array of presets" sounds wonderfully enterprise.
 
 ## Timeline Rules
 
-The initial `timeline` object should support:
+The initial `timeline` object supports:
 
 - `bucketSource`: one of `targetDate`, `retirementDate`, `endOfSupportDate`, `currentFrom`, or `auto`.
 - `bucketGranularity`: `month`, `quarter`, `half_year`, or `year`.
@@ -52,11 +52,11 @@ The initial `timeline` object should support:
 - `includeUndatedBucket`: boolean.
 - `dateLabelFormat`: `date`, `month`, `quarter`, or `year`.
 
-`auto` should preserve the current renderer behavior: pick the most useful available lifecycle date in a deterministic order and derive visible buckets from included objects.
+`auto` preserves the current renderer behavior: pick the most useful available lifecycle date in a deterministic order and derive visible buckets from included objects.
 
 ## Swimlane Rules
 
-The initial `swimlanes` object should support:
+The initial `swimlanes` object supports:
 
 - `groupBy`: one of `portfolioKind`, `lifecycleState`, `criticality`, `owner`, `capability`, `technology`, or `none`.
 - `order`: optional ordered lane keys.
@@ -67,7 +67,7 @@ Renderer implementations must keep lane membership explainable from canonical po
 
 ## Target-State Rules
 
-The initial `targetStates` object should support:
+The initial `targetStates` object supports:
 
 - `showCallouts`: boolean.
 - `showTargetDates`: boolean.
@@ -78,7 +78,7 @@ Target-state display is presentation metadata only. The actual target state and 
 
 ## Milestone Rules
 
-The initial `milestones` object should support:
+The initial `milestones` object supports:
 
 - `showMilestoneNodes`: boolean.
 - `showMilestoneLinks`: boolean.
@@ -96,20 +96,20 @@ The initial `styling` object may include:
 - `showLegend`: boolean.
 - `showTimelineScale`: boolean.
 
-Deep shape, icon, asset, and renderer selection belongs in render profiles. Roadmap presentation should control roadmap-specific grouping and annotations, not the whole drawing system.
+Deep shape, icon, asset, and renderer selection belongs in render profiles. Roadmap presentation controls roadmap-specific grouping and annotations, not the whole drawing system.
 
 ## Proposal Operations
 
-Roadmap presentations should be created and changed through typed proposal operations:
+Roadmap presentations are created and changed through typed proposal operations:
 
 - `create_roadmap_presentation`
 - `update_roadmap_presentation`
 - `remove_roadmap_presentation`
 - `assign_roadmap_presentation`
 
-`assign_roadmap_presentation` should attach a presentation ID to a lifecycle-roadmap diagram view or renderer request without mutating portfolio objects.
+`assign_roadmap_presentation` attaches a presentation ID to a lifecycle-roadmap diagram view without mutating portfolio objects.
 
-The validator should reject unknown fields, unsupported enum values, duplicate IDs, empty titles, invalid dates, no-op updates, assignments to non-roadmap view kinds, and references to missing presentation or diagram IDs.
+The validator rejects unknown fields, unsupported enum values, duplicate IDs, empty titles, invalid dates, no-op updates, assignments to non-roadmap view kinds, and references to missing presentation or diagram IDs.
 
 ## Boundaries
 

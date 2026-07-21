@@ -28,6 +28,7 @@
 - Define the future named portfolio saved-view/query contract without persisting current local filters yet.
 - Implement saved portfolio view/query schemas, typed proposal operations, validation, examples, and workbench summary affordances.
 - Define the future named roadmap presentation/layout contract without persisting current renderer defaults yet.
+- Implement roadmap presentation schemas, typed proposal operations, validation, examples, and workbench/CLI affordances.
 
 ## Milestone 2: Proposal Review Workflow
 
