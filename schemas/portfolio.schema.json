@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://redshield.dev/schemas/portfolio.schema.json",
+  "title": "RedShield Portfolio Objects",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "objects"],
+  "properties": {
+    "schemaVersion": { "const": "0.1.0" },
+    "objects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/portfolioObject" }
+    }
+  },
+  "$defs": {
+    "portfolioObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "$ref": "#/$defs/portfolioKind" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "proposed", "accepted", "deprecated", "retired"]
+        },
+        "lifecycleState": {
+          "type": "string",
+          "enum": ["idea", "planned", "active", "deprecated", "retiring", "retired"]
+        },
+        "criticality": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "standardState": {
+          "type": "string",
+          "enum": ["approved", "tolerated", "discouraged", "banned", "emerging"]
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "ownerRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "capabilityRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "technologyRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "riskRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "relatedElementRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "sourceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "externalReferences": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/externalReference" }
+        }
+      }
+    },
+    "portfolioKind": {
+      "type": "string",
+      "enum": [
+        "business_capability",
+        "portfolio_application",
+        "portfolio_service",
+        "technology_component",
+        "technology_standard",
+        "organization_unit",
+        "owner",
+        "lifecycle_milestone",
+        "roadmap_item",
+        "risk",
+        "control",
+        "governance_decision",
+        "data_source"
+      ]
+    },
+    "externalReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "uri"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "uri": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

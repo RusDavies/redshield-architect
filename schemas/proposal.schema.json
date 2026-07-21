@@ -23,6 +23,8 @@
     "operation": {
       "oneOf": [
         { "$ref": "#/$defs/createRequirementOperation" },
+        { "$ref": "#/$defs/createPortfolioObjectOperation" },
+        { "$ref": "#/$defs/updatePortfolioObjectOperation" },
         { "$ref": "#/$defs/createModelElementOperation" },
         { "$ref": "#/$defs/updateModelElementDetailsOperation" },
         { "$ref": "#/$defs/createRelationshipOperation" },
@@ -72,6 +74,30 @@
           "properties": {
             "op": { "const": "create_model_element" },
             "args": { "$ref": "#/$defs/createModelElementArgs" }
+          }
+        }
+      ]
+    },
+    "createPortfolioObjectOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "create_portfolio_object" },
+            "args": { "$ref": "#/$defs/createPortfolioObjectArgs" }
+          }
+        }
+      ]
+    },
+    "updatePortfolioObjectOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/operationCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "op": { "const": "update_portfolio_object" },
+            "args": { "$ref": "#/$defs/updatePortfolioObjectArgs" }
           }
         }
       ]
@@ -310,6 +336,58 @@
           "then": { "properties": { "kind": { "const": "sequence_participant" } } }
         }
       ]
+    },
+    "createPortfolioObjectArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "$ref": "#/$defs/portfolioKind" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "proposed", "accepted", "deprecated", "retired"] },
+        "lifecycleState": { "type": "string", "enum": ["idea", "planned", "active", "deprecated", "retiring", "retired"] },
+        "criticality": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "standardState": { "type": "string", "enum": ["approved", "tolerated", "discouraged", "banned", "emerging"] },
+        "tags": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "ownerRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "capabilityRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "technologyRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "riskRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "relatedElementRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "sourceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "externalReferences": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/externalReference" }
+        }
+      }
+    },
+    "updatePortfolioObjectArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objectId"],
+      "minProperties": 2,
+      "properties": {
+        "objectId": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "proposed", "accepted", "deprecated", "retired"] },
+        "lifecycleState": { "type": "string", "enum": ["idea", "planned", "active", "deprecated", "retiring", "retired"] },
+        "criticality": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "standardState": { "type": "string", "enum": ["approved", "tolerated", "discouraged", "banned", "emerging"] },
+        "tags": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "ownerRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "capabilityRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "technologyRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "riskRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "relatedElementRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "sourceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "externalReferences": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/externalReference" }
+        }
+      }
     },
     "updateModelElementDetailsArgs": {
       "type": "object",
@@ -614,6 +692,24 @@
         "createdAt": { "type": "string", "minLength": 1 },
         "notes": { "type": "string" }
       }
+    },
+    "portfolioKind": {
+      "type": "string",
+      "enum": [
+        "business_capability",
+        "portfolio_application",
+        "portfolio_service",
+        "technology_component",
+        "technology_standard",
+        "organization_unit",
+        "owner",
+        "lifecycle_milestone",
+        "roadmap_item",
+        "risk",
+        "control",
+        "governance_decision",
+        "data_source"
+      ]
     },
     "externalReference": {
       "type": "object",

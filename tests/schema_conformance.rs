@@ -16,6 +16,10 @@ const SCHEMA_CASES: &[(&str, &str)] = &[
         "examples/minimal/redshield/model/elements.json",
     ),
     (
+        "schemas/portfolio.schema.json",
+        "examples/minimal/redshield/model/portfolio.json",
+    ),
+    (
         "schemas/relationships.schema.json",
         "examples/minimal/redshield/model/relationships.json",
     ),
@@ -851,6 +855,78 @@ fn schema_validation_rejects_available_render_asset_without_hash() {
     assert!(
         validator.validate(&invalid).is_err(),
         "render profile schema should require a hash for available assets"
+    );
+}
+
+#[test]
+fn schema_validation_accepts_portfolio_operations() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let valid = json!({
+        "proposalId": "proposal.valid-portfolio",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T20:45:00Z",
+        "intent": "Create and refine native enterprise architecture portfolio facts.",
+        "operations": [
+            {
+                "opId": "op.create-capability",
+                "op": "create_portfolio_object",
+                "args": {
+                    "id": "capability.decision-evidence",
+                    "kind": "business_capability",
+                    "name": "Decision evidence",
+                    "status": "accepted",
+                    "lifecycleState": "active",
+                    "criticality": "high",
+                    "relatedElementRefs": ["component.workbench"],
+                    "sourceRefs": ["docs/PRODUCT_BRIEF.md"]
+                },
+                "rationale": "Capabilities are first-class RedShield portfolio facts that can link back to model elements."
+            },
+            {
+                "opId": "op.update-capability",
+                "op": "update_portfolio_object",
+                "args": {
+                    "objectId": "capability.decision-evidence",
+                    "tags": ["governance", "traceability"]
+                },
+                "rationale": "Portfolio facts need typed updates instead of silent JSON mutation."
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&valid).is_ok(),
+        "proposal schema should accept typed portfolio operations"
+    );
+}
+
+#[test]
+fn schema_validation_rejects_noop_portfolio_update_operation() {
+    let schema = read_json("schemas/proposal.schema.json");
+    let validator = jsonschema::validator_for(&schema).expect("proposal schema should compile");
+    let invalid = json!({
+        "proposalId": "proposal.invalid-portfolio-noop",
+        "schemaVersion": "0.1.0",
+        "state": "accepted",
+        "createdAt": "2026-07-20T20:46:00Z",
+        "intent": "Attempt a no-op portfolio update.",
+        "operations": [
+            {
+                "opId": "op.noop-portfolio",
+                "op": "update_portfolio_object",
+                "args": {
+                    "objectId": "capability.model-review"
+                },
+                "rationale": "This operation is intentionally empty."
+            }
+        ]
+    });
+
+    assert!(
+        validator.validate(&invalid).is_err(),
+        "proposal schema should reject no-op portfolio updates"
     );
 }
 
