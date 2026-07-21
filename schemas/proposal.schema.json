@@ -447,12 +447,23 @@
     "createDiagramViewArgs": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "title", "viewKind", "modelRefs"],
+      "required": ["id", "title", "viewKind"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "title": { "type": "string", "minLength": 1 },
-        "viewKind": { "type": "string", "enum": ["use_case"] },
+        "viewKind": {
+          "type": "string",
+          "enum": [
+            "use_case",
+            "capability_map",
+            "application_landscape",
+            "lifecycle_roadmap",
+            "risk_heatmap",
+            "dependency_map"
+          ]
+        },
         "modelRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "portfolioRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
         "layout": { "$ref": "#/$defs/diagramLayout" }
       }
     },

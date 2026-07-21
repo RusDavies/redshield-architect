@@ -28,6 +28,8 @@ The ArchiMate posture is documented in [ArchiMate Alignment Decision](ARCHIMATE_
 
 Lifecycle field semantics are documented in [Portfolio Lifecycle Semantics](PORTFOLIO_LIFECYCLE.md): lifecycle data is native RedShield package state for applications, products represented as applications, services, and technologies.
 
+Portfolio view semantics are documented in [Portfolio View Semantics](PORTFOLIO_VIEWS.md): capability maps, application landscapes, lifecycle roadmaps, risk heatmaps, and dependency maps are package-level view kinds before they are full MVP UI surfaces.
+
 ## MVP UI Boundary
 
 The MVP UI should not try to provide full CRUD, landscape dashboards, survey workflows, import wizards, or enterprise reporting for every portfolio object. The first visible UI should stay close to the core RedShield workflow:
@@ -92,7 +94,7 @@ Deferred work belongs in backlog, not the first UI:
 
 - read-only CLI/workbench summaries for portfolio objects
 - stricter reference validation once import and cross-package semantics are defined
-- capability map, application landscape, dependency map, lifecycle roadmap, risk heatmap, and target-state transition views
+- richer portfolio view rendering for capability maps, application landscapes, dependency maps, lifecycle roadmaps, risk heatmaps, and target-state transition views
 - ArchiMate alignment/mapping decision
 - import/export strategy for portfolio objects and discovered facts
 - governance/control workflow and enterprise reporting
