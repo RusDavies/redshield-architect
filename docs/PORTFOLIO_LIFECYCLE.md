@@ -65,6 +65,8 @@ Current validation is intentionally conservative:
 - lifecycle states and target states are bounded
 - lifecycle date fields must use `YYYY-MM-DD`
 - milestone refs must be non-empty strings
-- referenced milestone objects are not required to be local yet
+- plain milestone refs must resolve to local `lifecycle_milestone` portfolio objects
+- `package:<projectId>#<portfolioObjectId>` milestone refs resolve and kind-check locally when the project ID matches the current manifest, and otherwise warn as unresolved external portfolio refs
+- `source:<sourceId>#<externalObjectId>` milestone refs warn as unresolved external portfolio refs for imported/source-system identity
 
-Cross-package imports and external portfolio systems may legitimately provide milestone refs before the local package materializes those milestones. Stricter reference validation belongs after import semantics are clearer.
+Cross-package imports and external portfolio systems may legitimately provide milestone refs before the local package materializes those milestones, but they should now use explicit `package:` or `source:` qualifiers so local typos can fail loudly.

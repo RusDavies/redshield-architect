@@ -77,7 +77,14 @@ The initial object kinds are deliberately bounded:
 - `governance_decision`
 - `data_source`
 
-Each portfolio object has a stable `id`, `kind`, `name`, optional description, status, lifecycle state, structured lifecycle details, criticality, standard state, tags, source references, external references, and typed reference lists for owners, capabilities, technologies, risks, and related model elements. `relatedElementRefs` are validated against `model/elements.json`, so portfolio facts can point at the same UML-backed components and use cases already used by diagrams and traceability. Local owner/capability/technology/risk and lifecycle milestone refs are also kind-checked against `model/portfolio.json`; non-local refs are warnings until import and cross-package identity semantics are first-class.
+Each portfolio object has a stable `id`, `kind`, `name`, optional description, status, lifecycle state, structured lifecycle details, criticality, standard state, tags, source references, external references, and typed reference lists for owners, capabilities, technologies, risks, and related model elements. `relatedElementRefs` are validated against `model/elements.json`, so portfolio facts can point at the same UML-backed components and use cases already used by diagrams and traceability. Plain owner/capability/technology/risk and lifecycle milestone refs are package-local and must resolve against `model/portfolio.json` with the expected portfolio object kind.
+
+Cross-package and imported portfolio refs use explicit qualifiers:
+
+- `package:<projectId>#<portfolioObjectId>` references a portfolio object in another RedShield package. If `<projectId>` matches the current `manifest.projectId`, the validator resolves and kind-checks `<portfolioObjectId>` locally. Other packages are reported as unresolved external references until import manifests and package dependency loading exist.
+- `source:<sourceId>#<externalObjectId>` references an imported or external estate/source-system object. These refs are accepted as unresolved external references so import adapters can preserve identity before materializing local portfolio objects.
+
+Unqualified missing portfolio refs are treated as package-local typos and fail validation. Malformed qualified refs fail validation. This keeps local package mistakes loud while leaving a deliberate lane for imports and cross-package identity.
 
 Structured lifecycle details are documented in [Portfolio Lifecycle Semantics](PORTFOLIO_LIFECYCLE.md). They support current state, local phase, target state/date, support/retirement dates, and milestone references for portfolio applications, products represented as applications, portfolio services, technology components, and technology standards.
 
@@ -118,7 +125,7 @@ Model elements are semantic objects under `model/elements.json`. The common elem
 - `classifier` details for UML class/component elements
 - `actorDetails`, `useCaseDetails`, `activityDetails`, and `sequenceParticipantDetails` for supported UML behavior/interaction elements
 
-Architecture metadata is optional on any model element. It is intended for solution/enterprise architecture facts that attach to the element without changing its UML kind or diagram appearance. Local refs in these mappings are kind-checked against portfolio facts, while non-local refs are reported as validation warnings for now:
+Architecture metadata is optional on any model element. It is intended for solution/enterprise architecture facts that attach to the element without changing its UML kind or diagram appearance. Plain refs in these mappings are package-local and kind-checked against portfolio facts; `package:<projectId>#<portfolioObjectId>` and `source:<sourceId>#<externalObjectId>` use the same qualified portfolio reference semantics as portfolio objects:
 
 - `owners`: references to accountable, responsible, technical, business, or support owners, with optional display names
 - `lifecycle`: state, phase, milestone references, target date, and notes
