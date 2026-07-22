@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
+    "build:appimage": "../scripts/build_tauri_appimage.sh",
+    "build:appimage:debug": "../scripts/build_tauri_appimage.sh --debug",
     "preview": "vite preview --host 127.0.0.1",
     "tauri": "tauri"
   },
