@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.redshield.architect</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>RedShield Architect</name>
+  <summary>Requirements and architecture modeling workbench</summary>
+  <developer id="dev.redshield">
+    <name>RedShield Architect contributors</name>
+  </developer>
+  <description>
+    <p>
+      RedShield Architect is a Linux-first workbench for requirements,
+      architecture modeling, UML views, traceability, and AI-assisted design
+      review.
+    </p>
+    <p>
+      It keeps requirements and model elements as semantic, versioned objects
+      while diagrams remain reviewable views over the model. AI-assisted
+      changes are represented as typed proposals instead of silent edits to
+      project files.
+    </p>
+  </description>
+  <categories>
+    <category>Development</category>
+  </categories>
+  <keywords>
+    <keyword>requirements</keyword>
+    <keyword>architecture</keyword>
+    <keyword>UML</keyword>
+    <keyword>traceability</keyword>
+  </keywords>
+  <launchable type="desktop-id">com.redshield.architect.desktop</launchable>
+  <provides>
+    <binary>redshield-architect-workbench</binary>
+  </provides>
+  <url type="homepage">https://github.com/RusDavies/redshield-architect</url>
+  <url type="bugtracker">https://github.com/RusDavies/redshield-architect/issues</url>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="0.1.0" date="2026-07-22">
+      <description>
+        <p>
+          Initial pre-release workbench metadata for Linux AppImage and
+          distro-native package validation.
+        </p>
+      </description>
+    </release>
+  </releases>
+</component>
