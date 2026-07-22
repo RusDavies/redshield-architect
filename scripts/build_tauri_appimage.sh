@@ -25,6 +25,11 @@ fi
 
 bundle_dir="$tauri_dir/target/$profile/bundle/appimage"
 appdir="$bundle_dir/RedShield Architect.AppDir"
+metainfo_src="$tauri_dir/metainfo/com.redshield.architect.metainfo.xml"
+metainfo_dest="$appdir/usr/share/metainfo/com.redshield.architect.metainfo.xml"
+appimage_metainfo_dest="$appdir/usr/share/metainfo/com.redshield.architect.appdata.xml"
+generated_desktop="$appdir/usr/share/applications/RedShield Architect.desktop"
+desktop_dest="$appdir/usr/share/applications/com.redshield.architect.desktop"
 linuxdeploy_appimage="${TAURI_LINUXDEPLOY_APPIMAGE:-$HOME/.cache/tauri/linuxdeploy-x86_64.AppImage}"
 tauri_cache="${TAURI_CACHE_DIR:-$HOME/.cache/tauri}"
 extract_dir="$tauri_dir/target/appimage-linuxdeploy"
@@ -52,6 +57,17 @@ fi
 
 echo "Normal Tauri AppImage bundling failed."
 echo "Retrying with extracted linuxdeploy and system strip: $strip_bin"
+
+if [[ -f "$metainfo_src" ]]; then
+  mkdir -p "$(dirname "$metainfo_dest")"
+  rm -f "$appdir/usr/share/metainfo/RedShield Architect.appdata.xml"
+  cp "$metainfo_src" "$metainfo_dest"
+  cp "$metainfo_src" "$appimage_metainfo_dest"
+fi
+
+if [[ -f "$generated_desktop" && "$generated_desktop" != "$desktop_dest" ]]; then
+  mv "$generated_desktop" "$desktop_dest"
+fi
 
 rm -rf "$extract_dir" "$extract_dir.tmp"
 mkdir -p "$extract_dir.tmp"

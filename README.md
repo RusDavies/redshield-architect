@@ -20,6 +20,10 @@ npm run build:appimage:debug
 
 The wrapper first uses Tauri's normal AppImage bundler. On newer Fedora-style hosts where Tauri's cached linuxdeploy AppImage uses an older embedded `strip` that cannot read `.relr.dyn` sections, it retries with extracted linuxdeploy and the system `strip`.
 
+Linux desktop metadata lives in `web/src-tauri/metainfo/`. Tauri copies the
+AppStream metainfo into AppImage and RPM bundles so desktop software centers
+and distro-native package checks can identify the workbench consistently.
+
 ## Direction
 
 RedShield Architect is not intended to be a broad enterprise ALM clone. The first useful slice is a local-first architecture workbench that keeps a deliberate path to browser-hosted, self-hosted, and SaaS surfaces. It can:
