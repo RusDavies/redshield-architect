@@ -4,6 +4,22 @@ RedShield Architect is an early-stage, Linux-strong and web-ready workbench for 
 
 The core idea is simple: requirements and model elements should be semantic, versioned objects, while diagrams are views over that model. AI tools should propose reviewable model changes rather than silently editing diagrams, documents, or project files.
 
+## Build Notes
+
+The workbench can build a Linux AppImage from `web/`:
+
+```sh
+npm run build:appimage
+```
+
+For debug packaging:
+
+```sh
+npm run build:appimage:debug
+```
+
+The wrapper first uses Tauri's normal AppImage bundler. On newer Fedora-style hosts where Tauri's cached linuxdeploy AppImage uses an older embedded `strip` that cannot read `.relr.dyn` sections, it retries with extracted linuxdeploy and the system `strip`.
+
 ## Direction
 
 RedShield Architect is not intended to be a broad enterprise ALM clone. The first useful slice is a local-first architecture workbench that keeps a deliberate path to browser-hosted, self-hosted, and SaaS surfaces. It can:
@@ -28,6 +44,7 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 ## Repository Map
 
 - `src/` - first Rust model/validation/rendering core and CLI
+- `scripts/` - project build helpers, including the Linux AppImage wrapper
 - `web/` - React Flow + ELK workbench interaction spike
 - `schemas/` - prototype JSON Schemas for the `redshield/` model package and proposal transactions
 - `examples/minimal/redshield/` - smallest model package used by tests and the CLI
