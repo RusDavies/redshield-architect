@@ -35,6 +35,11 @@ This produces local RPM artifacts under `target/rpm/`. It is a development
 workflow, not a Fedora review submission; dependency vendoring/offline build
 policy still needs to be tightened before public repository packaging.
 
+Fedora RPM review-candidate evidence and offline validation helpers are also in
+`scripts/`. Generate evidence from a clean tagged tree with
+`prepare_fedora_rpm_review_candidate.sh`, then validate that candidate with
+`validate_fedora_rpm_review_candidate.sh --evidence-dir <dir>`.
+
 ## Direction
 
 RedShield Architect is not intended to be a broad enterprise ALM clone. The first useful slice is a local-first architecture workbench that keeps a deliberate path to browser-hosted, self-hosted, and SaaS surfaces. It can:
