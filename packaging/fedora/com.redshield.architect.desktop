@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=RedShield Architect
+Comment=Requirements and architecture modeling workbench
+Exec=redshield-architect-workbench
+Icon=redshield-architect-workbench
+Terminal=false
+Categories=Development;
+StartupWMClass=redshield-architect-workbench

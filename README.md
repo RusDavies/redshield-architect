@@ -24,6 +24,17 @@ Linux desktop metadata lives in `web/src-tauri/metainfo/`. Tauri copies the
 AppStream metainfo into AppImage and RPM bundles so desktop software centers
 and distro-native package checks can identify the workbench consistently.
 
+The first Fedora-oriented development RPM workflow lives in `packaging/fedora/`
+and can be run from the repository root:
+
+```sh
+./scripts/build_fedora_rpm.sh
+```
+
+This produces local RPM artifacts under `target/rpm/`. It is a development
+workflow, not a Fedora review submission; dependency vendoring/offline build
+policy still needs to be tightened before public repository packaging.
+
 ## Direction
 
 RedShield Architect is not intended to be a broad enterprise ALM clone. The first useful slice is a local-first architecture workbench that keeps a deliberate path to browser-hosted, self-hosted, and SaaS surfaces. It can:
@@ -49,6 +60,7 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 
 - `src/` - first Rust model/validation/rendering core and CLI
 - `scripts/` - project build helpers, including the Linux AppImage wrapper
+- `packaging/fedora/` - first Fedora-oriented development RPM spec and notes
 - `web/` - React Flow + ELK workbench interaction spike
 - `schemas/` - prototype JSON Schemas for the `redshield/` model package and proposal transactions
 - `examples/minimal/redshield/` - smallest model package used by tests and the CLI
