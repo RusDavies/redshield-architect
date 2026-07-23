@@ -352,6 +352,12 @@ type ProposalOperation = {
 };
 type ProposalOperationDraft = Omit<ProposalOperation, 'opId'>;
 type ProposalState = 'draft' | 'accepted';
+type InspectorTab = 'details' | 'edit' | 'advanced' | 'render';
+type WorkbenchSelection = {
+  modelRefs: string[];
+  relationshipRefs: string[];
+  source: 'canvas' | 'navigator' | 'system';
+};
 type SemanticElementUpdateArgs = {
   elementId: string;
   name?: string;
@@ -845,10 +851,13 @@ export default function App() {
     initialNodes(defaultRenderProfile),
   );
   const [edges, setEdges] = useState<Edge<RedshieldEdgeData>[]>(() => initialEdges());
-  const [selection, setSelection] = useState<{
-    nodes: Node<RedshieldNodeData>[];
-    edges: Edge<RedshieldEdgeData>[];
-  }>({ nodes: [], edges: [] });
+  const [workbenchSelection, setWorkbenchSelection] = useState<WorkbenchSelection>({
+    modelRefs: [],
+    relationshipRefs: [],
+    source: 'system',
+  });
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>('details');
+  const [navigatorStatus, setNavigatorStatus] = useState('No model item selected.');
   const operationSequence = useRef(1);
   const proposalCreatedAt = useRef(new Date().toISOString());
   const [operationLog, setOperationLog] = useState<ProposalOperation[]>([]);
@@ -864,10 +873,30 @@ export default function App() {
   );
 
   const selectedNodeIds = useMemo(
-    () => new Set(selection.nodes.map((node) => node.id)),
-    [selection.nodes],
+    () => new Set(workbenchSelection.modelRefs),
+    [workbenchSelection.modelRefs],
   );
-  const selectedNode = selection.nodes[0];
+  const selectedEdgeIds = useMemo(
+    () => new Set(workbenchSelection.relationshipRefs),
+    [workbenchSelection.relationshipRefs],
+  );
+  const selectedNodes = useMemo(
+    () => nodes.filter((node) => selectedNodeIds.has(node.id)),
+    [nodes, selectedNodeIds],
+  );
+  const selectedEdges = useMemo(
+    () => edges.filter((edge) => selectedEdgeIds.has(edge.id)),
+    [edges, selectedEdgeIds],
+  );
+  const selectedNode = selectedNodes[0];
+  const visibleNodes = useMemo(
+    () => nodes.map((node) => ({ ...node, selected: selectedNodeIds.has(node.id) })),
+    [nodes, selectedNodeIds],
+  );
+  const visibleEdges = useMemo(
+    () => edges.map((edge) => ({ ...edge, selected: selectedEdgeIds.has(edge.id) })),
+    [edges, selectedEdgeIds],
+  );
   const renderProfilePreview = useMemo(
     () => ({
       schemaVersion: renderProfileFile.schemaVersion,
@@ -1357,39 +1386,6 @@ export default function App() {
           };
         }),
       );
-      setSelection((currentSelection) => ({
-        ...currentSelection,
-        nodes: currentSelection.nodes.map((node) => {
-          if (node.id !== args.elementId) return node;
-          const clearDetails = new Set(args.clearDetails ?? []);
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              label: args.name ?? node.data.label,
-              description: args.description ?? node.data.description,
-              documentation: args.documentation ?? node.data.documentation,
-              status: args.status ?? node.data.status,
-              stereotypes: args.stereotypes ?? node.data.stereotypes,
-              tags: args.tags ?? node.data.tags,
-              architecture: clearDetails.has('architecture')
-                ? undefined
-                : args.architecture ?? node.data.architecture,
-              classifier: clearDetails.has('classifier') ? undefined : node.data.classifier,
-              actorDetails: clearDetails.has('actorDetails') ? undefined : node.data.actorDetails,
-              useCaseDetails: clearDetails.has('useCaseDetails')
-                ? undefined
-                : node.data.useCaseDetails,
-              activityDetails: clearDetails.has('activityDetails')
-                ? undefined
-                : node.data.activityDetails,
-              sequenceParticipantDetails: clearDetails.has('sequenceParticipantDetails')
-                ? undefined
-                : node.data.sequenceParticipantDetails,
-            },
-          };
-        }),
-      }));
       recordOperation({
         op: 'update_model_element_details',
         args,
@@ -1410,20 +1406,38 @@ export default function App() {
         </div>
         <section>
           <h2>Model</h2>
-          <div className="object-list">
+          <div className="navigator-status">{navigatorStatus}</div>
+          <div className="object-list object-list--navigator">
             {elementsFile.elements.map((element) => (
               <button
                 key={element.id}
                 className={selectedNodeIds.has(element.id) ? 'is-active' : ''}
-                onClick={() =>
-                  setSelection({
-                    nodes: nodes.filter((node) => node.id === element.id),
-                    edges: [],
-                  })
-                }
+                onClick={() => {
+                  setWorkbenchSelection({
+                    modelRefs: [element.id],
+                    relationshipRefs: [],
+                    source: 'navigator',
+                  });
+                  setInspectorTab('details');
+                  setNavigatorStatus(`Selected ${element.id}.`);
+                }}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setWorkbenchSelection({
+                    modelRefs: [element.id],
+                    relationshipRefs: [],
+                    source: 'navigator',
+                  });
+                  setInspectorTab('edit');
+                  setNavigatorStatus(`Opened edit context for ${element.id}.`);
+                }}
+                title="Click to inspect; right-click to edit"
+                type="button"
               >
                 <span>{element.name}</span>
-                <small>{element.kind.replace('_', ' ')}</small>
+                <small>
+                  {element.kind.replace('_', ' ')} / {element.status ?? 'accepted'}
+                </small>
               </button>
             ))}
           </div>
@@ -1471,59 +1485,53 @@ export default function App() {
             ))}
           </div>
         </section>
-        <RenderRuleEditor
-          profile={renderProfile}
-          selectedNode={selectedNode}
-          status={renderProfileStatus}
-          onApply={applyRenderRule}
-          onToggle={toggleRenderRule}
-          onReset={() => {
-            setRenderProfile(defaultRenderProfile);
-            setRenderProfileStatus('Reset to the packaged default render profile.');
-          }}
-          onDownload={downloadRenderProfile}
-        />
       </aside>
 
       <section className="canvas-region">
         <div className="toolbar">
           <button onClick={runElkLayout}>Auto layout</button>
           <span className="divider" />
-          <button disabled={selection.nodes.length < 2} onClick={() => alignSelected('left')}>
+          <button disabled={selectedNodes.length < 2} onClick={() => alignSelected('left')}>
             Align L
           </button>
-          <button disabled={selection.nodes.length < 2} onClick={() => alignSelected('hcenter')}>
+          <button disabled={selectedNodes.length < 2} onClick={() => alignSelected('hcenter')}>
             Align X
           </button>
-          <button disabled={selection.nodes.length < 2} onClick={() => alignSelected('right')}>
+          <button disabled={selectedNodes.length < 2} onClick={() => alignSelected('right')}>
             Align R
           </button>
-          <button disabled={selection.nodes.length < 2} onClick={() => alignSelected('top')}>
+          <button disabled={selectedNodes.length < 2} onClick={() => alignSelected('top')}>
             Align T
           </button>
-          <button disabled={selection.nodes.length < 2} onClick={() => alignSelected('vcenter')}>
+          <button disabled={selectedNodes.length < 2} onClick={() => alignSelected('vcenter')}>
             Align Y
           </button>
-          <button disabled={selection.nodes.length < 2} onClick={() => alignSelected('bottom')}>
+          <button disabled={selectedNodes.length < 2} onClick={() => alignSelected('bottom')}>
             Align B
           </button>
           <span className="divider" />
-          <button disabled={selection.nodes.length < 3} onClick={() => distributeSelected('x')}>
+          <button disabled={selectedNodes.length < 3} onClick={() => distributeSelected('x')}>
             Distribute H
           </button>
-          <button disabled={selection.nodes.length < 3} onClick={() => distributeSelected('y')}>
+          <button disabled={selectedNodes.length < 3} onClick={() => distributeSelected('y')}>
             Distribute V
           </button>
         </div>
         <div className="canvas-frame">
           <ReactFlow
-            nodes={nodes}
-            edges={edges}
+            nodes={visibleNodes}
+            edges={visibleEdges}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onSelectionChange={setSelection}
+            onSelectionChange={(selection) =>
+              setWorkbenchSelection({
+                modelRefs: selection.nodes.map((node) => node.id),
+                relationshipRefs: selection.edges.map((edge) => edge.id),
+                source: 'canvas',
+              })
+            }
             fitView
             multiSelectionKeyCode={['Shift', 'Meta']}
             selectionOnDrag
@@ -1534,66 +1542,139 @@ export default function App() {
             <Controls />
           </ReactFlow>
         </div>
-        <div className="operation-log">
-          {operationLog.length === 0 ? (
-            <code>No emitted operations yet.</code>
-          ) : (
-            operationLog
-              .slice()
-              .reverse()
-              .map((operation) => (
-                <code key={operation.opId}>
-                  {operation.opId} {operation.op}
-                </code>
-              ))
-          )}
-        </div>
+        <ProposalTray
+          operationLog={operationLog}
+          proposalDraft={proposalDraft}
+          proposalStatus={proposalStatus}
+          onAccept={() => setProposalState('accepted')}
+          onClear={clearProposalDraft}
+          onDownload={downloadProposalDraft}
+          onLoad={loadProposalDraft}
+          onSave={saveProposalDraft}
+        />
       </section>
 
       <aside className="inspector">
         <section>
           <h2>Inspector</h2>
-          {selection.nodes[0] ? (
-            <>
-              <InspectorNode node={selection.nodes[0]} />
-              <SemanticElementEditor node={selection.nodes[0]} onApply={applySemanticElementUpdate} />
-            </>
-          ) : selection.edges[0] ? (
-            <InspectorEdge edge={selection.edges[0]} />
-          ) : (
-            <p>Select an element or connector.</p>
-          )}
-        </section>
-        <section>
-          <h2>View Metadata</h2>
-          <pre>{JSON.stringify(viewMetadata, null, 2)}</pre>
-        </section>
-        <section>
-          <h2>Proposal Operations</h2>
-          <div className="proposal-actions">
-            <button disabled={operationLog.length === 0} onClick={saveProposalDraft}>
-              Save draft
-            </button>
-            <button onClick={loadProposalDraft}>Load draft</button>
-            <button disabled={operationLog.length === 0} onClick={() => setProposalState('accepted')}>
-              Accept
-            </button>
-            <button disabled={operationLog.length === 0} onClick={downloadProposalDraft}>
-              Download
-            </button>
-            <button disabled={operationLog.length === 0} onClick={clearProposalDraft}>
-              Clear
-            </button>
+          <div className="inspector-tabs" role="tablist" aria-label="Inspector panels">
+            {[
+              ['details', 'Details'],
+              ['edit', 'Edit'],
+              ['advanced', 'Advanced'],
+              ['render', 'Render'],
+            ].map(([value, label]) => (
+              <button
+                aria-selected={inspectorTab === value}
+                className={inspectorTab === value ? 'is-active' : ''}
+                key={value}
+                onClick={() => setInspectorTab(value as InspectorTab)}
+                role="tab"
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
           </div>
-          <p className="proposal-status">{proposalStatus}</p>
-          <pre>{JSON.stringify(proposalDraft, null, 2)}</pre>
-        </section>
-        <section>
-          <h2>Render Profile</h2>
-          <pre>{JSON.stringify(renderProfilePreview, null, 2)}</pre>
+          {inspectorTab === 'details' ? (
+            selectedNode ? (
+              <InspectorNode node={selectedNode} />
+            ) : selectedEdges[0] ? (
+              <InspectorEdge edge={selectedEdges[0]} />
+            ) : (
+              <p>Select an element or connector.</p>
+            )
+          ) : null}
+          {inspectorTab === 'edit' ? (
+            selectedNode ? (
+              <SemanticElementEditor node={selectedNode} onApply={applySemanticElementUpdate} />
+            ) : (
+              <p>Select an element to edit.</p>
+            )
+          ) : null}
+          {inspectorTab === 'advanced' ? (
+            <div className="advanced-inspector">
+              <h3>View Metadata</h3>
+              <pre>{JSON.stringify(viewMetadata, null, 2)}</pre>
+              <h3>Proposal JSON</h3>
+              <pre>{JSON.stringify(proposalDraft, null, 2)}</pre>
+            </div>
+          ) : null}
+          {inspectorTab === 'render' ? (
+            <RenderRuleEditor
+              profile={renderProfile}
+              selectedNode={selectedNode}
+              status={renderProfileStatus}
+              onApply={applyRenderRule}
+              onToggle={toggleRenderRule}
+              onReset={() => {
+                setRenderProfile(defaultRenderProfile);
+                setRenderProfileStatus('Reset to the packaged default render profile.');
+              }}
+              onDownload={downloadRenderProfile}
+            />
+          ) : null}
         </section>
       </aside>
     </main>
+  );
+}
+
+function ProposalTray({
+  operationLog,
+  proposalDraft,
+  proposalStatus,
+  onAccept,
+  onClear,
+  onDownload,
+  onLoad,
+  onSave,
+}: {
+  operationLog: ProposalOperation[];
+  proposalDraft: WorkbenchProposalDraft;
+  proposalStatus: string;
+  onAccept: () => void;
+  onClear: () => void;
+  onDownload: () => void;
+  onLoad: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <div className="proposal-tray">
+      <div className="operation-log">
+        {operationLog.length === 0 ? (
+          <code>No emitted operations yet.</code>
+        ) : (
+          operationLog
+            .slice()
+            .reverse()
+            .map((operation) => (
+              <code key={operation.opId}>
+                {operation.opId} {operation.op}
+              </code>
+            ))
+        )}
+      </div>
+      <div className="proposal-tray__actions">
+        <span>{proposalStatus}</span>
+        <button disabled={operationLog.length === 0} onClick={onSave} type="button">
+          Save draft
+        </button>
+        <button onClick={onLoad} type="button">
+          Load draft
+        </button>
+        <button disabled={operationLog.length === 0} onClick={onAccept} type="button">
+          Accept
+        </button>
+        <button disabled={operationLog.length === 0} onClick={onDownload} type="button">
+          Download
+        </button>
+        <button disabled={operationLog.length === 0} onClick={onClear} type="button">
+          Clear
+        </button>
+        <strong>{proposalDraft.operations.length}</strong>
+      </div>
+    </div>
   );
 }
 
