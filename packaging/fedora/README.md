@@ -54,6 +54,18 @@ through `mock` when available:
 The `mock` path is the better clean-build-root evidence. Plain `rpmbuild` is a
 useful local gate, but it is still host-shaped.
 
+Run clean install/remove lifecycle smoke checks against built RPMs:
+
+```sh
+sudo -n ./scripts/smoke_fedora_rpm_lifecycle.sh \
+  --rpm-dir target/fedora-rpm-review/v0.1.0/results
+```
+
+The smoke helper uses a fresh DNF installroot with host repository config,
+verifies the package is installed with the expected executable, desktop file,
+AppStream metadata, and icons, then erases the package from that root and verifies it is gone. Pass
+`--previous-rpm-dir <dir>` to include an upgrade transaction before removal.
+
 Expected local tools on Fedora:
 
 - `rpmbuild`
@@ -68,3 +80,4 @@ Expected local tools on Fedora:
 - `openssl-devel`
 - `desktop-file-utils`
 - `appstream`
+- `dnf5` or `dnf`
