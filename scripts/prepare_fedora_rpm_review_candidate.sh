@@ -97,7 +97,7 @@ mkdir -p "$cargo_vendor_dir"
 cargo vendor \
   --locked \
   --versioned-dirs \
-  --manifest-path "$repo_root/web/src-tauri/Cargo.toml" \
+  --sync "$repo_root/web/src-tauri/Cargo.toml" \
   "$cargo_vendor_dir" \
   > "$manifest_dir/cargo-vendor-config.toml"
 tar -C "$work_dir" -czf "$cargo_vendor_archive" cargo-vendor
@@ -117,17 +117,32 @@ tar -C "$work_dir" -czf "$npm_cache_archive" npm-cache
 cargo metadata \
   --locked \
   --format-version 1 \
-  --manifest-path "$repo_root/web/src-tauri/Cargo.toml" \
+  --all-features \
   > "$manifest_dir/cargo-metadata.json"
 
-python3 - "$manifest_dir/cargo-metadata.json" "$manifest_dir/cargo-dependency-inventory.tsv" "$manifest_dir/cargo-license-summary.tsv" <<'PY'
+cargo metadata \
+  --locked \
+  --format-version 1 \
+  --manifest-path "$repo_root/web/src-tauri/Cargo.toml" \
+  > "$manifest_dir/cargo-tauri-metadata.json"
+
+python3 - \
+  "$manifest_dir/cargo-metadata.json" \
+  "$manifest_dir/cargo-tauri-metadata.json" \
+  "$manifest_dir/cargo-dependency-inventory.tsv" \
+  "$manifest_dir/cargo-license-summary.tsv" <<'PY'
 import json
 import sys
 from collections import Counter
 
-metadata_path, inventory_path, license_path = sys.argv[1:4]
-metadata = json.load(open(metadata_path, encoding="utf-8"))
-packages = sorted(metadata["packages"], key=lambda p: (p["name"], p["version"], p["id"]))
+root_metadata_path, tauri_metadata_path, inventory_path, license_path = sys.argv[1:5]
+packages_by_id = {}
+for metadata_path in (root_metadata_path, tauri_metadata_path):
+    metadata = json.load(open(metadata_path, encoding="utf-8"))
+    for package in metadata["packages"]:
+        packages_by_id[package["id"]] = package
+
+packages = sorted(packages_by_id.values(), key=lambda p: (p["name"], p["version"], p["id"]))
 licenses = Counter()
 
 with open(inventory_path, "w", encoding="utf-8") as inventory:
