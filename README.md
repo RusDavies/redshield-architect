@@ -78,6 +78,7 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 - `docs/MODEL_PACKAGE.md` - current text-backed model package shape and CLI usage
 - `docs/PORTFOLIO_SAVED_VIEWS.md` - saved portfolio query contract
 - `docs/PORTFOLIO_ROADMAP_PRESENTATION.md` - lifecycle-roadmap presentation contract
+- `docs/PORTFOLIO_SUBTYPE_PROFILES.md` - decision to defer product/application/service subtype profiles until import/export evidence proves the need
 - `docs/RENDER_EXPORT_BEHAVIOR.md` - export contract for built-in, image-backed, SVG, and custom HTML renderers
 - `docs/AI_AGENT_INTERACTION_SURFACE.md` - provider-agnostic workbench contract for conversation, context, provenance, proposal review, and apply/reject controls
 

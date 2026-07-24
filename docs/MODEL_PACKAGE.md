@@ -116,6 +116,8 @@ Optional package imports live in `imports/imports.json`:
 
 Structured lifecycle details are documented in [Portfolio Lifecycle Semantics](PORTFOLIO_LIFECYCLE.md). They support current state, local phase, target state/date, support/retirement dates, and milestone references for portfolio applications, products represented as applications, portfolio services, technology components, and technology standards.
 
+Subtype/profile posture is documented in [Portfolio Subtype Profiles](PORTFOLIO_SUBTYPE_PROFILES.md). The prototype does not add a separate `product` kind or free-form subtype field yet; import/export evidence must prove where a bounded profile contract is needed.
+
 This is the product wedge: business capabilities, services, technologies, risks, and ownership can be reviewed as deterministic package data while still linking directly to solution-architecture model elements. It is not a broad EA repository yet, and the MVP UI does not need to edit every object kind on day one.
 
 The schema/UI split for these concepts is defined in [Enterprise Architecture Schema/UI Boundary](EA_SCHEMA_UI_BOUNDARY.md).
