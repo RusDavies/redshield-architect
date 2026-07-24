@@ -4,6 +4,8 @@ Render profiles choose how model elements appear in a diagram view. Exporters mu
 
 This document defines the first export contract for built-in renderers, image-backed renderers, SVG assets, and future custom HTML renderers across the browser workbench, Tauri desktop, SVG export, and PDF export paths.
 
+The broader format order is documented in [Import And Export Priority](IMPORT_EXPORT_PRIORITY.md). SVG is the first structured diagram export target; PDF is a downstream delivery format.
+
 ## Goals
 
 - Export diagrams without changing semantic model truth.

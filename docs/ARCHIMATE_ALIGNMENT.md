@@ -22,6 +22,8 @@ Use a RedShield-native portfolio model as the internal source of truth. Add Arch
 - validation warnings when an object cannot map cleanly
 - documentation showing approximate mapping, lossiness, and non-goals
 
+The broader format order is documented in [Import And Export Priority](IMPORT_EXPORT_PRIORITY.md). ArchiMate exchange is important for EA interoperability, but it follows native package validation, generated SVG/PDF artifacts, and early text exports rather than driving the prototype's internal model.
+
 Do not make ArchiMate element types, relationship taxonomy, layers, notation, or exchange format the canonical package model.
 
 ## Why Not Native ArchiMate Internally
