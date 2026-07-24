@@ -118,6 +118,8 @@ Structured lifecycle details are documented in [Portfolio Lifecycle Semantics](P
 
 Subtype/profile posture is documented in [Portfolio Subtype Profiles](PORTFOLIO_SUBTYPE_PROFILES.md). The prototype does not add a separate `product` kind or free-form subtype field yet; import/export evidence must prove where a bounded profile contract is needed.
 
+ArchiMate compatibility posture is documented in [ArchiMate Mapping Matrix](ARCHIMATE_MAPPING_MATRIX.md). RedShield keeps the native portfolio schema as the source of truth and treats ArchiMate element/relationship choices as adapter decisions with explicit lossiness warnings.
+
 This is the product wedge: business capabilities, services, technologies, risks, and ownership can be reviewed as deterministic package data while still linking directly to solution-architecture model elements. It is not a broad EA repository yet, and the MVP UI does not need to edit every object kind on day one.
 
 The schema/UI split for these concepts is defined in [Enterprise Architecture Schema/UI Boundary](EA_SCHEMA_UI_BOUNDARY.md).

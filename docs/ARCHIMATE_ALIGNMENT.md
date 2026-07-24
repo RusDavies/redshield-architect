@@ -55,7 +55,7 @@ These map partially to ArchiMate concepts, but RedShield should preserve its own
 
 ## Mapping Strategy
 
-Treat ArchiMate mapping as a separate adapter matrix:
+Treat ArchiMate mapping as a separate adapter matrix. The first explicit matrix is documented in [ArchiMate Mapping Matrix](ARCHIMATE_MAPPING_MATRIX.md):
 
 | RedShield concept | ArchiMate alignment posture |
 | --- | --- |
@@ -87,7 +87,6 @@ The correct posture is "interoperate where useful, remain native where RedShield
 
 ## Follow-Up Work
 
-- Build an explicit ArchiMate mapping matrix for the first portfolio object kinds.
 - Decide whether to support ArchiMate exchange format import/export before or after PlantUML/Mermaid/Structurizr priorities.
 - Add schema fields for optional mapping hints only after a real adapter needs them.
 - Add tests for lossy mapping warnings when export/import exists.
