@@ -47,7 +47,7 @@
 
 ## Milestone 4: Compatibility And Packaging
 
-- Apply the import/export priority decision from [Import And Export Priority](IMPORT_EXPORT_PRIORITY.md): native package first, SVG/PDF delivery exports, PlantUML/Mermaid text exports, Structurizr DSL, ArchiMate exchange, then XMI.
+- Apply the import/export priority decision from [Import And Export Priority](IMPORT_EXPORT_PRIORITY.md) and [Import And Export Matrix](IMPORT_EXPORT_MATRIX.md): native package first, SVG/PDF delivery exports, PlantUML/Mermaid text exports, Structurizr DSL, ArchiMate exchange, then XMI.
 - Define ArchiMate import/export mapping after the native package contract is stable.
 - Package for common Linux desktop environments.
 - Add project templates and examples.

@@ -120,7 +120,7 @@ Subtype/profile posture is documented in [Portfolio Subtype Profiles](PORTFOLIO_
 
 ArchiMate compatibility posture is documented in [ArchiMate Mapping Matrix](ARCHIMATE_MAPPING_MATRIX.md). RedShield keeps the native portfolio schema as the source of truth and treats ArchiMate element/relationship choices as adapter decisions with explicit lossiness warnings.
 
-Import/export priority is documented in [Import And Export Priority](IMPORT_EXPORT_PRIORITY.md). External formats are added around the native package contract rather than becoming alternate canonical model stores.
+Import/export priority is documented in [Import And Export Priority](IMPORT_EXPORT_PRIORITY.md), with detailed format coverage in [Import And Export Matrix](IMPORT_EXPORT_MATRIX.md). External formats are added around the native package contract rather than becoming alternate canonical model stores.
 
 This is the product wedge: business capabilities, services, technologies, risks, and ownership can be reviewed as deterministic package data while still linking directly to solution-architecture model elements. It is not a broad EA repository yet, and the MVP UI does not need to edit every object kind on day one.
 

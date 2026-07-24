@@ -81,7 +81,7 @@ When it arrives, start with export of the RedShield-supported UML subset, then i
 1. Keep native JSON package validation and proposal application as the mandatory gate.
 2. Finish the shared export-scene boundary for SVG, with PDF downstream.
 3. Add deterministic PlantUML and Mermaid exports for the supported UML/view subset.
-4. Define the detailed import/export matrix for PlantUML, Mermaid, Structurizr DSL, ArchiMate exchange, XMI, SVG, and PDF.
+4. Apply the detailed format coverage and warning posture in [Import And Export Matrix](IMPORT_EXPORT_MATRIX.md).
 5. Add Structurizr DSL export once view mapping is clear.
 6. Add an ArchiMate exchange export preview for portfolio objects using the mapping matrix.
 7. Add importer previews only after exported examples and lossiness warnings are practical.

@@ -83,6 +83,7 @@ RedShield Architect is not intended to be a broad enterprise ALM clone. The firs
 - `docs/AI_AGENT_INTERACTION_SURFACE.md` - provider-agnostic workbench contract for conversation, context, provenance, proposal review, and apply/reject controls
 - `docs/ARCHIMATE_MAPPING_MATRIX.md` - explicit first mapping posture from RedShield portfolio object kinds and refs to ArchiMate adapter targets
 - `docs/IMPORT_EXPORT_PRIORITY.md` - priority order for native packages, SVG/PDF, PlantUML, Mermaid, Structurizr DSL, ArchiMate exchange, and XMI
+- `docs/IMPORT_EXPORT_MATRIX.md` - detailed format and package-concept coverage matrix for import/export adapters
 
 ## Status
 
